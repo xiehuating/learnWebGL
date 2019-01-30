@@ -1,0 +1,615 @@
+<!DOCTYPE html>
+<!-- saved from url=(0029)http://www.hiwebgl.com/?p=384 -->
+<html dir="ltr" lang="zh-CN"><script type="text/javascript">
+    var spector;
+    var captureOnLoad = false;
+    var captureOffScreen = false;
+    window.__SPECTOR_Canvases = [];
+
+    (function() {
+        var __SPECTOR_Origin_EXTENSION_GetContext = HTMLCanvasElement.prototype.getContext;
+        HTMLCanvasElement.prototype.__SPECTOR_Origin_EXTENSION_GetContext = __SPECTOR_Origin_EXTENSION_GetContext;
+
+        HTMLCanvasElement.prototype.getContext = function () {
+            var context = null;
+            if (!arguments.length) {
+                return context;
+            }
+
+            if (arguments.length === 1) {
+                context = this.__SPECTOR_Origin_EXTENSION_GetContext(arguments[0]);
+                if (context === null) {
+                    return context;
+                }
+            }
+            else if (arguments.length === 2) {
+                context = this.__SPECTOR_Origin_EXTENSION_GetContext(arguments[0], arguments[1]);
+                if (context === null) {
+                    return context;
+                }
+            }
+
+            var contextNames = ["webgl", "experimental-webgl", "webgl2", "experimental-webgl2"];
+            if (contextNames.indexOf(arguments[0]) !== -1) {
+                context.canvas.setAttribute("__spector_context_type", arguments[0]);
+                // Notify the page a canvas is available.
+                var myEvent = new CustomEvent("SpectorWebGLCanvasAvailableEvent");
+                document.dispatchEvent(myEvent);
+
+                if (captureOffScreen) {
+                    var found = false;
+                    for (var i = 0; i < window.__SPECTOR_Canvases.length; i++) {
+                        if (window.__SPECTOR_Canvases[i] === this) {
+                            found = true;
+                            break;
+                        }
+                    }
+                    if (!found) {
+                        window.__SPECTOR_Canvases.push(this);
+                    }
+                }
+
+                if (captureOnLoad) {
+                    // Ensures canvas is in the dom to capture the one we are currently tracking.
+                    if (this.parentElement || false) {
+                        spector.captureContext(context, 500, false);
+                        captureOnLoad = false;
+                    }
+                }
+            }
+
+            return context;
+        }
+    })()</script><script>(function main() {
+    // Create enabled event
+    function fireEnabledEvent() {
+        // If gli exists, then we are already present and shouldn't do anything
+        if (!window.gli) {
+            setTimeout(function () {
+                var enabledEvent = document.createEvent("Event");
+                enabledEvent.initEvent("WebGLEnabledEvent", true, true);
+                document.dispatchEvent(enabledEvent);
+            }, 0);
+        } else {
+            //console.log("WebGL Inspector already embedded on the page - disabling extension");
+        }
+    };
+
+    // Grab the path root from the extension
+    document.addEventListener("WebGLInspectorReadyEvent", function (e) {
+        var pathElement = document.getElementById("__webglpathroot");
+        if (window["gliloader"]) {
+            gliloader.pathRoot = pathElement.innerText;
+        } else {
+            // TODO: more?
+            window.gliCssUrl = pathElement.innerText + "gli.all.css";
+        }
+    }, false);
+
+    // Rewrite getContext to snoop for webgl
+    var originalGetContext = HTMLCanvasElement.prototype.getContext;
+    if (!HTMLCanvasElement.prototype.getContextRaw) {
+        HTMLCanvasElement.prototype.getContextRaw = originalGetContext;
+    }
+    HTMLCanvasElement.prototype.getContext = function () {
+        var ignoreCanvas = this.internalInspectorSurface;
+        if (ignoreCanvas) {
+            return originalGetContext.apply(this, arguments);
+        }
+
+        var result = originalGetContext.apply(this, arguments);
+        if (result == null) {
+            return null;
+        }
+
+        var contextNames = ["moz-webgl", "webkit-3d", "experimental-webgl", "webgl", "3d"];
+        var requestingWebGL = contextNames.indexOf(arguments[0]) != -1;
+        if (requestingWebGL) {
+            // Page is requesting a WebGL context!
+            fireEnabledEvent(this);
+
+            // If we are injected, inspect this context
+            if (window.gli) {
+                if (gli.host.inspectContext) {
+                    // TODO: pull options from extension
+                    result = gli.host.inspectContext(this, result);
+                    // NOTE: execute in a timeout so that if the dom is not yet
+                    // loaded this won't error out.
+                    window.setTimeout(function() {
+                        var hostUI = new gli.host.HostUI(result);
+                        result.hostUI = hostUI; // just so we can access it later for debugging
+                    }, 0);
+                }
+            }
+        }
+
+        return result;
+    };
+})();</script><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+
+<title>Lesson 14 镜面高光和载入JSON模型 | HiWebGL</title>
+<link rel="profile" href="http://gmpg.org/xfn/11">
+<link rel="stylesheet" type="text/css" media="all" href="./Lesson 14 镜面高光和载入JSON模型 _ HiWebGL_files/style.css">
+<!--[if IE]>
+<link rel="stylesheet" type="text/css" media="all" href="http://www.hiwebgl.com/wp-content/themes/mnchrome/style-ie.css" />
+<![endif]-->
+<link rel="stylesheet" type="text/css" media="all" href="./Lesson 14 镜面高光和载入JSON模型 _ HiWebGL_files/custom.css"><link rel="pingback" href="http://www.hiwebgl.com/xmlrpc.php">
+<meta name="robots" content="index,follow">
+<link rel="canonical" href="http://www.hiwebgl.com/?p=384">
+<link rel="alternate" type="application/rss+xml" title="HiWebGL » Feed" href="http://www.hiwebgl.com/?feed=rss2">
+<link rel="alternate" type="application/rss+xml" title="HiWebGL » 评论 Feed" href="http://www.hiwebgl.com/?feed=comments-rss2">
+<link rel="alternate" type="application/rss+xml" title="HiWebGL » Lesson 14 镜面高光和载入JSON模型 评论 Feed" href="http://www.hiwebgl.com/?feed=rss2&amp;p=384">
+<link rel="stylesheet" id="wm-css" href="./Lesson 14 镜面高光和载入JSON模型 _ HiWebGL_files/style(1).css" type="text/css" media="all">
+<link rel="stylesheet" id="toc-screen-css" href="./Lesson 14 镜面高光和载入JSON模型 _ HiWebGL_files/screen.css" type="text/css" media="all">
+<link rel="stylesheet" id="codebox-css" href="./Lesson 14 镜面高光和载入JSON模型 _ HiWebGL_files/codebox.css" type="text/css" media="screen">
+<script type="text/javascript" src="./Lesson 14 镜面高光和载入JSON模型 _ HiWebGL_files/jquery.js.下载"></script>
+<script type="text/javascript" src="./Lesson 14 镜面高光和载入JSON模型 _ HiWebGL_files/front.js.下载"></script>
+<script type="text/javascript" src="./Lesson 14 镜面高光和载入JSON模型 _ HiWebGL_files/widget.js.下载"></script>
+<script type="text/javascript" src="./Lesson 14 镜面高光和载入JSON模型 _ HiWebGL_files/comment-reply.js.下载"></script>
+<script type="text/javascript" src="./Lesson 14 镜面高光和载入JSON模型 _ HiWebGL_files/codebox.js.下载"></script>
+<link rel="EditURI" type="application/rsd+xml" title="RSD" href="http://www.hiwebgl.com/xmlrpc.php?rsd">
+<link rel="wlwmanifest" type="application/wlwmanifest+xml" href="http://www.hiwebgl.com/wp-includes/wlwmanifest.xml"> 
+<link rel="prev" title="Rovio推HTML5版愤怒的小鸟 目标多平台" href="http://www.hiwebgl.com/?p=379">
+<link rel="next" title="Google Chrome AngryBirds电视广告提及WebGL" href="http://www.hiwebgl.com/?p=393">
+<meta name="generator" content="Monochrome 1.0">
+<link rel="canonical" href="http://www.hiwebgl.com/?p=384">
+<script type="text/javascript" src="./Lesson 14 镜面高光和载入JSON模型 _ HiWebGL_files/jquery.min.js.下载"></script>
+<script type="text/javascript" src="./Lesson 14 镜面高光和载入JSON模型 _ HiWebGL_files/hoverIntent.js.下载"></script>
+<script type="text/javascript" src="./Lesson 14 镜面高光和载入JSON模型 _ HiWebGL_files/superfish.js.下载"></script>
+<script type="text/javascript" src="./Lesson 14 镜面高光和载入JSON模型 _ HiWebGL_files/supersubs.js.下载"></script>
+<script type="text/javascript" src="./Lesson 14 镜面高光和载入JSON模型 _ HiWebGL_files/jquery.accordion.js.下载"></script>
+<script type="text/javascript" src="./Lesson 14 镜面高光和载入JSON模型 _ HiWebGL_files/dropdowns.js.下载"></script>
+<style type="text/css" media="all">
+/* <![CDATA[ */
+@import url("http://www.hiwebgl.com/wp-content/plugins/wp-table-reloaded/css/plugin.css?ver=1.9.3");
+@import url("http://www.hiwebgl.com/wp-content/plugins/wp-table-reloaded/css/datatables.css?ver=1.9.3");
+/* ]]> */
+</style></head>
+<body class="single single-post postid-384 single-format-standard">
+<div id="wrapper" class="hfeed">
+	<div id="header">
+    	<div id="masthead">
+        	<div id="branding" role="banner">
+            	<div id="site-logo">
+                	<a href="http://www.hiwebgl.com/" title="HiWebGL" rel="home">
+                    	                    <img src="./Lesson 14 镜面高光和载入JSON模型 _ HiWebGL_files/logo.png" align="logo">
+                    					</a>
+                </div>
+                <div id="site-description">最好的HTML5 WebGL中文资讯站！</div>
+                            </div><!-- #branding -->
+            <div id="access" role="navigation">
+            		<div class="menu">
+		<ul class="sf-menu sf-js-enabled">
+			<li>
+            	<a href="http://www.hiwebgl.com/" title="HiWebGL" rel="home">
+				<strong>首页</strong><span>Homepage</span>
+			</a></li>
+						<li>
+				<a href="http://www.hiwebgl.com/?p=42">
+				<strong>教程</strong><span>&nbsp;</span></a>
+							</li>
+						<li>
+				<a href="http://www.hiwebgl.com/?cat=16">
+				<strong>Demo</strong><span>&nbsp;</span></a>
+							</li>
+						<li>
+				<a href="http://www.hiwebgl.com/ask">
+				<strong>有问必答</strong><span>&nbsp;</span></a>
+							</li>
+						<li>
+				<a href="http://hiwebgl.com/forum/">
+				<strong>论坛</strong><span>&nbsp;</span></a>
+							</li>
+					</ul>
+	</div>
+            </div><!-- #access -->
+        </div><!-- #masthead -->
+    </div><!-- #header -->
+    
+    <div id="breadcrumbWrap"><div id="breadcrumb">
+<span>You are here: </span><a href="http://www.hiwebgl.com/">Home</a> » <a href="http://www.hiwebgl.com/?cat=17" title="查看 WebGL教程 中的全部文章">WebGL教程</a> » Lesson 14 镜面高光和载入JSON模型</div></div>    
+    <div id="main">
+		<div id="container">
+			<div id="content" role="main">
+
+
+				<div id="post-384" class="post-384 post type-post status-publish format-standard hentry category-webgl">
+					<h1 class="entry-title">Lesson 14 镜面高光和载入JSON模型</h1>
+
+					<div class="entry-meta">
+							<span class="meta-author">By admin</span>
+    <span class="meta-date">On 2011 年 9 月 28 日</span>
+    <span class="meta-comment">3 条评论</span>
+						2,907 次浏览					</div><!-- .entry-meta -->
+
+					<div class="entry-content">
+                		<p><span style="color: #888888;"><em>HiWebGL译者声明：因为译者个人方便的原因，我们将原教程中的第三方图形库由glMatrix改为Oak3D实现，这不影响到Demo的最终效果和实现，也不影响到WebGL的讲解和学习。原教程正文中相应的代码和讲解也为做了相应修改！本教程由HiWebGL翻译整理，转载请注明出处！</em></span></p>
+<p><span style="color: #888888;"><em>关于Oak3D：Oak3D是一套简单易用、性能优越的WebGL Javascript Library。您可以在他们的主页找到更多信息。Oak3D主页：<a href="http://www.oak3d.com/" target="_blank"><span style="color: #888888;">http://www.oak3d.com</span></a>&nbsp;</em></span></p>
+<p>欢迎来到WebGL教程的第14课。在这节课中，我们将会引入从第7课开始介绍的<a href="http://en.wikipedia.org/wiki/Phong_shading" target="_blank">冯氏反射模型</a>中的最后一个部分：镜面高光——在一个光泽表面上闪光的部分。镜面高光会让你的场景看起来更加真实。</p>
+<p>下面的视频就是我们这节课将会完成的最终效果。</p>
+<p><embed src="http://player.youku.com/player.php/sid/XMzA4MDU4NzEy/v.swf" quality="high" width="480" height="400" align="middle" allowscriptaccess="sameDomain" type="application/x-shockwave-flash"></p>
+<p>点击<a href="http://www.hiwebgl.com/webgl_lessons/lesson14/index.html" target="_blank">这里</a>打开一个独立的WebGL页面，如果你的浏览器不支持WebGL，请点击<a href="http://www.hiwebgl.com/?p=52" target="_blank">这里</a>。</p>
+<p>你会看到一个旋转的<a href="http://zh.wikipedia.org/wiki/%E7%8A%B9%E4%BB%96%E8%8C%B6%E5%A3%B6" target="_blank">“犹他茶壶”</a>，旋转的同时你会看到在茶壶中部偏左的部分和茶壶盖子的帽上会有常亮的高光，另外当茶壶的壶嘴和把手与光源成特定角度时，偶尔也会有高光出现。你可以使用canvas下面的复选框来切换是否开启镜面高光，是否开启光源、切换3个不同的纹理状态，分别是不使用纹理、默认的电镀金属纹理（根据CC协议，感谢<a href="http://www.arroway-textures.com/" target="_blank">Arroway Textures</a>提供），最后为了好玩，我们还加上了一个地球的纹理（感谢<a href="http://www.esa.int/esaEO/SEMGSY2IU7E_index_0.html" target="_blank">European Space Agency/Envisat</a>提供），不过茶壶形状的地球看起来实在是太猎奇了。</p>
+<p>下面我们来看看它是怎么工作的……</p>
+<p>惯例声明：本系列的教程是针对那些已经具备相应编程知识但没有实际3D图形经验的人的；目标是让学习者创建并运行代码，并且明白代码其中的含义，从而可以快速地创建自己的3D Web页面。如果你还没有阅读前一课，请先阅读前一课的内容吧。因为本课中我只会讲解那些与前一课中不同的新知识。</p>
+<p>另外，我编写这套教程是因为我在独立学习WebGL，所以教程中可能（非常可能）会有错误，所以还请风险自担。尽管如此，我还是会不断的修正bug和改正其中的错误的，所以如果你发现了教程中的错误，请告诉我。</p>
+<p>有两种方法可以获得上面实例的代码：在实例的独立页面中选择“查看源代码”；或者点击<a href="http://www.hiwebgl.com/webgl_lessons/lesson14/lesson14.zip" target="_blank">这里</a>下载我们为您准备好的压缩包。</p>
+<p>得到了源代码之后，请在编辑器中打开。这次我们从代码顶部开始，然后顺着慢慢往下看。这样的好处是我们可以先看到本科中最有趣的部分，也就是片元着色器。在开始之前，还要说一下本课代码和第13课中的一个区别，那就是我们摒弃了逐顶点光照的代码。说实话，逐顶点光照不能很好处理镜面高光（因为看起来非常斑驳），所以我们不再使用它了。</p>
+<p>好了，首先你会看到逐片元光照的片元着色器代码。和通常一样，代码先定义了浮点级别的精确度，声明了varying变量和uniform变量。在uniform变量中，我们将点光源的颜色分成了2个变量来分别储存，一个是漫反射的颜色，另一个是镜面高光的颜色。请注意第17行和第26、27行。</p>
+
+<div class="wp_codebox"><table><tbody><tr id="p3841"><td class="line_numbers"><pre>9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+</pre></td><td class="code" id="p384code1"><pre class="glsl" style="font-family:monospace;">&nbsp;
+    <span style="color: #000066; font-weight: bold;">precision</span> <span style="color: #000066; font-weight: bold;">mediump</span> <span style="color: #000066; font-weight: bold;">float</span><span style="color: #000066;">;</span>
+&nbsp;
+&nbsp;
+    <span style="color: #333399; font-weight: bold;">varying</span> <span style="color: #000066; font-weight: bold;">vec2</span> vTextureCoord<span style="color: #000066;">;</span>
+    <span style="color: #333399; font-weight: bold;">varying</span> <span style="color: #000066; font-weight: bold;">vec3</span> vTransformedNormal<span style="color: #000066;">;</span>
+    <span style="color: #333399; font-weight: bold;">varying</span> <span style="color: #000066; font-weight: bold;">vec4</span> vPosition<span style="color: #000066;">;</span>
+&nbsp;
+    <span style="color: #333399; font-weight: bold;">uniform</span> <span style="color: #000066; font-weight: bold;">float</span> uMaterialShininess<span style="color: #000066;">;</span>
+&nbsp;
+    <span style="color: #333399; font-weight: bold;">uniform</span> <span style="color: #000066; font-weight: bold;">bool</span> uShowSpecularHighlights<span style="color: #000066;">;</span>
+    <span style="color: #333399; font-weight: bold;">uniform</span> <span style="color: #000066; font-weight: bold;">bool</span> uUseLighting<span style="color: #000066;">;</span>
+    <span style="color: #333399; font-weight: bold;">uniform</span> <span style="color: #000066; font-weight: bold;">bool</span> uUseTextures<span style="color: #000066;">;</span>
+&nbsp;
+    <span style="color: #333399; font-weight: bold;">uniform</span> <span style="color: #000066; font-weight: bold;">vec3</span> uAmbientColor<span style="color: #000066;">;</span>
+&nbsp;
+    <span style="color: #333399; font-weight: bold;">uniform</span> <span style="color: #000066; font-weight: bold;">vec3</span> uPointLightingLocation<span style="color: #000066;">;</span>
+    <span style="color: #333399; font-weight: bold;">uniform</span> <span style="color: #000066; font-weight: bold;">vec3</span> uPointLightingSpecularColor<span style="color: #000066;">;</span>
+    <span style="color: #333399; font-weight: bold;">uniform</span> <span style="color: #000066; font-weight: bold;">vec3</span> uPointLightingDiffuseColor<span style="color: #000066;">;</span>
+&nbsp;
+    <span style="color: #333399; font-weight: bold;">uniform</span> <span style="color: #000066; font-weight: bold;">sampler2D</span> uSampler<span style="color: #000066;">;</span></pre></td></tr></tbody></table></div>
+
+<p>没必要解释太多，你可以在页面中手动设定它们的值。让我们接着往下看着色器部分的主函数，首先要做的事情就是判断光照是否开启，这段代码和之前的一样。</p>
+
+<div class="wp_codebox"><table><tbody><tr id="p3842"><td class="line_numbers"><pre>32
+33
+34
+35
+36
+</pre></td><td class="code" id="p384code2"><pre class="glsl" style="font-family:monospace;">    <span style="color: #000066; font-weight: bold;">void</span> main<span style="color: #000066;">(</span><span style="color: #000066; font-weight: bold;">void</span><span style="color: #000066;">)</span> <span style="color: #000066;">{</span>
+        <span style="color: #000066; font-weight: bold;">vec3</span> lightWeighting<span style="color: #000066;">;</span>
+        <span style="color: #000000; font-weight: bold;">if</span> <span style="color: #000066;">(</span><span style="color: #000066;">!</span>uUseLighting<span style="color: #000066;">)</span> <span style="color: #000066;">{</span>
+            lightWeighting <span style="color: #000066;">=</span> <span style="color: #000066; font-weight: bold;">vec3</span><span style="color: #000066;">(</span><span style="color: #0000ff;">1.0</span><span style="color: #000066;">,</span> <span style="color: #0000ff;">1.0</span><span style="color: #000066;">,</span> <span style="color: #0000ff;">1.0</span><span style="color: #000066;">)</span><span style="color: #000066;">;</span>
+        <span style="color: #000066;">}</span> <span style="color: #000000; font-weight: bold;">else</span> <span style="color: #000066;">{</span></pre></td></tr></tbody></table></div>
+
+<p>下面我们开始处理光照，好戏就要上演了！</p>
+
+<div class="wp_codebox"><table><tbody><tr id="p3843"><td class="line_numbers"><pre>37
+38
+39
+40
+41
+</pre></td><td class="code" id="p384code3"><pre class="glsl" style="font-family:monospace;">            <span style="color: #000066; font-weight: bold;">vec3</span> lightDirection <span style="color: #000066;">=</span> <span style="color: #993333; font-weight: bold;">normalize</span><span style="color: #000066;">(</span>uPointLightingLocation <span style="color: #000066;">-</span> vPosition<span style="color: #000066;">.</span><span style="color: #006600;">xyz</span><span style="color: #000066;">)</span><span style="color: #000066;">;</span>
+            <span style="color: #000066; font-weight: bold;">vec3</span> normal <span style="color: #000066;">=</span> <span style="color: #993333; font-weight: bold;">normalize</span><span style="color: #000066;">(</span>vTransformedNormal<span style="color: #000066;">)</span><span style="color: #000066;">;</span>
+&nbsp;
+            <span style="color: #000066; font-weight: bold;">float</span> specularLightWeighting <span style="color: #000066;">=</span> <span style="color: #0000ff;">0.0</span><span style="color: #000066;">;</span>
+            <span style="color: #000000; font-weight: bold;">if</span> <span style="color: #000066;">(</span>uShowSpecularHighlights<span style="color: #000066;">)</span> <span style="color: #000066;">{</span></pre></td></tr></tbody></table></div>
+
+<p>这儿到底怎么了呢？和往常一样，我们为逐片元光照计算出光照方向；然后将片元的法线向量归一化，这还是和往常一样——切记，顶点法线在经过线线性插值之后，得到的片元法线的长度会改变，所以我们必须进行归一化处理！但是这次，我们会比较多地使用归一化之前的线性插值的结果，所以我们将其储存在一个本地变量中。然后，我们定义了一个变量用来储存由镜面高光所带来的额外的亮度。如果镜面高光没有开启，显然它的值应当是0；反之，我们就要计算它了。</p>
+<p>那么，究竟是什么决定了镜面高光的亮度呢？你也许还记得，在第7课中我们解释冯氏反射模型的时候曾经说过，镜面高光其实就是光线像照到镜子上一样，照到物体表面然后反射出来的部分。</p>
+<blockquote><p>镜面反射（Specular）：这就像镜子一样，反射光将按照和入射角相同的角度反射出来。这种情况下，你看到的物体反射出来的光的亮度，取决于你的眼睛和光反射的方向是否在同一直线上；也就是说，反射光的亮度不仅与光线的入射角有关，还与你的视线和物体表面之间的角度有关。镜面反射通常会造成物体表面上的“闪烁”和“高光”现象，镜面反射的强度也与物体的材质有关，无光泽的木材很少会有镜面反射发生，而高光泽的金属则会有大量镜面反射。</p></blockquote>
+<p>计算镜面反射亮度的方程式如下：</p>
+<ul>
+<li>(R<sub>m</sub> · V)<sup>α</sup></li>
+</ul>
+<p>其中R<sub>m</sub>是发生镜面反射时反射光的方向的单位向量，V是观察方向的单位向量，α是一个描述光泽度的常量，常量的值越大，光泽度越高。你也会还记得，两个向量的点积就是它们之间夹角的余弦值。这样的话，如果光线直接反射到观察者的眼睛中，那根据方程式计算出的结果是1（也就是说R<sub>m</sub>和V是平行向量，夹角为0，而0的余弦是1），然后随着光线与视线方向的夹角慢慢变大，镜面反射的亮度也会慢慢地进行一个渐变。当施加α次幂之后，实际上会“压缩“镜面高光的效果，在某个点上，当两个向量平行时，计算结果仍然是1，但该点周围的亮度会迅速下降。你可以试着在Demo页面中调整光泽度常量的值，调的大一些，比如512，你就会明白了。</p>
+<p>好了，有了以上的准备，我们首先要做的就是计算出观察方向V和反射光方向R<sub>m</sub>。让我们先来看看看V，因为它很简单。在第10课中提到过，我们的场景是基于eye space构造的。也就是说，我们的相机位于原点（0,0,0），看向Z轴的负半轴，X轴的坐标越往右越大，Y轴的坐标越往上越大。从原点到空间中的任何一点的方向，就等于该点的坐标值所表示的向量。那么同样的，反过来，从任何一点看向原点的观察方向，就是该点坐标值的负值。我们对顶点坐标进行线性插值，得到了片元的坐标，储存在vPosition变量中，然后对其取负值，然后归一化使其长度为1，这样我们就得到了观察方向的单位向量V。</p>
+
+<div class="wp_codebox"><table><tbody><tr id="p3844"><td class="line_numbers"><pre>42
+</pre></td><td class="code" id="p384code4"><pre class="glsl" style="font-family:monospace;">                <span style="color: #000066; font-weight: bold;">vec3</span> eyeDirection <span style="color: #000066;">=</span> <span style="color: #993333; font-weight: bold;">normalize</span><span style="color: #000066;">(</span><span style="color: #000066;">-</span>vPosition<span style="color: #000066;">.</span><span style="color: #006600;">xyz</span><span style="color: #000066;">)</span><span style="color: #000066;">;</span></pre></td></tr></tbody></table></div>
+
+<p>让我们再来看看R<sub>m</sub>。这里原本应该是很麻烦的，但幸好我们有一个GLSL函数reflect，这就方便多了。这个函数是这样定义的：</p>
+<blockquote><p>reflect (I, N)<br>
+其中I是入射向量，N是物体表面朝向，函数返回值是反射方向。</p></blockquote>
+<p>入射向量就是光线照在物体表面上的入射方向，也就是从片元到光线的方向的反方向，而片元到光线的方向我们已经有了，储存在lightDirection中。N，也就是物体表面朝向，实际上就是法线，我们也已经计算出了。这样，我们就可以很轻松的计算出反射方向。</p>
+
+<div class="wp_codebox"><table><tbody><tr id="p3845"><td class="line_numbers"><pre>43
+</pre></td><td class="code" id="p384code5"><pre class="glsl" style="font-family:monospace;">                <span style="color: #000066; font-weight: bold;">vec3</span> reflectionDirection <span style="color: #000066;">=</span> <span style="color: #993333; font-weight: bold;">reflect</span><span style="color: #000066;">(</span><span style="color: #000066;">-</span>lightDirection<span style="color: #000066;">,</span> normal<span style="color: #000066;">)</span><span style="color: #000066;">;</span></pre></td></tr></tbody></table></div>
+
+<p>好了，万事俱备，最后一步非常简单。</p>
+
+<div class="wp_codebox"><table><tbody><tr id="p3846"><td class="line_numbers"><pre>45
+46
+</pre></td><td class="code" id="p384code6"><pre class="glsl" style="font-family:monospace;">                specularLightWeighting <span style="color: #000066;">=</span> <span style="color: #993333; font-weight: bold;">pow</span><span style="color: #000066;">(</span><span style="color: #993333; font-weight: bold;">max</span><span style="color: #000066;">(</span><span style="color: #993333; font-weight: bold;">dot</span><span style="color: #000066;">(</span>reflectionDirection<span style="color: #000066;">,</span> eyeDirection<span style="color: #000066;">)</span><span style="color: #000066;">,</span> <span style="color: #0000ff;">0.0</span><span style="color: #000066;">)</span><span style="color: #000066;">,</span> uMaterialShininess<span style="color: #000066;">)</span><span style="color: #000066;">;</span>
+            <span style="color: #000066;">}</span></pre></td></tr></tbody></table></div>
+
+<p>以上就是我们如何计算镜面反射贡献的亮度，然后我们再来看看漫发射贡献的亮度。我们还是用之前的逻辑（这里我们用本地变量来储存归一化的法线向量）。</p>
+
+<div class="wp_codebox"><table><tbody><tr id="p3847"><td class="line_numbers"><pre>48
+</pre></td><td class="code" id="p384code7"><pre class="glsl" style="font-family:monospace;">            <span style="color: #000066; font-weight: bold;">float</span> diffuseLightWeighting <span style="color: #000066;">=</span> <span style="color: #993333; font-weight: bold;">max</span><span style="color: #000066;">(</span><span style="color: #993333; font-weight: bold;">dot</span><span style="color: #000066;">(</span>normal<span style="color: #000066;">,</span> lightDirection<span style="color: #000066;">)</span><span style="color: #000066;">,</span> <span style="color: #0000ff;">0.0</span><span style="color: #000066;">)</span><span style="color: #000066;">;</span></pre></td></tr></tbody></table></div>
+
+<p>最后，我们将镜面反射的亮度、漫反射的亮度和环境光的颜色结合起来，计算出片元的总亮度。计算方法是我们之前使用的方法的扩展。</p>
+
+<div class="wp_codebox"><table><tbody><tr id="p3848"><td class="line_numbers"><pre>49
+50
+51
+52
+</pre></td><td class="code" id="p384code8"><pre class="glsl" style="font-family:monospace;">            lightWeighting <span style="color: #000066;">=</span> uAmbientColor
+                <span style="color: #000066;">+</span> uPointLightingSpecularColor <span style="color: #000066;">*</span> specularLightWeighting
+                <span style="color: #000066;">+</span> uPointLightingDiffuseColor <span style="color: #000066;">*</span> diffuseLightWeighting<span style="color: #000066;">;</span>
+        <span style="color: #000066;">}</span></pre></td></tr></tbody></table></div>
+
+<p>完成了以上工作，我们就可以使用与第13课中完全相同的代码来计算，基于当前纹理，每个片元的颜色。</p>
+
+<div class="wp_codebox"><table><tbody><tr id="p3849"><td class="line_numbers"><pre>54
+55
+56
+57
+58
+59
+60
+61
+</pre></td><td class="code" id="p384code9"><pre class="glsl" style="font-family:monospace;">        <span style="color: #000066; font-weight: bold;">vec4</span> fragmentColor<span style="color: #000066;">;</span>
+        <span style="color: #000000; font-weight: bold;">if</span> <span style="color: #000066;">(</span>uUseTextures<span style="color: #000066;">)</span> <span style="color: #000066;">{</span>
+            fragmentColor <span style="color: #000066;">=</span> <span style="color: #993333; font-weight: bold;">texture2D</span><span style="color: #000066;">(</span>uSampler<span style="color: #000066;">,</span> <span style="color: #000066; font-weight: bold;">vec2</span><span style="color: #000066;">(</span>vTextureCoord<span style="color: #000066;">.</span><span style="color: #006600;">s</span><span style="color: #000066;">,</span> vTextureCoord<span style="color: #000066;">.</span><span style="color: #006600;">t</span><span style="color: #000066;">)</span><span style="color: #000066;">)</span><span style="color: #000066;">;</span>
+        <span style="color: #000066;">}</span> <span style="color: #000000; font-weight: bold;">else</span> <span style="color: #000066;">{</span>
+            fragmentColor <span style="color: #000066;">=</span> <span style="color: #000066; font-weight: bold;">vec4</span><span style="color: #000066;">(</span><span style="color: #0000ff;">1.0</span><span style="color: #000066;">,</span> <span style="color: #0000ff;">1.0</span><span style="color: #000066;">,</span> <span style="color: #0000ff;">1.0</span><span style="color: #000066;">,</span> <span style="color: #0000ff;">1.0</span><span style="color: #000066;">)</span><span style="color: #000066;">;</span>
+        <span style="color: #000066;">}</span>
+        <span style="color: #551111;">gl_FragColor</span> <span style="color: #000066;">=</span> <span style="color: #000066; font-weight: bold;">vec4</span><span style="color: #000066;">(</span>fragmentColor<span style="color: #000066;">.</span><span style="color: #006600;">rgb</span> <span style="color: #000066;">*</span> lightWeighting<span style="color: #000066;">,</span> fragmentColor<span style="color: #000066;">.</span><span style="color: #006600;">a</span><span style="color: #000066;">)</span><span style="color: #000066;">;</span>
+    <span style="color: #000066;">}</span></pre></td></tr></tbody></table></div>
+
+<p>到这里，片元着色器就工作完毕。</p>
+<p>再往下看看，你会发现下一个与第13课不同的地方，位于initShaders函数中，这个函数又回到了更早之前的老样子，非常简单。其中只创建了一个program，然后理所当然的，为新增加的镜面高光初始化了一两个新的uniform地址。再往下一点，initTextures函数载入了地球纹理和电镀金属纹理，而不是什么月球和木质的板条箱了。再往下，在setMatrixUniforms函数中，和initShaders一样，又回到的原来的样子，只涉及到一个program，而不是多个。再往下，我们就到了本节课中另一个比较有趣的地方了。</p>
+<p>我们不再使用initBuffers函数来创建包含不同的顶点属性用于定义茶壶外观的WebGL数组对象了，我们有了两个新朋友，handleLoadedTeapot和loadTeapot函数。代码的模式看起来很像第10课中载入世界的代码，但是还是值得再重新看一遍的。让我们先来看看loadTeapot函数（虽然在代码中它是其中第二个函数）。</p>
+
+<div class="wp_codebox"><table><tbody><tr id="p38410"><td class="line_numbers"><pre>284
+285
+286
+287
+288
+289
+290
+291
+292
+293
+</pre></td><td class="code" id="p384code10"><pre class="javascript" style="font-family:monospace;">    <span style="color: #003366; font-weight: bold;">function</span> loadTeapot<span style="color: #009900;">(</span><span style="color: #009900;">)</span> <span style="color: #009900;">{</span>
+        <span style="color: #003366; font-weight: bold;">var</span> request <span style="color: #339933;">=</span> <span style="color: #003366; font-weight: bold;">new</span> XMLHttpRequest<span style="color: #009900;">(</span><span style="color: #009900;">)</span><span style="color: #339933;">;</span>
+        request.<span style="color: #000066;">open</span><span style="color: #009900;">(</span><span style="color: #3366CC;">"GET"</span><span style="color: #339933;">,</span> <span style="color: #3366CC;">"Teapot.json"</span><span style="color: #009900;">)</span><span style="color: #339933;">;</span>
+        request.<span style="color: #660066;">onreadystatechange</span> <span style="color: #339933;">=</span> <span style="color: #003366; font-weight: bold;">function</span> <span style="color: #009900;">(</span><span style="color: #009900;">)</span> <span style="color: #009900;">{</span>
+            <span style="color: #000066; font-weight: bold;">if</span> <span style="color: #009900;">(</span>request.<span style="color: #660066;">readyState</span> <span style="color: #339933;">==</span> <span style="color: #CC0000;">4</span><span style="color: #009900;">)</span> <span style="color: #009900;">{</span>
+                handleLoadedTeapot<span style="color: #009900;">(</span>JSON.<span style="color: #660066;">parse</span><span style="color: #009900;">(</span>request.<span style="color: #660066;">responseText</span><span style="color: #009900;">)</span><span style="color: #009900;">)</span><span style="color: #339933;">;</span>
+            <span style="color: #009900;">}</span>
+        <span style="color: #009900;">}</span>
+        request.<span style="color: #660066;">send</span><span style="color: #009900;">(</span><span style="color: #009900;">)</span><span style="color: #339933;">;</span>
+    <span style="color: #009900;">}</span></pre></td></tr></tbody></table></div>
+
+<p>代码的总体结构看起来和第10课很像，我们创建了一个新的XMLHttpRequest对象，然后用它来载入Teapot.json文件。因为是异步加载，所以我们还加入了一个回调函数，它会在载入文件过程中的不同阶段被触发，然后当readyState等于4时，也就是说文件被完全载入了，我们做一下相应的处理。</p>
+<p>接下来发生的事情非常有意思。我们载入的文件是JSON格式的，基本上也就是说，它是已经用Javascript写好的，打开这个文件看看你就明白我说的意思了。文件描述了一个Javascript对象，其中的列表储存了组成茶壶所需的顶点位置、法线、纹理坐标和顶点索引。我们当然可以将这些代码直接写到index.html里面，但是当你构建更复杂的模型时，尤其是由不同的独立模型的物体组成的，你最好还是把它们都放到一个单独的文件中。</p>
+<p>至于具体使用什么样的格式来储存模型，这是个很值得探讨的问题。你可以在任何你喜欢的软件中建模，这些软件可以将模型导出为不同的格式，比如3DsMax中的.obj文件。在未来，也许一些软件能够将模型导出为在Javascript中可以直接使用的格式，就好像我们这节课中用来储存茶壶模型的JSON文件。那下面，你应当将本教程仅仅作为一个示例，展示了如何载入一个预先设计好的JSON模型文件，而不是一个最好的典范。</p>
+
+<div class="wp_codebox"><table><tbody><tr id="p38411"><td class="line_numbers"><pre>250
+251
+252
+253
+254
+255
+256
+257
+258
+259
+260
+261
+262
+263
+264
+265
+266
+267
+268
+269
+270
+271
+272
+273
+274
+275
+276
+277
+278
+279
+280
+281
+</pre></td><td class="code" id="p384code11"><pre class="javascript" style="font-family:monospace;">    <span style="color: #003366; font-weight: bold;">var</span> teapotVertexPositionBuffer<span style="color: #339933;">;</span>
+    <span style="color: #003366; font-weight: bold;">var</span> teapotVertexNormalBuffer<span style="color: #339933;">;</span>
+    <span style="color: #003366; font-weight: bold;">var</span> teapotVertexTextureCoordBuffer<span style="color: #339933;">;</span>
+    <span style="color: #003366; font-weight: bold;">var</span> teapotVertexIndexBuffer<span style="color: #339933;">;</span>
+&nbsp;
+    <span style="color: #003366; font-weight: bold;">function</span> handleLoadedTeapot<span style="color: #009900;">(</span>teapotData<span style="color: #009900;">)</span> <span style="color: #009900;">{</span>
+        teapotVertexNormalBuffer <span style="color: #339933;">=</span> gl.<span style="color: #660066;">createBuffer</span><span style="color: #009900;">(</span><span style="color: #009900;">)</span><span style="color: #339933;">;</span>
+        gl.<span style="color: #660066;">bindBuffer</span><span style="color: #009900;">(</span>gl.<span style="color: #660066;">ARRAY_BUFFER</span><span style="color: #339933;">,</span> teapotVertexNormalBuffer<span style="color: #009900;">)</span><span style="color: #339933;">;</span>
+        gl.<span style="color: #660066;">bufferData</span><span style="color: #009900;">(</span>gl.<span style="color: #660066;">ARRAY_BUFFER</span><span style="color: #339933;">,</span> <span style="color: #003366; font-weight: bold;">new</span> Float32Array<span style="color: #009900;">(</span>teapotData.<span style="color: #660066;">vertexNormals</span><span style="color: #009900;">)</span><span style="color: #339933;">,</span> gl.<span style="color: #660066;">STATIC_DRAW</span><span style="color: #009900;">)</span><span style="color: #339933;">;</span>
+        teapotVertexNormalBuffer.<span style="color: #660066;">itemSize</span> <span style="color: #339933;">=</span> <span style="color: #CC0000;">3</span><span style="color: #339933;">;</span>
+        teapotVertexNormalBuffer.<span style="color: #660066;">numItems</span> <span style="color: #339933;">=</span> teapotData.<span style="color: #660066;">vertexNormals</span>.<span style="color: #660066;">length</span> <span style="color: #339933;">/</span> <span style="color: #CC0000;">3</span><span style="color: #339933;">;</span>
+&nbsp;
+        teapotVertexTextureCoordBuffer <span style="color: #339933;">=</span> gl.<span style="color: #660066;">createBuffer</span><span style="color: #009900;">(</span><span style="color: #009900;">)</span><span style="color: #339933;">;</span>
+        gl.<span style="color: #660066;">bindBuffer</span><span style="color: #009900;">(</span>gl.<span style="color: #660066;">ARRAY_BUFFER</span><span style="color: #339933;">,</span> teapotVertexTextureCoordBuffer<span style="color: #009900;">)</span><span style="color: #339933;">;</span>
+        gl.<span style="color: #660066;">bufferData</span><span style="color: #009900;">(</span>gl.<span style="color: #660066;">ARRAY_BUFFER</span><span style="color: #339933;">,</span> <span style="color: #003366; font-weight: bold;">new</span> Float32Array<span style="color: #009900;">(</span>teapotData.<span style="color: #660066;">vertexTextureCoords</span><span style="color: #009900;">)</span><span style="color: #339933;">,</span> gl.<span style="color: #660066;">STATIC_DRAW</span><span style="color: #009900;">)</span><span style="color: #339933;">;</span>
+        teapotVertexTextureCoordBuffer.<span style="color: #660066;">itemSize</span> <span style="color: #339933;">=</span> <span style="color: #CC0000;">2</span><span style="color: #339933;">;</span>
+        teapotVertexTextureCoordBuffer.<span style="color: #660066;">numItems</span> <span style="color: #339933;">=</span> teapotData.<span style="color: #660066;">vertexTextureCoords</span>.<span style="color: #660066;">length</span> <span style="color: #339933;">/</span> <span style="color: #CC0000;">2</span><span style="color: #339933;">;</span>
+&nbsp;
+        teapotVertexPositionBuffer <span style="color: #339933;">=</span> gl.<span style="color: #660066;">createBuffer</span><span style="color: #009900;">(</span><span style="color: #009900;">)</span><span style="color: #339933;">;</span>
+        gl.<span style="color: #660066;">bindBuffer</span><span style="color: #009900;">(</span>gl.<span style="color: #660066;">ARRAY_BUFFER</span><span style="color: #339933;">,</span> teapotVertexPositionBuffer<span style="color: #009900;">)</span><span style="color: #339933;">;</span>
+        gl.<span style="color: #660066;">bufferData</span><span style="color: #009900;">(</span>gl.<span style="color: #660066;">ARRAY_BUFFER</span><span style="color: #339933;">,</span> <span style="color: #003366; font-weight: bold;">new</span> Float32Array<span style="color: #009900;">(</span>teapotData.<span style="color: #660066;">vertexPositions</span><span style="color: #009900;">)</span><span style="color: #339933;">,</span> gl.<span style="color: #660066;">STATIC_DRAW</span><span style="color: #009900;">)</span><span style="color: #339933;">;</span>
+        teapotVertexPositionBuffer.<span style="color: #660066;">itemSize</span> <span style="color: #339933;">=</span> <span style="color: #CC0000;">3</span><span style="color: #339933;">;</span>
+        teapotVertexPositionBuffer.<span style="color: #660066;">numItems</span> <span style="color: #339933;">=</span> teapotData.<span style="color: #660066;">vertexPositions</span>.<span style="color: #660066;">length</span> <span style="color: #339933;">/</span> <span style="color: #CC0000;">3</span><span style="color: #339933;">;</span>
+&nbsp;
+        teapotVertexIndexBuffer <span style="color: #339933;">=</span> gl.<span style="color: #660066;">createBuffer</span><span style="color: #009900;">(</span><span style="color: #009900;">)</span><span style="color: #339933;">;</span>
+        gl.<span style="color: #660066;">bindBuffer</span><span style="color: #009900;">(</span>gl.<span style="color: #660066;">ELEMENT_ARRAY_BUFFER</span><span style="color: #339933;">,</span> teapotVertexIndexBuffer<span style="color: #009900;">)</span><span style="color: #339933;">;</span>
+        gl.<span style="color: #660066;">bufferData</span><span style="color: #009900;">(</span>gl.<span style="color: #660066;">ELEMENT_ARRAY_BUFFER</span><span style="color: #339933;">,</span> <span style="color: #003366; font-weight: bold;">new</span> Uint16Array<span style="color: #009900;">(</span>teapotData.<span style="color: #660066;">indices</span><span style="color: #009900;">)</span><span style="color: #339933;">,</span> gl.<span style="color: #660066;">STATIC_DRAW</span><span style="color: #009900;">)</span><span style="color: #339933;">;</span>
+        teapotVertexIndexBuffer.<span style="color: #660066;">itemSize</span> <span style="color: #339933;">=</span> <span style="color: #CC0000;">1</span><span style="color: #339933;">;</span>
+        teapotVertexIndexBuffer.<span style="color: #660066;">numItems</span> <span style="color: #339933;">=</span> teapotData.<span style="color: #660066;">indices</span>.<span style="color: #660066;">length</span><span style="color: #339933;">;</span>
+&nbsp;
+        document.<span style="color: #660066;">getElementById</span><span style="color: #009900;">(</span><span style="color: #3366CC;">"loadingtext"</span><span style="color: #009900;">)</span>.<span style="color: #660066;">textContent</span> <span style="color: #339933;">=</span> <span style="color: #3366CC;">""</span><span style="color: #339933;">;</span>
+    <span style="color: #009900;">}</span></pre></td></tr></tbody></table></div>
+
+<p>这些代码里实在是没有什么好强调的东西。就是从载入的JSON对象中提取不同的列表，然后放到WebGL的数组对象中，然后推送到显卡端。在这之后，我们清空了HTML中的div标签，和第10课一样，它用来告诉用户模型正在载入中。</p>
+<p>好了，模型载入完毕了，还有什么要说的嘛？好吧，还有drawScene函数。在确认模型已经载入之后，我们要在一个合适的角度来绘制茶壶，这里没什么新东西。看一下代码，确认你知道其中发生了什么（如果有任何不明白的地方，请留下评论），不过我想你应该找不出什么让你吃惊的地方。</p>
+<p>这之后，animate函数里也有一些琐碎的改变，用来让茶壶旋转而不是什么月亮和箱子；webGLStart函数调用了loadTeapot而不是initBuffers。最后，当载入模型时，HTML里的div标签中会显示“Loading world…”，还有相应的CSS样式。当然，还新增加了一个文本域用来输入新的镜面高光的相关参数的。</p>
+<p>好了，本节课到这里就结束了。你学会了如何实现镜面高光，如何载入一个储存在JSON文件中预先制作好的模型。下节课我们将会学习一个稍微有点高端的东西，这是一种不同的、更加有趣的使用纹理的方式——高光贴图。</p>
+<div style="clear:both; margin-top:5px; margin-bottom:5px;"></div><div style="float:left"><!-- JiaThis Button BEGIN -->
+<div id="ckepop">
+	<span class="jiathis_txt">分享到：</span>
+	<a class="jiathis_button_tools_1"></a>
+	<a class="jiathis_button_tools_2"></a>
+	<a class="jiathis_button_tools_3"></a>
+	<a class="jiathis_button_tools_4"></a>
+	<a href="http://www.jiathis.com/share" class="jiathis jiathis_txt jiathis_separator jtico jtico_jiathis" target="_blank">更多</a>
+	<a class="jiathis_counter_style"></a>
+</div>
+<script type="text/javascript" src="./Lesson 14 镜面高光和载入JSON模型 _ HiWebGL_files/jia.js.下载" charset="utf-8"></script>
+<!-- JiaThis Button END --></div><div style="clear:both; margin-top:5px; margin-bottom:5px;"></div>											</div><!-- .entry-content -->
+
+
+					<div class="entry-utility">
+						Posted in <a href="http://www.hiwebgl.com/?cat=17" title="查看 WebGL教程 中的全部文章" rel="category">WebGL教程</a>. Bookmark the <a href="http://www.hiwebgl.com/?p=384" title="Permalink to Lesson 14 镜面高光和载入JSON模型" rel="bookmark">permalink</a>.											</div><!-- .entry-utility -->
+				</div><!-- #post-## -->
+
+				<div id="nav-below" class="navigation">
+					<div class="nav-previous"><a href="http://www.hiwebgl.com/?p=379" rel="prev"><span class="meta-nav">←</span> Rovio推HTML5版愤怒的小鸟 目标多平台</a></div>
+					<div class="nav-next"><a href="http://www.hiwebgl.com/?p=393" rel="next">Google Chrome AngryBirds电视广告提及WebGL <span class="meta-nav">→</span></a></div>
+				</div><!-- #nav-below -->
+
+				
+
+<div id="comments">
+		<h3 id="comments-title"><span>1 trackback</span></h3>
+	<dl id="trackback_list">
+		<dt><a href="http://www.hiwebgl.com/?p=42" rel="external nofollow" class="url">WebGL教程 | WebGL中文教程翻译工程启动！HiWebGL | HiWebGL | 最好的HTML5 WebGL中文资讯站</a></dt>
+		<dd><span>2011 年 9 月 29 日 上午 1:10</span></dd>
+    </dl>
+    <h3 id="comments-title"><span>2 comments</span></h3>
+	<ol class="commentlist">
+    	
+	<li class="comment even thread-even depth-1" id="li-comment-213">
+    	<div id="comment-213">
+            <div class="comment_meta commentmetadata">
+                <span class="avatar"><img alt="" src="./Lesson 14 镜面高光和载入JSON模型 _ HiWebGL_files/ad516503a11cd5ca435acc9bb6523536.png" class="avatar avatar-40 photo" height="40" width="40"></span>
+                <span class="comment_author vcard fn">maoli</span>
+                <span class="comment_time">2011 年 11 月 17 日 下午 6:16</span>
+            </div>
+            <div class="comment_body">
+                <p></p><p>请问webgl也可以载入x3d格式的模型文件吗？</p>
+<p></p>
+                <p class="reply"><a class="comment-reply-link" href="http://www.hiwebgl.com/?p=384&amp;replytocom=213#respond" onclick="return addComment.moveForm(&quot;comment-213&quot;, &quot;213&quot;, &quot;respond&quot;, &quot;384&quot;)">回复</a></p>
+            </div>
+		</div>
+        
+        
+    
+</li>
+	<li class="comment odd alt thread-odd thread-alt depth-1" id="li-comment-1380">
+    	<div id="comment-1380">
+            <div class="comment_meta commentmetadata">
+                <span class="avatar"><img alt="" src="./Lesson 14 镜面高光和载入JSON模型 _ HiWebGL_files/ad516503a11cd5ca435acc9bb6523536(1).png" class="avatar avatar-40 photo" height="40" width="40"></span>
+                <span class="comment_author vcard fn">lky</span>
+                <span class="comment_time">2012 年 8 月 3 日 下午 4:17</span>
+            </div>
+            <div class="comment_body">
+                <p></p><p>这个教程的文件我在电脑上通过IIS打开，为啥一直处在loading world</p>
+<p></p>
+                <p class="reply"><a class="comment-reply-link" href="http://www.hiwebgl.com/?p=384&amp;replytocom=1380#respond" onclick="return addComment.moveForm(&quot;comment-1380&quot;, &quot;1380&quot;, &quot;respond&quot;, &quot;384&quot;)">回复</a></p>
+            </div>
+		</div>
+        
+        
+    
+</li>
+    </ol>
+        
+
+								<div id="respond">
+				<h3 id="reply-title">Post a Comment <small><a rel="nofollow" id="cancel-comment-reply-link" href="http://www.hiwebgl.com/?p=384#respond" style="display:none;">点击这里取消回复。</a></small></h3>
+									<form action="http://www.hiwebgl.com/wp-comments-post.php" method="post" id="commentform">
+																			<p class="comment-notes">电子邮件地址不会被公开。 必填项已用 <span class="required">*</span> 标注</p>							<p class="comment-form-author"><label for="author">姓名</label> <span class="required">*</span><input id="author" name="author" type="text" value="" size="30" aria-required="true"></p>
+<p class="comment-form-email"><label for="email">电子邮件</label> <span class="required">*</span><input id="email" name="email" type="text" value="" size="30" aria-required="true"></p>
+<p class="comment-form-url"><label for="url">站点</label><input id="url" name="url" type="text" value="" size="30"></p>
+												<p class="comment-form-comment"><label for="comment">评论</label><textarea id="comment" name="comment" cols="45" rows="8" aria-required="true"></textarea></p>						<p class="form-allowed-tags">您可以使用这些 <abbr title="HyperText Markup Language">HTML</abbr> 标签和属性： <code>&lt;a href="" title=""&gt; &lt;abbr title=""&gt; &lt;acronym title=""&gt; &lt;b&gt; &lt;blockquote cite=""&gt; &lt;cite&gt; &lt;code&gt; &lt;del datetime=""&gt; &lt;em&gt; &lt;i&gt; &lt;q cite=""&gt; &lt;strike&gt; &lt;strong&gt; </code></p>						<p class="form-submit">
+							<input name="submit" type="submit" id="submit" value="发表评论">
+							<input type="hidden" name="comment_post_ID" value="384" id="comment_post_ID">
+<input type="hidden" name="comment_parent" id="comment_parent" value="0">
+						</p>
+						<p style="display: none;"><input type="hidden" id="akismet_comment_nonce" name="akismet_comment_nonce" value="8583427213"></p>					</form>
+							</div><!-- #respond -->
+						
+</div><!-- #comments -->
+
+			</div><!-- #content -->
+		</div><!-- #container -->
+
+<div id="sidebar" class="widget-area" role="complementary">
+	<ul class="xoxo">
+    	<li id="search-2" class="widget-container widget_search"><form id="searchform" method="get" action="http://www.hiwebgl.com/"> 
+	<input type="text" name="s" id="s" class="search_term" value="Type in keyword and hit Enter..." onblur="if (this.value == &#39;&#39;) {this.value = &#39;Type in keyword and hit Enter...&#39;;}" onfocus="if (this.value == &#39;Type in keyword and hit Enter...&#39;) {this.value = &#39;&#39;;}">
+</form></li><li id="text-4" class="widget-container widget_text"><h3 class="widget-title">加入我们的QQ群</h3>			<div class="textwidget"><b>HiWebGL技术讨论群</b><br>①群群号174563471（已满）<br>②群群号133703893（已满）<br>③群群号196778533（已满）<br>④群群号217873851（已满）<br>⑤群群号225923498（已满）<br>500人群群号219549633<br>欢迎各位程序员和工程师加入！<br><a target="_blank" href="http://qun.qq.com/#jointhegroup/gid/219549633"><img border="0" src="./Lesson 14 镜面高光和载入JSON模型 _ HiWebGL_files/gp.png" alt="点击这里加入此群" title="点击这里加入此群"></a>
+<br><br>
+<b>HiWebGL产业讨论群</b><br>①群群号176289597（已满）<br>②群群号216936388<br>欢迎关注Web3D发展的从业者与富有理想与激情的创业者朋友加入！<br><a target="_blank" href="http://qun.qq.com/#jointhegroup/gid/216936388"><img border="0" src="./Lesson 14 镜面高光和载入JSON模型 _ HiWebGL_files/gp.png" alt="点击这里加入此群" title="点击这里加入此群"></a></div>
+		</li><style type="text/css" media="screen">
+#mwrapper-wm_show-3 .mcontainer {height: 300px; overflow: hidden;}
+</style>
+<li id="wm_show-3" class="widget-container wm_show"><h3 class="widget-title">关注我们的新浪微博！</h3><div class="mwrapper" id="mwrapper-wm_show-3"><div class="head"><img class="headimg" src="./Lesson 14 镜面高光和载入JSON模型 _ HiWebGL_files/89c570d0jw1e8qgp5bmzyj2050050aa8.jpg"><a class="headlink" href="http://weibo.com/2311418064" rel="external nofollow" target="_blank">HiWebGL</a><div class="onekey"><iframe width="63" height="24" frameborder="0" allowtransparency="true" marginwidth="0" marginheight="0" scrolling="no" border="0" src="./Lesson 14 镜面高光和载入JSON模型 _ HiWebGL_files/followbutton.html"></iframe></div></div><a class="scroll up" href="javascript:;"><img src="./Lesson 14 镜面高光和载入JSON模型 _ HiWebGL_files/transparent.gif"></a><div class="mcontainer"><ul class="microblogs"><li class="tweet">[哆啦A梦吃惊]<div class="rt"><a href="http://weibo.com/crazycomputer" rel="external nofollow" target="_blank">尼奥_</a> : 因写了抢猫粮插件被抓的小喵。<div class="pic rt-pic"><a href="http://ww3.sinaimg.cn/large/6588fb91jw1f8a611qywmj20qo0r743g.jpg" rel="external nofollow" target="_blank"><img src="./Lesson 14 镜面高光和载入JSON模型 _ HiWebGL_files/6588fb91jw1f8a611qywmj20qo0r743g.jpg"></a></div></div><div class="meta"><a href="http://api.t.sina.com.cn/2311418064/statuses/4025014212843692" rel="external nofollow" target="_blank">9月29日 12:00</a> 来自 <a href="http://weibo.com/2311418064" rel="external nofollow" target="_blank">新浪微博</a></div></li><li class="tweet">转发微博<div class="rt"><a href="http://weibo.com/armcn" rel="external nofollow" target="_blank">ARM中国</a> : 在看颜的时代，如何让一款游戏画面更具高bigger？从8位像素画风到1080P/4K，再到ARM的Enlighten全局光照技术，能够分分钟变化出数十种光照效果，再挑的玩家都给它点赞了，不信你就来看看[围观][围观]<a href="http://t.cn/RcNsHsc" rel="external nofollow" target="_blank">http://t.cn/RcNsHsc</a><div class="pic rt-pic"><a href="http://ww3.sinaimg.cn/large/84217b4fgw1f89g6wubugj20j30q6gr3.jpg" rel="external nofollow" target="_blank"><img src="./Lesson 14 镜面高光和载入JSON模型 _ HiWebGL_files/84217b4fgw1f89g6wubugj20j30q6gr3.jpg"></a></div></div><div class="meta"><a href="http://api.t.sina.com.cn/2311418064/statuses/4025000392991907" rel="external nofollow" target="_blank">9月29日 11:05</a> 来自 <a href="http://weibo.com/2311418064" rel="external nofollow" target="_blank">新浪微博</a></div></li><li class="tweet">转发微博<div class="rt"><a href="http://weibo.com/baidujs" rel="external nofollow" target="_blank">JS小组</a> : 你知道使用 target='_blank' 也会有安全漏洞么？尤其是在各种 UGC 网站中。不过小编早就玩过了，其实一般倒也不会用在钓鱼上，而是用在各种各样的广告点击中。推荐文章《target='_blank' 安全漏洞示例》地址 <a href="http://t.cn/RchBwVu" rel="external nofollow" target="_blank">http://t.cn/RchBwVu</a>  $w<div class="pic rt-pic"><a href="http://ww2.sinaimg.cn/large/aa9d3df6jw1f7fewekmx8j20g30a1aak.jpg" rel="external nofollow" target="_blank"><img src="./Lesson 14 镜面高光和载入JSON模型 _ HiWebGL_files/aa9d3df6jw1f7fewekmx8j20g30a1aak.jpg"></a></div></div><div class="meta"><a href="http://api.t.sina.com.cn/2311418064/statuses/4016375595329873" rel="external nofollow" target="_blank">9月5日 15:53</a> 来自 <a href="http://weibo.com/2311418064" rel="external nofollow" target="_blank">新浪微博</a></div></li><li class="tweet">不做游戏，帮转<div class="rt"><a href="http://weibo.com/xdarui" rel="external nofollow" target="_blank">阿里子之</a> : 有做WebVR游戏的公司么，求合作。求圈内大神帮忙转发。@寒冬winter @大城小胖 @w3cplus</div><div class="meta"><a href="http://api.t.sina.com.cn/2311418064/statuses/4015348426770066" rel="external nofollow" target="_blank">9月2日 19:52</a> 来自 <a href="http://weibo.com/2311418064" rel="external nofollow" target="_blank">新浪微博</a></div></li><li class="tweet">阿里云OSS是否支持websockets?有人知道吗？<div class="meta"><a href="http://api.t.sina.com.cn/2311418064/statuses/4006622127044001" rel="external nofollow" target="_blank">8月9日 17:56</a> 来自 <a href="http://weibo.com/2311418064" rel="external nofollow" target="_blank">新浪微博</a></div></li></ul></div><a class="scroll down" href="javascript:;"><img src="./Lesson 14 镜面高光和载入JSON模型 _ HiWebGL_files/transparent.gif"></a></div></li><li id="recent-comments-2" class="widget-container widget_recent_comments"><h3 class="widget-title">近期评论</h3><ul id="recentcomments"><li class="recentcomments"><a href="http://www.d2film.com/" rel="external nofollow" class="url">企业宣传片制作d2film.com影视视频制作公司QQ30998</a> 发表在《<a href="http://www.hiwebgl.com/?p=42#comment-7984">WebGL中文教程翻译工程启动！</a>》</li><li class="recentcomments"><a href="http://www.128sf.cn/" rel="external nofollow" class="url">魔域服务器架设</a> 发表在《<a href="http://www.hiwebgl.com/?p=312#comment-7858">Lesson 9 优化代码结构实现多物体运动</a>》</li><li class="recentcomments"><a href="http://www.39uc.cn/" rel="external nofollow" class="url">天龙八部师傅m161</a> 发表在《<a href="http://www.hiwebgl.com/?p=70#comment-7857">外媒公布Firefox 6性能测试结果</a>》</li><li class="recentcomments"><a href="http://www.233sf.cn/" rel="external nofollow" class="url">最新奇迹私发网</a> 发表在《<a href="http://www.hiwebgl.com/?p=42#comment-7856">WebGL中文教程翻译工程启动！</a>》</li><li class="recentcomments"><a href="http://www.5aivideo.com/" rel="external nofollow" class="url">婚礼跟拍视频5aivideo.com婚礼摄影MV-QQ73595</a> 发表在《<a href="http://www.hiwebgl.com/?p=42#comment-7829">WebGL中文教程翻译工程启动！</a>》</li></ul></li><li id="categories-2" class="widget-container widget_categories"><h3 class="widget-title">分类目录</h3>		<ul>
+	<li class="cat-item cat-item-16"><a href="http://www.hiwebgl.com/?cat=16" title="查看 Demo大赏 下的所有文章">Demo大赏</a>
+</li>
+	<li class="cat-item cat-item-29"><a href="http://www.hiwebgl.com/?cat=29" title="查看 HTML5新闻 下的所有文章">HTML5新闻</a>
+</li>
+	<li class="cat-item cat-item-57"><a href="http://www.hiwebgl.com/?cat=57" title="Oak3D中文教程">Oak3D教程</a>
+</li>
+	<li class="cat-item cat-item-17"><a href="http://www.hiwebgl.com/?cat=17" title="查看 WebGL教程 下的所有文章">WebGL教程</a>
+</li>
+	<li class="cat-item cat-item-3"><a href="http://www.hiwebgl.com/?cat=3" title="WebGL新闻">WebGL新闻</a>
+</li>
+	<li class="cat-item cat-item-10"><a href="http://www.hiwebgl.com/?cat=10" title="查看 博文精选 下的所有文章">博文精选</a>
+</li>
+	<li class="cat-item cat-item-4"><a href="http://www.hiwebgl.com/?cat=4" title="推荐阅读">推荐</a>
+</li>
+	<li class="cat-item cat-item-1"><a href="http://www.hiwebgl.com/?cat=1" title="查看 未分类 下的所有文章">未分类</a>
+</li>
+		</ul>
+</li><li id="archives-2" class="widget-container widget_archive"><h3 class="widget-title">文章归档</h3>		<ul>
+			<li><a href="http://www.hiwebgl.com/?m=201206" title="2012 年六月">2012 年六月</a></li>
+	<li><a href="http://www.hiwebgl.com/?m=201205" title="2012 年五月">2012 年五月</a></li>
+	<li><a href="http://www.hiwebgl.com/?m=201204" title="2012 年四月">2012 年四月</a></li>
+	<li><a href="http://www.hiwebgl.com/?m=201203" title="2012 年三月">2012 年三月</a></li>
+	<li><a href="http://www.hiwebgl.com/?m=201202" title="2012 年二月">2012 年二月</a></li>
+	<li><a href="http://www.hiwebgl.com/?m=201201" title="2012 年一月">2012 年一月</a></li>
+	<li><a href="http://www.hiwebgl.com/?m=201112" title="2011 年十二月">2011 年十二月</a></li>
+	<li><a href="http://www.hiwebgl.com/?m=201111" title="2011 年十一月">2011 年十一月</a></li>
+	<li><a href="http://www.hiwebgl.com/?m=201110" title="2011 年十月">2011 年十月</a></li>
+	<li><a href="http://www.hiwebgl.com/?m=201109" title="2011 年九月">2011 年九月</a></li>
+	<li><a href="http://www.hiwebgl.com/?m=201108" title="2011 年八月">2011 年八月</a></li>
+		</ul>
+</li>    </ul>
+</div><!-- #sidebar .widget-area -->	</div><!-- #main -->
+    <div id="footer" role="contentinfo">
+    	
+    	<div id="colophon">
+            <div id="site-info" class="clearfix">
+                <div id="generator">Powered by <a href="http://wordpress.org/" title="Semantic Personal Publishing Platform" rel="generator">Wordpress</a> and <a href="http://wpcrunchy.com/" title="Free Premium Quality Wordpress Themes">WPCrunchy</a></div>
+                <div id="credits">Designed by <a href="http://www.hostreviewgeeks.com/" title="best web hosting" target="_blank">best web hosting</a>. In collaboration with <a href="http://www.hostv.com/" title="VPS Hosting" target="_blank">VPS Hosting</a>, <a href="http://broadwaytickets.co/" title="Broadway Tickets" target="_blank">Broadway Tickets</a>, <a href="http://wpcorner.com/" title="Free Wordpress Themes" target="_blank">Free Wordpress Themes</a>.</div>
+            </div>
+        </div>
+    </div><!-- #footer -->
+</div><!-- #wrapper -->
+
+<script type="text/javascript">jQuery(document).ready(function() { if(jQuery("ul.accordion li").length > 2) { jQuery("ul.accordion").accordion(); } });</script><script src="./Lesson 14 镜面高光和载入JSON模型 _ HiWebGL_files/stat.php" language="JavaScript"></script><script src="./Lesson 14 镜面高光和载入JSON模型 _ HiWebGL_files/core.php" charset="utf-8" type="text/javascript"></script><a href="http://www.cnzz.com/stat/website.php?web_id=3871765" target="_blank" title="站长统计"><img border="0" hspace="0" vspace="0" src="./Lesson 14 镜面高光和载入JSON模型 _ HiWebGL_files/pic.gif"></a><script src="./Lesson 14 镜面高光和载入JSON模型 _ HiWebGL_files/stat.js.下载" defer="defer" async="async"></script>
+ </body></html>

@@ -1,0 +1,751 @@
+<!DOCTYPE html>
+<!-- saved from url=(0029)http://www.hiwebgl.com/?p=339 -->
+<html dir="ltr" lang="zh-CN"><script type="text/javascript">
+    var spector;
+    var captureOnLoad = false;
+    var captureOffScreen = false;
+    window.__SPECTOR_Canvases = [];
+
+    (function() {
+        var __SPECTOR_Origin_EXTENSION_GetContext = HTMLCanvasElement.prototype.getContext;
+        HTMLCanvasElement.prototype.__SPECTOR_Origin_EXTENSION_GetContext = __SPECTOR_Origin_EXTENSION_GetContext;
+
+        HTMLCanvasElement.prototype.getContext = function () {
+            var context = null;
+            if (!arguments.length) {
+                return context;
+            }
+
+            if (arguments.length === 1) {
+                context = this.__SPECTOR_Origin_EXTENSION_GetContext(arguments[0]);
+                if (context === null) {
+                    return context;
+                }
+            }
+            else if (arguments.length === 2) {
+                context = this.__SPECTOR_Origin_EXTENSION_GetContext(arguments[0], arguments[1]);
+                if (context === null) {
+                    return context;
+                }
+            }
+
+            var contextNames = ["webgl", "experimental-webgl", "webgl2", "experimental-webgl2"];
+            if (contextNames.indexOf(arguments[0]) !== -1) {
+                context.canvas.setAttribute("__spector_context_type", arguments[0]);
+                // Notify the page a canvas is available.
+                var myEvent = new CustomEvent("SpectorWebGLCanvasAvailableEvent");
+                document.dispatchEvent(myEvent);
+
+                if (captureOffScreen) {
+                    var found = false;
+                    for (var i = 0; i < window.__SPECTOR_Canvases.length; i++) {
+                        if (window.__SPECTOR_Canvases[i] === this) {
+                            found = true;
+                            break;
+                        }
+                    }
+                    if (!found) {
+                        window.__SPECTOR_Canvases.push(this);
+                    }
+                }
+
+                if (captureOnLoad) {
+                    // Ensures canvas is in the dom to capture the one we are currently tracking.
+                    if (this.parentElement || false) {
+                        spector.captureContext(context, 500, false);
+                        captureOnLoad = false;
+                    }
+                }
+            }
+
+            return context;
+        }
+    })()</script><script>(function main() {
+    // Create enabled event
+    function fireEnabledEvent() {
+        // If gli exists, then we are already present and shouldn't do anything
+        if (!window.gli) {
+            setTimeout(function () {
+                var enabledEvent = document.createEvent("Event");
+                enabledEvent.initEvent("WebGLEnabledEvent", true, true);
+                document.dispatchEvent(enabledEvent);
+            }, 0);
+        } else {
+            //console.log("WebGL Inspector already embedded on the page - disabling extension");
+        }
+    };
+
+    // Grab the path root from the extension
+    document.addEventListener("WebGLInspectorReadyEvent", function (e) {
+        var pathElement = document.getElementById("__webglpathroot");
+        if (window["gliloader"]) {
+            gliloader.pathRoot = pathElement.innerText;
+        } else {
+            // TODO: more?
+            window.gliCssUrl = pathElement.innerText + "gli.all.css";
+        }
+    }, false);
+
+    // Rewrite getContext to snoop for webgl
+    var originalGetContext = HTMLCanvasElement.prototype.getContext;
+    if (!HTMLCanvasElement.prototype.getContextRaw) {
+        HTMLCanvasElement.prototype.getContextRaw = originalGetContext;
+    }
+    HTMLCanvasElement.prototype.getContext = function () {
+        var ignoreCanvas = this.internalInspectorSurface;
+        if (ignoreCanvas) {
+            return originalGetContext.apply(this, arguments);
+        }
+
+        var result = originalGetContext.apply(this, arguments);
+        if (result == null) {
+            return null;
+        }
+
+        var contextNames = ["moz-webgl", "webkit-3d", "experimental-webgl", "webgl", "3d"];
+        var requestingWebGL = contextNames.indexOf(arguments[0]) != -1;
+        if (requestingWebGL) {
+            // Page is requesting a WebGL context!
+            fireEnabledEvent(this);
+
+            // If we are injected, inspect this context
+            if (window.gli) {
+                if (gli.host.inspectContext) {
+                    // TODO: pull options from extension
+                    result = gli.host.inspectContext(this, result);
+                    // NOTE: execute in a timeout so that if the dom is not yet
+                    // loaded this won't error out.
+                    window.setTimeout(function() {
+                        var hostUI = new gli.host.HostUI(result);
+                        result.hostUI = hostUI; // just so we can access it later for debugging
+                    }, 0);
+                }
+            }
+        }
+
+        return result;
+    };
+})();</script><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+
+<title>Lesson 11 球体、旋转矩阵和鼠标事件 | HiWebGL</title>
+<link rel="profile" href="http://gmpg.org/xfn/11">
+<link rel="stylesheet" type="text/css" media="all" href="./Lesson 11 球体、旋转矩阵和鼠标事件 _ HiWebGL_files/style.css">
+<!--[if IE]>
+<link rel="stylesheet" type="text/css" media="all" href="http://www.hiwebgl.com/wp-content/themes/mnchrome/style-ie.css" />
+<![endif]-->
+<link rel="stylesheet" type="text/css" media="all" href="./Lesson 11 球体、旋转矩阵和鼠标事件 _ HiWebGL_files/custom.css"><link rel="pingback" href="http://www.hiwebgl.com/xmlrpc.php">
+<meta name="robots" content="index,follow">
+<link rel="canonical" href="http://www.hiwebgl.com/?p=339">
+<link rel="alternate" type="application/rss+xml" title="HiWebGL » Feed" href="http://www.hiwebgl.com/?feed=rss2">
+<link rel="alternate" type="application/rss+xml" title="HiWebGL » 评论 Feed" href="http://www.hiwebgl.com/?feed=comments-rss2">
+<link rel="alternate" type="application/rss+xml" title="HiWebGL » Lesson 11 球体、旋转矩阵和鼠标事件 评论 Feed" href="http://www.hiwebgl.com/?feed=rss2&amp;p=339">
+<link rel="stylesheet" id="wm-css" href="./Lesson 11 球体、旋转矩阵和鼠标事件 _ HiWebGL_files/style(1).css" type="text/css" media="all">
+<link rel="stylesheet" id="toc-screen-css" href="./Lesson 11 球体、旋转矩阵和鼠标事件 _ HiWebGL_files/screen.css" type="text/css" media="all">
+<link rel="stylesheet" id="codebox-css" href="./Lesson 11 球体、旋转矩阵和鼠标事件 _ HiWebGL_files/codebox.css" type="text/css" media="screen">
+<script type="text/javascript" src="./Lesson 11 球体、旋转矩阵和鼠标事件 _ HiWebGL_files/jquery.js.下载"></script>
+<script type="text/javascript" src="./Lesson 11 球体、旋转矩阵和鼠标事件 _ HiWebGL_files/front.js.下载"></script>
+<script type="text/javascript" src="./Lesson 11 球体、旋转矩阵和鼠标事件 _ HiWebGL_files/widget.js.下载"></script>
+<script type="text/javascript" src="./Lesson 11 球体、旋转矩阵和鼠标事件 _ HiWebGL_files/comment-reply.js.下载"></script>
+<script type="text/javascript" src="./Lesson 11 球体、旋转矩阵和鼠标事件 _ HiWebGL_files/codebox.js.下载"></script>
+<link rel="EditURI" type="application/rsd+xml" title="RSD" href="http://www.hiwebgl.com/xmlrpc.php?rsd">
+<link rel="wlwmanifest" type="application/wlwmanifest+xml" href="http://www.hiwebgl.com/wp-includes/wlwmanifest.xml"> 
+<link rel="prev" title="Lesson 10 载入世界，以及相机简介" href="http://www.hiwebgl.com/?p=327">
+<link rel="next" title="Lesson 12 点光源" href="http://www.hiwebgl.com/?p=355">
+<meta name="generator" content="Monochrome 1.0">
+<link rel="canonical" href="http://www.hiwebgl.com/?p=339">
+<script type="text/javascript" src="./Lesson 11 球体、旋转矩阵和鼠标事件 _ HiWebGL_files/jquery.min.js.下载"></script>
+<script type="text/javascript" src="./Lesson 11 球体、旋转矩阵和鼠标事件 _ HiWebGL_files/hoverIntent.js.下载"></script>
+<script type="text/javascript" src="./Lesson 11 球体、旋转矩阵和鼠标事件 _ HiWebGL_files/superfish.js.下载"></script>
+<script type="text/javascript" src="./Lesson 11 球体、旋转矩阵和鼠标事件 _ HiWebGL_files/supersubs.js.下载"></script>
+<script type="text/javascript" src="./Lesson 11 球体、旋转矩阵和鼠标事件 _ HiWebGL_files/jquery.accordion.js.下载"></script>
+<script type="text/javascript" src="./Lesson 11 球体、旋转矩阵和鼠标事件 _ HiWebGL_files/dropdowns.js.下载"></script>
+<style type="text/css" media="all">
+/* <![CDATA[ */
+@import url("http://www.hiwebgl.com/wp-content/plugins/wp-table-reloaded/css/plugin.css?ver=1.9.3");
+@import url("http://www.hiwebgl.com/wp-content/plugins/wp-table-reloaded/css/datatables.css?ver=1.9.3");
+/* ]]> */
+</style></head>
+<body class="single single-post postid-339 single-format-standard">
+<div id="wrapper" class="hfeed">
+	<div id="header">
+    	<div id="masthead">
+        	<div id="branding" role="banner">
+            	<div id="site-logo">
+                	<a href="http://www.hiwebgl.com/" title="HiWebGL" rel="home">
+                    	                    <img src="./Lesson 11 球体、旋转矩阵和鼠标事件 _ HiWebGL_files/logo.png" align="logo">
+                    					</a>
+                </div>
+                <div id="site-description">最好的HTML5 WebGL中文资讯站！</div>
+                            </div><!-- #branding -->
+            <div id="access" role="navigation">
+            		<div class="menu">
+		<ul class="sf-menu sf-js-enabled">
+			<li>
+            	<a href="http://www.hiwebgl.com/" title="HiWebGL" rel="home">
+				<strong>首页</strong><span>Homepage</span>
+			</a></li>
+						<li>
+				<a href="http://www.hiwebgl.com/?p=42">
+				<strong>教程</strong><span>&nbsp;</span></a>
+							</li>
+						<li>
+				<a href="http://www.hiwebgl.com/?cat=16">
+				<strong>Demo</strong><span>&nbsp;</span></a>
+							</li>
+						<li>
+				<a href="http://www.hiwebgl.com/ask">
+				<strong>有问必答</strong><span>&nbsp;</span></a>
+							</li>
+						<li>
+				<a href="http://hiwebgl.com/forum/">
+				<strong>论坛</strong><span>&nbsp;</span></a>
+							</li>
+					</ul>
+	</div>
+            </div><!-- #access -->
+        </div><!-- #masthead -->
+    </div><!-- #header -->
+    
+    <div id="breadcrumbWrap"><div id="breadcrumb">
+<span>You are here: </span><a href="http://www.hiwebgl.com/">Home</a> » <a href="http://www.hiwebgl.com/?cat=17" title="查看 WebGL教程 中的全部文章">WebGL教程</a> » Lesson 11 球体、旋转矩阵和鼠标事件</div></div>    
+    <div id="main">
+		<div id="container">
+			<div id="content" role="main">
+
+
+				<div id="post-339" class="post-339 post type-post status-publish format-standard hentry category-webgl">
+					<h1 class="entry-title">Lesson 11 球体、旋转矩阵和鼠标事件</h1>
+
+					<div class="entry-meta">
+							<span class="meta-author">By admin</span>
+    <span class="meta-date">On 2011 年 9 月 22 日</span>
+    <span class="meta-comment">3 条评论</span>
+						3,343 次浏览					</div><!-- .entry-meta -->
+
+					<div class="entry-content">
+                		<p><span style="color: #888888;"><em>HiWebGL译者声明：因为译者个人方便的原因，我们将原教程中的第三方图形库由glMatrix改为Oak3D实现，这不影响到Demo的最终效果和实现，也不影响到WebGL的讲解和学习。原教程正文中相应的代码和讲解也为做了相应修改！本教程由HiWebGL翻译整理，转载请注明出处！</em></span></p>
+<p><span style="color: #888888;"><em>关于Oak3D：Oak3D是一套简单易用、性能优越的WebGL Javascript Library。您可以在他们的主页找到更多信息。Oak3D主页：<a href="http://www.oak3d.com/" target="_blank"><span style="color: #888888;">http://www.oak3d.com</span></a>&nbsp;</em></span></p>
+<p>欢迎来到WebGL教程的第11课。本节课是第一个不是基于NeHe的OpenGL教程改编的课时。这节课里，我们将会演示在平行光照下的一个球体，并为其贴上纹理贴图，观察者可以使用鼠标来旋转球体。</p>
+<p>下面的视频就是我们这节课将会完成的最终效果。</p>
+<p><embed src="http://player.youku.com/player.php/sid/XMzA2Mzc3OTIw/v.swf" quality="high" width="480" height="400" align="middle" allowscriptaccess="sameDomain" type="application/x-shockwave-flash"></p>
+<p>点击<a href="http://www.hiwebgl.com/webgl_lessons/lesson11/index.html" target="_blank">这里</a>打开一个独立的WebGL页面，如果你的浏览器不支持WebGL，请点击<a href="http://www.hiwebgl.com/?p=52" target="_blank">这里</a>。</p>
+<p>一开始当纹理还没有完整载入的时候你会看到一个白色的球体，载入完成后你将看到月球，并有来自右上方的光照。用鼠标拖拽球体，球体将会转动，光照效果依然存在。如果你想要改变光线的参数，和第7课一样，可以使用canvas下方的文本输入框。</p>
+<p>下面我们来看看它是怎么工作的……</p>
+<p>惯例声明：本系列的教程是针对那些已经具备相应编程知识但没有实际3D图形经验的人的；目标是让学习者创建并运行代码，并且明白代码其中的含义，从而可以快速地创建自己的3D Web页面。如果你还没有阅读前一课，请先阅读前一课的内容吧。因为本课中我只会讲解那些与前一课中不同的新知识。</p>
+<p>另外，我编写这套教程是因为我在独立学习WebGL，所以教程中可能（非常可能）会有错误，所以还请风险自担。尽管如此，我还是会不断的修正bug和改正其中的错误的，所以如果你发现了教程中的错误，请告诉我。</p>
+<p>有两种方法可以获得上面实例的代码：在实例的独立页面中选择“查看源代码”；或者点击<a href="http://www.hiwebgl.com/webgl_lessons/lesson11/lesson11.zip" target="_blank">这里</a>下载我们为您准备好的压缩包。</p>
+<p>和往常一样，我们还是从代码的底部开始我们的学习，一步一步讲解那些发生变化的代码。在body标签之前的HTML代码，与第七课相比并没有发生变化，所以我们直接来看一下webGLStart函数。</p>
+
+<div class="wp_codebox"><table><tbody><tr id="p3391"><td class="line_numbers"><pre>394
+395
+396
+397
+398
+399
+400
+401
+402
+403
+404
+405
+406
+407
+408
+409
+</pre></td><td class="code" id="p339code1"><pre class="javascript" style="font-family:monospace;">    <span style="color: #003366; font-weight: bold;">function</span> webGLStart<span style="color: #009900;">(</span><span style="color: #009900;">)</span> <span style="color: #009900;">{</span>
+        <span style="color: #003366; font-weight: bold;">var</span> canvas <span style="color: #339933;">=</span> document.<span style="color: #660066;">getElementById</span><span style="color: #009900;">(</span><span style="color: #3366CC;">"lesson11-canvas"</span><span style="color: #009900;">)</span><span style="color: #339933;">;</span>
+        initGL<span style="color: #009900;">(</span>canvas<span style="color: #009900;">)</span><span style="color: #339933;">;</span>
+        initShaders<span style="color: #009900;">(</span><span style="color: #009900;">)</span><span style="color: #339933;">;</span>
+        initBuffers<span style="color: #009900;">(</span><span style="color: #009900;">)</span><span style="color: #339933;">;</span>
+        initTexture<span style="color: #009900;">(</span><span style="color: #009900;">)</span><span style="color: #339933;">;</span>
+&nbsp;
+        gl.<span style="color: #660066;">clearColor</span><span style="color: #009900;">(</span><span style="color: #CC0000;">0.0</span><span style="color: #339933;">,</span> <span style="color: #CC0000;">0.0</span><span style="color: #339933;">,</span> <span style="color: #CC0000;">0.0</span><span style="color: #339933;">,</span> <span style="color: #CC0000;">1.0</span><span style="color: #009900;">)</span><span style="color: #339933;">;</span>
+        gl.<span style="color: #660066;">enable</span><span style="color: #009900;">(</span>gl.<span style="color: #660066;">DEPTH_TEST</span><span style="color: #009900;">)</span><span style="color: #339933;">;</span>
+&nbsp;
+        canvas.<span style="color: #660066;">onmousedown</span> <span style="color: #339933;">=</span> handleMouseDown<span style="color: #339933;">;</span>
+        document.<span style="color: #660066;">onmouseup</span> <span style="color: #339933;">=</span> handleMouseUp<span style="color: #339933;">;</span>
+        document.<span style="color: #660066;">onmousemove</span> <span style="color: #339933;">=</span> handleMouseMove<span style="color: #339933;">;</span>
+&nbsp;
+        tick<span style="color: #009900;">(</span><span style="color: #009900;">)</span><span style="color: #339933;">;</span>
+    <span style="color: #009900;">}</span></pre></td></tr></tbody></table></div>
+
+<p>这三行新增加的代码允许我们探测鼠标事件，当用户拖拽球体的时候可以相应的旋转它。很明显，我们只在3D canvas内部读取MouseDown事件（如果你在页面的其他部分进行了拖拽，将不会对球体产生影响，比如说点击文本框）。不那么明显的是，我们却在整个页面而不仅仅是canvas中，监听MouseUp和MouseMove事件；这样我们就可以完整地读取用户拖拽，即使鼠标被释放在或被移动到canvas之外，只要拖拽行为发生在canvas里面就可以了。这种解决方法让我们避免了成为那些愚蠢的交互页面中的一员——当你想要旋转物体的时候，在场景内按下鼠标，然后由于拖拽移动鼠标的缘故，在场景外释放了鼠标，但是你却发现当你把鼠标移动回场景内的时候，MouseUp事件却没有生效，笨蛋电脑依然认为你还是在拖拽当中，逼着你在场景内的某个位置单击鼠标才行。</p>
+<p>继续往上看代码，我们来到了tick函数，在本节课中它只是简单的安排下一帧调用drawScene函数，因为它已经不需要处理键盘输入了（因为本课中我们没有键盘输入），也不需要运动场景（因为场景中物体的运动只对用户输入发生反应，没有独立的动画场景）</p>
+<p>下一个比较重要的变动位于drawScene函数中。开始，我们还是用样板化的代码清空了canvas并设置了透视，然后和第7课一样用相同的代码设置了光照。</p>
+
+<div class="wp_codebox"><table><tbody><tr id="p3392"><td class="line_numbers"><pre>332
+333
+334
+335
+336
+337
+338
+339
+340
+341
+342
+343
+344
+345
+346
+347
+348
+349
+350
+351
+352
+353
+354
+355
+356
+357
+358
+359
+360
+361
+362
+363
+364
+</pre></td><td class="code" id="p339code2"><pre class="javascript" style="font-family:monospace;">    <span style="color: #003366; font-weight: bold;">function</span> drawScene<span style="color: #009900;">(</span><span style="color: #009900;">)</span> <span style="color: #009900;">{</span>
+        gl.<span style="color: #660066;">viewport</span><span style="color: #009900;">(</span><span style="color: #CC0000;">0</span><span style="color: #339933;">,</span> <span style="color: #CC0000;">0</span><span style="color: #339933;">,</span> gl.<span style="color: #660066;">viewportWidth</span><span style="color: #339933;">,</span> gl.<span style="color: #660066;">viewportHeight</span><span style="color: #009900;">)</span><span style="color: #339933;">;</span>
+        gl.<span style="color: #660066;">clear</span><span style="color: #009900;">(</span>gl.<span style="color: #660066;">COLOR_BUFFER_BIT</span> <span style="color: #339933;">|</span> gl.<span style="color: #660066;">DEPTH_BUFFER_BIT</span><span style="color: #009900;">)</span><span style="color: #339933;">;</span>
+&nbsp;
+        pMatrix <span style="color: #339933;">=</span> okMat4Proj<span style="color: #009900;">(</span><span style="color: #CC0000;">45</span><span style="color: #339933;">,</span> gl.<span style="color: #660066;">viewportWidth</span> <span style="color: #339933;">/</span> gl.<span style="color: #660066;">viewportHeight</span><span style="color: #339933;">,</span> <span style="color: #CC0000;">0.1</span><span style="color: #339933;">,</span> <span style="color: #CC0000;">100.0</span><span style="color: #009900;">)</span><span style="color: #339933;">;</span>
+&nbsp;
+        <span style="color: #003366; font-weight: bold;">var</span> lighting <span style="color: #339933;">=</span> document.<span style="color: #660066;">getElementById</span><span style="color: #009900;">(</span><span style="color: #3366CC;">"lighting"</span><span style="color: #009900;">)</span>.<span style="color: #660066;">checked</span><span style="color: #339933;">;</span>
+        gl.<span style="color: #660066;">uniform1i</span><span style="color: #009900;">(</span>shaderProgram.<span style="color: #660066;">useLightingUniform</span><span style="color: #339933;">,</span> lighting<span style="color: #009900;">)</span><span style="color: #339933;">;</span>
+        <span style="color: #000066; font-weight: bold;">if</span> <span style="color: #009900;">(</span>lighting<span style="color: #009900;">)</span> <span style="color: #009900;">{</span>
+            gl.<span style="color: #660066;">uniform3f</span><span style="color: #009900;">(</span>
+                shaderProgram.<span style="color: #660066;">ambientColorUniform</span><span style="color: #339933;">,</span>
+                parseFloat<span style="color: #009900;">(</span>document.<span style="color: #660066;">getElementById</span><span style="color: #009900;">(</span><span style="color: #3366CC;">"ambientR"</span><span style="color: #009900;">)</span>.<span style="color: #660066;">value</span><span style="color: #009900;">)</span><span style="color: #339933;">,</span>
+                parseFloat<span style="color: #009900;">(</span>document.<span style="color: #660066;">getElementById</span><span style="color: #009900;">(</span><span style="color: #3366CC;">"ambientG"</span><span style="color: #009900;">)</span>.<span style="color: #660066;">value</span><span style="color: #009900;">)</span><span style="color: #339933;">,</span>
+                parseFloat<span style="color: #009900;">(</span>document.<span style="color: #660066;">getElementById</span><span style="color: #009900;">(</span><span style="color: #3366CC;">"ambientB"</span><span style="color: #009900;">)</span>.<span style="color: #660066;">value</span><span style="color: #009900;">)</span>
+            <span style="color: #009900;">)</span><span style="color: #339933;">;</span>
+&nbsp;
+            <span style="color: #003366; font-weight: bold;">var</span> lightingDirection <span style="color: #339933;">=</span> <span style="color: #003366; font-weight: bold;">new</span> okVec3<span style="color: #009900;">(</span>
+                parseFloat<span style="color: #009900;">(</span>document.<span style="color: #660066;">getElementById</span><span style="color: #009900;">(</span><span style="color: #3366CC;">"lightDirectionX"</span><span style="color: #009900;">)</span>.<span style="color: #660066;">value</span><span style="color: #009900;">)</span><span style="color: #339933;">,</span>
+                parseFloat<span style="color: #009900;">(</span>document.<span style="color: #660066;">getElementById</span><span style="color: #009900;">(</span><span style="color: #3366CC;">"lightDirectionY"</span><span style="color: #009900;">)</span>.<span style="color: #660066;">value</span><span style="color: #009900;">)</span><span style="color: #339933;">,</span>
+                parseFloat<span style="color: #009900;">(</span>document.<span style="color: #660066;">getElementById</span><span style="color: #009900;">(</span><span style="color: #3366CC;">"lightDirectionZ"</span><span style="color: #009900;">)</span>.<span style="color: #660066;">value</span><span style="color: #009900;">)</span>
+            <span style="color: #009900;">)</span><span style="color: #339933;">;</span>
+&nbsp;
+            <span style="color: #003366; font-weight: bold;">var</span> adjustedLD <span style="color: #339933;">=</span> lightingDirection.<span style="color: #660066;">normalize</span><span style="color: #009900;">(</span><span style="color: #003366; font-weight: bold;">false</span><span style="color: #009900;">)</span><span style="color: #339933;">;</span>
+            adjustedLD <span style="color: #339933;">=</span> okVec3MulVal<span style="color: #009900;">(</span>adjustedLD<span style="color: #339933;">,</span> <span style="color: #339933;">-</span><span style="color: #CC0000;">1.0</span><span style="color: #009900;">)</span><span style="color: #339933;">;</span>
+            gl.<span style="color: #660066;">uniform3fv</span><span style="color: #009900;">(</span>shaderProgram.<span style="color: #660066;">lightingDirectionUniform</span><span style="color: #339933;">,</span> adjustedLD.<span style="color: #660066;">toArray</span><span style="color: #009900;">(</span><span style="color: #009900;">)</span><span style="color: #009900;">)</span><span style="color: #339933;">;</span>
+&nbsp;
+            gl.<span style="color: #660066;">uniform3f</span><span style="color: #009900;">(</span>
+                shaderProgram.<span style="color: #660066;">directionalColorUniform</span><span style="color: #339933;">,</span>
+                parseFloat<span style="color: #009900;">(</span>document.<span style="color: #660066;">getElementById</span><span style="color: #009900;">(</span><span style="color: #3366CC;">"directionalR"</span><span style="color: #009900;">)</span>.<span style="color: #660066;">value</span><span style="color: #009900;">)</span><span style="color: #339933;">,</span>
+                parseFloat<span style="color: #009900;">(</span>document.<span style="color: #660066;">getElementById</span><span style="color: #009900;">(</span><span style="color: #3366CC;">"directionalG"</span><span style="color: #009900;">)</span>.<span style="color: #660066;">value</span><span style="color: #009900;">)</span><span style="color: #339933;">,</span>
+                parseFloat<span style="color: #009900;">(</span>document.<span style="color: #660066;">getElementById</span><span style="color: #009900;">(</span><span style="color: #3366CC;">"directionalB"</span><span style="color: #009900;">)</span>.<span style="color: #660066;">value</span><span style="color: #009900;">)</span>
+            <span style="color: #009900;">)</span><span style="color: #339933;">;</span>
+        <span style="color: #009900;">}</span></pre></td></tr></tbody></table></div>
+
+<p>然后，我们移动到正确的位置，开始绘制月球。</p>
+
+<div class="wp_codebox"><table><tbody><tr id="p3393"><td class="line_numbers"><pre>366
+</pre></td><td class="code" id="p339code3"><pre class="javascript" style="font-family:monospace;">        mvMatrix <span style="color: #339933;">=</span> okMat4Trans<span style="color: #009900;">(</span><span style="color: #CC0000;">0.0</span><span style="color: #339933;">,</span> <span style="color: #CC0000;">0.0</span><span style="color: #339933;">,</span> <span style="color: #339933;">-</span><span style="color: #CC0000;">6.0</span><span style="color: #009900;">)</span><span style="color: #339933;">;</span></pre></td></tr></tbody></table></div>
+
+<p>下面，出现了一行比较奇怪的代码。我现在先不详细解释，大概说一下就是我们把月球的当前旋转状态储存在一个矩阵之中，这个矩阵从单位矩阵开始（表示我们没有做任何旋转），然后当用户进行鼠标操作时，矩阵也会发生对应于这个操作的相应变化。所以，在我们绘制月球之前，需要将旋转矩阵应用于当前的模型视图矩阵，我们使用了okMat4Mul函数。</p>
+
+<div class="wp_codebox"><table><tbody><tr id="p3394"><td class="line_numbers"><pre>367
+</pre></td><td class="code" id="p339code4"><pre class="javascript" style="font-family:monospace;">        mvMatrix <span style="color: #339933;">=</span> okMat4Mul<span style="color: #009900;">(</span>mvMatrix<span style="color: #339933;">,</span> moonRotationMatrix<span style="color: #009900;">)</span><span style="color: #339933;">;</span></pre></td></tr></tbody></table></div>
+
+<p>完成之后，剩下的工作就是绘制月球了。这些代码都相当的标准——我们设置了纹理，然后告诉WebGL用建立好的数组对象来绘制一串三角形，这些代码我们在前几课用过很多次了。</p>
+
+<div class="wp_codebox"><table><tbody><tr id="p3395"><td class="line_numbers"><pre>369
+370
+371
+372
+373
+374
+375
+376
+377
+378
+379
+380
+381
+382
+383
+384
+385
+</pre></td><td class="code" id="p339code5"><pre class="javascript" style="font-family:monospace;">        gl.<span style="color: #660066;">activeTexture</span><span style="color: #009900;">(</span>gl.<span style="color: #660066;">TEXTURE0</span><span style="color: #009900;">)</span><span style="color: #339933;">;</span>
+        gl.<span style="color: #660066;">bindTexture</span><span style="color: #009900;">(</span>gl.<span style="color: #660066;">TEXTURE_2D</span><span style="color: #339933;">,</span> moonTexture<span style="color: #009900;">)</span><span style="color: #339933;">;</span>
+        gl.<span style="color: #660066;">uniform1i</span><span style="color: #009900;">(</span>shaderProgram.<span style="color: #660066;">samplerUniform</span><span style="color: #339933;">,</span> <span style="color: #CC0000;">0</span><span style="color: #009900;">)</span><span style="color: #339933;">;</span>
+&nbsp;
+        gl.<span style="color: #660066;">bindBuffer</span><span style="color: #009900;">(</span>gl.<span style="color: #660066;">ARRAY_BUFFER</span><span style="color: #339933;">,</span> moonVertexPositionBuffer<span style="color: #009900;">)</span><span style="color: #339933;">;</span>
+        gl.<span style="color: #660066;">vertexAttribPointer</span><span style="color: #009900;">(</span>shaderProgram.<span style="color: #660066;">vertexPositionAttribute</span><span style="color: #339933;">,</span> moonVertexPositionBuffer.<span style="color: #660066;">itemSize</span><span style="color: #339933;">,</span> gl.<span style="color: #660066;">FLOAT</span><span style="color: #339933;">,</span> <span style="color: #003366; font-weight: bold;">false</span><span style="color: #339933;">,</span> <span style="color: #CC0000;">0</span><span style="color: #339933;">,</span> <span style="color: #CC0000;">0</span><span style="color: #009900;">)</span><span style="color: #339933;">;</span>
+&nbsp;
+        gl.<span style="color: #660066;">bindBuffer</span><span style="color: #009900;">(</span>gl.<span style="color: #660066;">ARRAY_BUFFER</span><span style="color: #339933;">,</span> moonVertexTextureCoordBuffer<span style="color: #009900;">)</span><span style="color: #339933;">;</span>
+        gl.<span style="color: #660066;">vertexAttribPointer</span><span style="color: #009900;">(</span>shaderProgram.<span style="color: #660066;">textureCoordAttribute</span><span style="color: #339933;">,</span> moonVertexTextureCoordBuffer.<span style="color: #660066;">itemSize</span><span style="color: #339933;">,</span> gl.<span style="color: #660066;">FLOAT</span><span style="color: #339933;">,</span> <span style="color: #003366; font-weight: bold;">false</span><span style="color: #339933;">,</span> <span style="color: #CC0000;">0</span><span style="color: #339933;">,</span> <span style="color: #CC0000;">0</span><span style="color: #009900;">)</span><span style="color: #339933;">;</span>
+&nbsp;
+        gl.<span style="color: #660066;">bindBuffer</span><span style="color: #009900;">(</span>gl.<span style="color: #660066;">ARRAY_BUFFER</span><span style="color: #339933;">,</span> moonVertexNormalBuffer<span style="color: #009900;">)</span><span style="color: #339933;">;</span>
+        gl.<span style="color: #660066;">vertexAttribPointer</span><span style="color: #009900;">(</span>shaderProgram.<span style="color: #660066;">vertexNormalAttribute</span><span style="color: #339933;">,</span> moonVertexNormalBuffer.<span style="color: #660066;">itemSize</span><span style="color: #339933;">,</span> gl.<span style="color: #660066;">FLOAT</span><span style="color: #339933;">,</span> <span style="color: #003366; font-weight: bold;">false</span><span style="color: #339933;">,</span> <span style="color: #CC0000;">0</span><span style="color: #339933;">,</span> <span style="color: #CC0000;">0</span><span style="color: #009900;">)</span><span style="color: #339933;">;</span>
+&nbsp;
+        gl.<span style="color: #660066;">bindBuffer</span><span style="color: #009900;">(</span>gl.<span style="color: #660066;">ELEMENT_ARRAY_BUFFER</span><span style="color: #339933;">,</span> moonVertexIndexBuffer<span style="color: #009900;">)</span><span style="color: #339933;">;</span>
+        setMatrixUniforms<span style="color: #009900;">(</span><span style="color: #009900;">)</span><span style="color: #339933;">;</span>
+        gl.<span style="color: #660066;">drawElements</span><span style="color: #009900;">(</span>gl.<span style="color: #660066;">TRIANGLES</span><span style="color: #339933;">,</span> moonVertexIndexBuffer.<span style="color: #660066;">numItems</span><span style="color: #339933;">,</span> gl.<span style="color: #660066;">UNSIGNED_SHORT</span><span style="color: #339933;">,</span> <span style="color: #CC0000;">0</span><span style="color: #009900;">)</span><span style="color: #339933;">;</span>
+    <span style="color: #009900;">}</span></pre></td></tr></tbody></table></div>
+
+<p>那么，我们是如何建立顶点位置、法线、纹理坐标和顶点索引，并给它们赋值，来绘制一个球体呢？秘密就在于下面这个函数中：initBuffers。</p>
+<p>函数开始先定义了对象数组的全局变量，然后指定了经度带和纬度带的数量，以及球体的半径。如果你打算在你自己的WebGL页面中使用这些代码，你应当将经度带、纬度带和弧度都参数化，并且将数组对象储存在其他地方而不是全局变量中。这里我没有这么做只是为了演示起来方便简单，我可不想因此影响了你的良好的面对对象以及函数化的编程理念。</p>
+
+<div class="wp_codebox"><table><tbody><tr id="p3396"><td class="line_numbers"><pre>251
+252
+253
+254
+255
+256
+257
+258
+259
+</pre></td><td class="code" id="p339code6"><pre class="javascript" style="font-family:monospace;">    <span style="color: #003366; font-weight: bold;">var</span> moonVertexPositionBuffer<span style="color: #339933;">;</span>
+    <span style="color: #003366; font-weight: bold;">var</span> moonVertexNormalBuffer<span style="color: #339933;">;</span>
+    <span style="color: #003366; font-weight: bold;">var</span> moonVertexTextureCoordBuffer<span style="color: #339933;">;</span>
+    <span style="color: #003366; font-weight: bold;">var</span> moonVertexIndexBuffer<span style="color: #339933;">;</span>
+&nbsp;
+    <span style="color: #003366; font-weight: bold;">function</span> initBuffers<span style="color: #009900;">(</span><span style="color: #009900;">)</span> <span style="color: #009900;">{</span>
+        <span style="color: #003366; font-weight: bold;">var</span> latitudeBands <span style="color: #339933;">=</span> <span style="color: #CC0000;">30</span><span style="color: #339933;">;</span>
+        <span style="color: #003366; font-weight: bold;">var</span> longitudeBands <span style="color: #339933;">=</span> <span style="color: #CC0000;">30</span><span style="color: #339933;">;</span>
+        <span style="color: #003366; font-weight: bold;">var</span> radius <span style="color: #339933;">=</span> <span style="color: #CC0000;">2</span><span style="color: #339933;">;</span></pre></td></tr></tbody></table></div>
+
+<p>那么，究竟什么是经度带和纬度带呢？为了绘制一系列三角形来逼近球体，我们必须将球体分割开来。有很多聪明的技巧来实现这种分割，我们将使用其中最简单的方法，仅仅需要高中几何知识。这是因为（a）它的效果相当完美（b）我懂，并且理解起来不会让人头痛。这种方法是基于一个Khronos网站上的<a href="https://cvs.khronos.org/svn/repos/registry/trunk/public/webgl/sdk/demos/webkit/Earth.html" target="_blank">Demo</a>的，原本是由WebKit团队开发的。它的原理如下：</p>
+<p><a href="./Lesson 11 球体、旋转矩阵和鼠标事件 _ HiWebGL_files/tomato.jpg"><img src="./Lesson 11 球体、旋转矩阵和鼠标事件 _ HiWebGL_files/tomato.jpg" alt="制作蔬菜沙拉时的西红柿切片" title="制作蔬菜沙拉时的西红柿切片" width="344" height="225" class="alignleft size-full wp-image-340"></a>让我们先从这些专业术语的定义开始。纬线就是在一个球体上，告诉你距离南极或北极有多远的线。在球体表面上丈量南极到北极的距离，是一个常量。如果你按照纬线将一个球体从上到下依次切开，那么在顶部和底部你会得到镜片形状的切片，然后慢慢的在中间得到光盘形状的切片。如果你很难视觉化的想象出来，请参考在制作蔬菜沙拉时切西红柿。只不过切的时候要保证每个切片表面从顶部到底部的距离都是相同的，显然中间部分的切片的厚度要比两端的大。</p>
+<p>而经线是另外一种线，它们将球体分割成弓形。如果你按照经线切开一个球体，那么切出来的部分好像切橙子一样。</p>
+<p><a href="./Lesson 11 球体、旋转矩阵和鼠标事件 _ HiWebGL_files/orange.jpg"><img class="size-full wp-image-342 aligncenter" title="切橙子" src="./Lesson 11 球体、旋转矩阵和鼠标事件 _ HiWebGL_files/orange.jpg" alt="切橙子" width="180" height="240"></a></p>
+<p><a href="./Lesson 11 球体、旋转矩阵和鼠标事件 _ HiWebGL_files/sphere-triangles.png"><img src="./Lesson 11 球体、旋转矩阵和鼠标事件 _ HiWebGL_files/sphere-triangles.png" alt="" title="sphere-triangles" width="296" height="296" class="alignleft size-full wp-image-343"></a>现在，为了绘制球体，想象一下我们在球体上画满了经线和纬线。我们要做的就是计算出这些经线和纬线的交点，用这些交点作为顶点位置。这样我们就可以把由两条相邻的经线和纬线所组成的四边形分割成两个三角形，然后绘制它们。左边的图片应该很清楚地表达出我们的目的。</p>
+<p>下一个问题是，我们如何才能计算出这些经线和纬线的交点呢？让我们假设球体的半径是1，然后在X轴和Y轴平面上垂直切开球体，让原点处于球体中心位置。显然，切片的形状是一个正圆，一条条纬线平行穿过此圆。在图中，你会发现全部一共有10个纬线带，而我们正在指向从上往下数第3个纬线带。连结坐标轴原点和纬线与圆的交点，设Y轴与该连接线的夹角为θ。那么利用简单的三角学知识，我们可以算出这条纬线与圆的交点的X坐标是sin(θ)，Y坐标是cos(θ)。</p>
+<p><a href="./Lesson 11 球体、旋转矩阵和鼠标事件 _ HiWebGL_files/sphere-latitude.png"><img src="./Lesson 11 球体、旋转矩阵和鼠标事件 _ HiWebGL_files/sphere-latitude.png" alt="" title="sphere-latitude" width="352" height="343" class="alignright size-full wp-image-344"></a>下面，让我们来概括一下如何计算出每条纬线上相应的点。因为每两条相邻纬线之间的球面距离都是相等的，我们可以根据θ的值来计算出每条纬线。每个半圆的弧度是π，所以θ的取值应该是从0、π/10、2π/10、 3π/10……一直到10π/10。这样我们就可以确保我们用纬线平均的将球体分割开来。</p>
+<p>在每个确定的纬线上的点，不管他们的经度如何，都有相同的Y坐标。根据我们上面用方程求出的纬线与圆的交点的Y坐标，我们可以推出，在这个用10条纬线平均分割且半径为1的球体上，第n条纬线的Y坐标是cos(nπ / 10)。</p>
+<p><a href="./Lesson 11 球体、旋转矩阵和鼠标事件 _ HiWebGL_files/sphere-longitude.png"><img src="./Lesson 11 球体、旋转矩阵和鼠标事件 _ HiWebGL_files/sphere-longitude.png" alt="" title="sphere-longitude" width="350" height="349" class="alignleft size-full wp-image-345"></a>这样我们就解决了Y坐标的问题。那X坐标和Z坐标如何确定呢？我们可以看出来，在Z坐标为0、Y坐标为cos(nπ / 10)的位置，X坐标是sin(nπ / 10)。让我们换一种方式来切割球体，就像左边的那幅图，我们在第N条纬线上，水平将球体切开。我们可以看到圆的半径是sin(nπ / 10)，让我们设其为k。如果我们用经线将这个圆平均分割一下，假设是10条经线，我们同样设X轴和经线与圆的交点之间的夹角为φ，又有整个圆的弧度为2π，那么φ的取值应该是0、2π/10、4π/10……我们再利用简单的三角学知识计算一下，可以得出X坐标为kcos(φ)，Z坐标为ksin(φ)。</p>
+<p>总结一下，对于一个半径为r的球体，有m个纬线带和n个经线带，我们把从0到π的区间平均分成m等份就可以得到θ的取值范围，把0到2π的区间平均分成n等份就可以得到φ的取值范围，从而计算出坐标x,y,z的值。</p>
+<ul>
+<li>x = r sinθ cosφ</li>
+<li>y = r cosθ</li>
+<li>z = r sinθ sinφ</li>
+</ul>
+<p>以上就是我们如何计算出顶点的过程。那现在看看我们还需要哪些值，包括法线和纹理坐标。好吧，其实计算法线是相当容易的。你只要记住，法线就是一个直勾勾指向表面外部的一个长度为1的向量。对于一个半径为1的球体来说，法线就是从球体中心指向到表面的向量，而这个值我们已经在计算顶点的过程中计算出来了！事实上，计算顶点位置和法线向量的顺序应当是，在按照上面的公式运算中，在与半径相乘之前，先把结果储存一下，作为法线向量，然后再与半径相乘得到顶点位置。</p>
+<p>纹理坐标，其实更简单。我们希望纹理贴图的提供者，提供给我们的是一张矩形图片。多说一句，WebGL（不是Javascript）会被其他形状的贴图搞晕。这样，我们就可以放心的假定，这张纹理图片的顶部和底部拉伸肯定是遵循<a href="http://zh.wikipedia.org/zh-cn/%E9%BA%A5%E5%8D%A1%E6%89%98%E6%8A%95%E5%BD%B1%E6%B3%95" target="_blank">墨卡托投影法则（Mercator Projection）</a>的。这样就是说，我们可以从左到右按照经线平均分割纹理图片得出坐标u，从上到下按照纬线平均分割纹理图片得到坐标v。</p>
+<p>好了，这就是全部的工作原理。对于Javascript来说，理解并运算以上原理是如此难以置信得简单方便！我们只需要循环遍历所有的纬线切片，在循环内我们再遍历所有的经线切片，之后我们就可以计算出法线、纹理坐标和顶点位置。唯一需要注意的是，在循环结束的条件中，循环变量必须大于经线或纬线的数量。所以这里我们必须使用小于等于而不是小于。也就是说，比如有30条经线，在每条纬线上就会产生31个顶点。因为根据三角函数的循环，最后一个顶点和第一个顶点的位置其实是相同的，这样的一个重叠让我们把所有东西都连接到了一起。</p>
+
+<div class="wp_codebox"><table><tbody><tr id="p3397"><td class="line_numbers"><pre>261
+262
+263
+264
+265
+266
+267
+268
+269
+270
+271
+272
+273
+274
+275
+276
+277
+278
+279
+280
+281
+282
+283
+284
+285
+286
+287
+288
+289
+</pre></td><td class="code" id="p339code7"><pre class="javascript" style="font-family:monospace;">        <span style="color: #003366; font-weight: bold;">var</span> vertexPositionData <span style="color: #339933;">=</span> <span style="color: #009900;">[</span><span style="color: #009900;">]</span><span style="color: #339933;">;</span>
+        <span style="color: #003366; font-weight: bold;">var</span> normalData <span style="color: #339933;">=</span> <span style="color: #009900;">[</span><span style="color: #009900;">]</span><span style="color: #339933;">;</span>
+        <span style="color: #003366; font-weight: bold;">var</span> textureCoordData <span style="color: #339933;">=</span> <span style="color: #009900;">[</span><span style="color: #009900;">]</span><span style="color: #339933;">;</span>
+        <span style="color: #000066; font-weight: bold;">for</span> <span style="color: #009900;">(</span><span style="color: #003366; font-weight: bold;">var</span> latNumber<span style="color: #339933;">=</span><span style="color: #CC0000;">0</span><span style="color: #339933;">;</span> latNumber <span style="color: #339933;">&lt;=</span> latitudeBands<span style="color: #339933;">;</span> latNumber<span style="color: #339933;">++</span><span style="color: #009900;">)</span> <span style="color: #009900;">{</span>
+            <span style="color: #003366; font-weight: bold;">var</span> theta <span style="color: #339933;">=</span> latNumber <span style="color: #339933;">*</span> Math.<span style="color: #660066;">PI</span> <span style="color: #339933;">/</span> latitudeBands<span style="color: #339933;">;</span>
+            <span style="color: #003366; font-weight: bold;">var</span> sinTheta <span style="color: #339933;">=</span> Math.<span style="color: #660066;">sin</span><span style="color: #009900;">(</span>theta<span style="color: #009900;">)</span><span style="color: #339933;">;</span>
+            <span style="color: #003366; font-weight: bold;">var</span> cosTheta <span style="color: #339933;">=</span> Math.<span style="color: #660066;">cos</span><span style="color: #009900;">(</span>theta<span style="color: #009900;">)</span><span style="color: #339933;">;</span>
+&nbsp;
+            <span style="color: #000066; font-weight: bold;">for</span> <span style="color: #009900;">(</span><span style="color: #003366; font-weight: bold;">var</span> longNumber<span style="color: #339933;">=</span><span style="color: #CC0000;">0</span><span style="color: #339933;">;</span> longNumber <span style="color: #339933;">&lt;=</span> longitudeBands<span style="color: #339933;">;</span> longNumber<span style="color: #339933;">++</span><span style="color: #009900;">)</span> <span style="color: #009900;">{</span>
+                <span style="color: #003366; font-weight: bold;">var</span> phi <span style="color: #339933;">=</span> longNumber <span style="color: #339933;">*</span> <span style="color: #CC0000;">2</span> <span style="color: #339933;">*</span> Math.<span style="color: #660066;">PI</span> <span style="color: #339933;">/</span> longitudeBands<span style="color: #339933;">;</span>
+                <span style="color: #003366; font-weight: bold;">var</span> sinPhi <span style="color: #339933;">=</span> Math.<span style="color: #660066;">sin</span><span style="color: #009900;">(</span>phi<span style="color: #009900;">)</span><span style="color: #339933;">;</span>
+                <span style="color: #003366; font-weight: bold;">var</span> cosPhi <span style="color: #339933;">=</span> Math.<span style="color: #660066;">cos</span><span style="color: #009900;">(</span>phi<span style="color: #009900;">)</span><span style="color: #339933;">;</span>
+&nbsp;
+                <span style="color: #003366; font-weight: bold;">var</span> x <span style="color: #339933;">=</span> cosPhi <span style="color: #339933;">*</span> sinTheta<span style="color: #339933;">;</span>
+                <span style="color: #003366; font-weight: bold;">var</span> y <span style="color: #339933;">=</span> cosTheta<span style="color: #339933;">;</span>
+                <span style="color: #003366; font-weight: bold;">var</span> z <span style="color: #339933;">=</span> sinPhi <span style="color: #339933;">*</span> sinTheta<span style="color: #339933;">;</span>
+                <span style="color: #003366; font-weight: bold;">var</span> u <span style="color: #339933;">=</span> <span style="color: #CC0000;">1</span> <span style="color: #339933;">-</span> <span style="color: #009900;">(</span>longNumber <span style="color: #339933;">/</span> longitudeBands<span style="color: #009900;">)</span><span style="color: #339933;">;</span>
+                <span style="color: #003366; font-weight: bold;">var</span> v <span style="color: #339933;">=</span> <span style="color: #CC0000;">1</span> <span style="color: #339933;">-</span> <span style="color: #009900;">(</span>latNumber <span style="color: #339933;">/</span> latitudeBands<span style="color: #009900;">)</span><span style="color: #339933;">;</span>
+&nbsp;
+                normalData.<span style="color: #660066;">push</span><span style="color: #009900;">(</span>x<span style="color: #009900;">)</span><span style="color: #339933;">;</span>
+                normalData.<span style="color: #660066;">push</span><span style="color: #009900;">(</span>y<span style="color: #009900;">)</span><span style="color: #339933;">;</span>
+                normalData.<span style="color: #660066;">push</span><span style="color: #009900;">(</span>z<span style="color: #009900;">)</span><span style="color: #339933;">;</span>
+                textureCoordData.<span style="color: #660066;">push</span><span style="color: #009900;">(</span>u<span style="color: #009900;">)</span><span style="color: #339933;">;</span>
+                textureCoordData.<span style="color: #660066;">push</span><span style="color: #009900;">(</span>v<span style="color: #009900;">)</span><span style="color: #339933;">;</span>
+                vertexPositionData.<span style="color: #660066;">push</span><span style="color: #009900;">(</span>radius <span style="color: #339933;">*</span> x<span style="color: #009900;">)</span><span style="color: #339933;">;</span>
+                vertexPositionData.<span style="color: #660066;">push</span><span style="color: #009900;">(</span>radius <span style="color: #339933;">*</span> y<span style="color: #009900;">)</span><span style="color: #339933;">;</span>
+                vertexPositionData.<span style="color: #660066;">push</span><span style="color: #009900;">(</span>radius <span style="color: #339933;">*</span> z<span style="color: #009900;">)</span><span style="color: #339933;">;</span>
+            <span style="color: #009900;">}</span>
+        <span style="color: #009900;">}</span></pre></td></tr></tbody></table></div>
+
+<p>现在我们已经处理完顶点了，还需要把它们缝合到一起。我们生成一个顶点索引列表，其中包括了上面六个值的序列，将每个四边形分成一对三角形。下面是代码：</p>
+
+<div class="wp_codebox"><table><tbody><tr id="p3398"><td class="line_numbers"><pre>291
+292
+293
+294
+295
+296
+297
+298
+299
+300
+301
+302
+303
+304
+</pre></td><td class="code" id="p339code8"><pre class="javascript" style="font-family:monospace;">        <span style="color: #003366; font-weight: bold;">var</span> indexData <span style="color: #339933;">=</span> <span style="color: #009900;">[</span><span style="color: #009900;">]</span><span style="color: #339933;">;</span>
+        <span style="color: #000066; font-weight: bold;">for</span> <span style="color: #009900;">(</span><span style="color: #003366; font-weight: bold;">var</span> latNumber<span style="color: #339933;">=</span><span style="color: #CC0000;">0</span><span style="color: #339933;">;</span> latNumber <span style="color: #339933;">&lt;</span> latitudeBands<span style="color: #339933;">;</span> latNumber<span style="color: #339933;">++</span><span style="color: #009900;">)</span> <span style="color: #009900;">{</span>
+            <span style="color: #000066; font-weight: bold;">for</span> <span style="color: #009900;">(</span><span style="color: #003366; font-weight: bold;">var</span> longNumber<span style="color: #339933;">=</span><span style="color: #CC0000;">0</span><span style="color: #339933;">;</span> longNumber <span style="color: #339933;">&lt;</span> longitudeBands<span style="color: #339933;">;</span> longNumber<span style="color: #339933;">++</span><span style="color: #009900;">)</span> <span style="color: #009900;">{</span>
+                <span style="color: #003366; font-weight: bold;">var</span> first <span style="color: #339933;">=</span> <span style="color: #009900;">(</span>latNumber <span style="color: #339933;">*</span> <span style="color: #009900;">(</span>longitudeBands <span style="color: #339933;">+</span> <span style="color: #CC0000;">1</span><span style="color: #009900;">)</span><span style="color: #009900;">)</span> <span style="color: #339933;">+</span> longNumber<span style="color: #339933;">;</span>
+                <span style="color: #003366; font-weight: bold;">var</span> second <span style="color: #339933;">=</span> first <span style="color: #339933;">+</span> longitudeBands <span style="color: #339933;">+</span> <span style="color: #CC0000;">1</span><span style="color: #339933;">;</span>
+                indexData.<span style="color: #660066;">push</span><span style="color: #009900;">(</span>first<span style="color: #009900;">)</span><span style="color: #339933;">;</span>
+                indexData.<span style="color: #660066;">push</span><span style="color: #009900;">(</span>second<span style="color: #009900;">)</span><span style="color: #339933;">;</span>
+                indexData.<span style="color: #660066;">push</span><span style="color: #009900;">(</span>first <span style="color: #339933;">+</span> <span style="color: #CC0000;">1</span><span style="color: #009900;">)</span><span style="color: #339933;">;</span>
+&nbsp;
+                indexData.<span style="color: #660066;">push</span><span style="color: #009900;">(</span>second<span style="color: #009900;">)</span><span style="color: #339933;">;</span>
+                indexData.<span style="color: #660066;">push</span><span style="color: #009900;">(</span>second <span style="color: #339933;">+</span> <span style="color: #CC0000;">1</span><span style="color: #009900;">)</span><span style="color: #339933;">;</span>
+                indexData.<span style="color: #660066;">push</span><span style="color: #009900;">(</span>first <span style="color: #339933;">+</span> <span style="color: #CC0000;">1</span><span style="color: #009900;">)</span><span style="color: #339933;">;</span>
+            <span style="color: #009900;">}</span>
+        <span style="color: #009900;">}</span></pre></td></tr></tbody></table></div>
+
+<p><a href="./Lesson 11 球体、旋转矩阵和鼠标事件 _ HiWebGL_files/sphere-triangle-stitching.png"><img src="./Lesson 11 球体、旋转矩阵和鼠标事件 _ HiWebGL_files/sphere-triangle-stitching.png" alt="" title="sphere-triangle-stitching" width="350" height="186" class="alignleft size-full wp-image-346"></a>这些代码实在是太容易理解了。我们通过循环遍历了所有顶点，对于每个顶点，我们将其索引值储存在first变量中，然后向前数longitudeBands + 1个顶点，找到和它配对的下一个纬线带，储存在second变量中（之所以+1是因为我们额外增加的那一个顶点会重叠）。这样我们就生成了两个三角形，如图所示。</p>
+<p>好了，以上就是本节课的难点（至少解释起来很难）。让我们继续看看其他变化的代码。</p>
+<p>在initBuffers函数上方有3个用于处理鼠标事件的函数。我们必须仔细的考察一下它们。让我们先想想我们的目的是什么。我们想让观察者可以使用拖拽来旋转月球。一个幼稚的想法就是，我们建立三个变量用来表示X、Y、Z轴的旋转。当用户拖拽鼠标的时候我们可以相应的调整变量值。如果用户上下拖拽鼠标，我们就调整X轴的旋转变量；如果用户左右拖拽鼠标，我们就调整Y轴的旋转变量。这么做的问题在于，当你围绕不同的轴旋转物体的时候，你实际上做的一系列不同的旋转，而这一系列不同旋转的应用顺序很重要。比如说，用户先让月球围绕Y轴旋转了90°，然后又向下拖拽鼠标。这时，如果我们按照原来说好的再围绕X轴做旋转，观察者就会发现实际上月球正在围绕Z轴旋转。因为第一次的旋转，同时也旋转了轴线。这对于观察者来说会变得很奇怪。当观察者先把物体围绕X轴旋转10°，再围绕Y轴旋转23°，再怎样怎样时，这种问题变的更糟糕。我们可以耍下小聪明——“给出当前的旋转装袋，如果用户向下拖拽鼠标，那就同时改变所有三个旋转变量”。其实，一共更简单的处理方式是，用某种方法记录下观察者施加给月球的每一个旋转，然后在我们绘制的时候重新展示出来。表面上看，这种方法似乎需要耗费大量资源。但是不要忘了，我们已经找到一种完美的方法来保持追踪几何体的一系列变换，并且只用一个操作就可以应用这些变换，那就是——矩阵！</p>
+<p>我们维护一个用来储存当前月球旋转状态的矩阵，叫做moonRotationMatrix。当用户拖拽鼠标的时候，我们会捕获到一系列的鼠标事件，每捕获到一个鼠标事件，我们都会根据用户拖拽鼠标的量，计算出绕着当前X轴和Y轴旋转多少度。我们用一个矩阵来表示这两个旋转，然后左乘moonRotationMatrix——之所以使用左乘，理由和我们上节课设置相机一样，我们需要做一个逆操作，旋转是基于eye space的，而不是模型空间。</p>
+<p>有了以上的说明，下面的代码就变得清晰起来。</p>
+
+<div class="wp_codebox"><table><tbody><tr id="p3399"><td class="line_numbers"><pre>211
+212
+213
+214
+215
+216
+217
+218
+219
+220
+221
+222
+223
+224
+225
+226
+227
+228
+229
+230
+231
+232
+233
+234
+235
+236
+237
+238
+239
+240
+241
+242
+243
+244
+245
+246
+247
+</pre></td><td class="code" id="p339code9"><pre class="javascript" style="font-family:monospace;">    <span style="color: #003366; font-weight: bold;">var</span> mouseDown <span style="color: #339933;">=</span> <span style="color: #003366; font-weight: bold;">false</span><span style="color: #339933;">;</span>
+    <span style="color: #003366; font-weight: bold;">var</span> lastMouseX <span style="color: #339933;">=</span> <span style="color: #003366; font-weight: bold;">null</span><span style="color: #339933;">;</span>
+    <span style="color: #003366; font-weight: bold;">var</span> lastMouseY <span style="color: #339933;">=</span> <span style="color: #003366; font-weight: bold;">null</span><span style="color: #339933;">;</span>
+&nbsp;
+    <span style="color: #003366; font-weight: bold;">var</span> moonRotationMatrix <span style="color: #339933;">=</span> <span style="color: #003366; font-weight: bold;">new</span> okMat4<span style="color: #009900;">(</span><span style="color: #009900;">)</span><span style="color: #339933;">;</span>
+&nbsp;
+    <span style="color: #003366; font-weight: bold;">function</span> handleMouseDown<span style="color: #009900;">(</span>event<span style="color: #009900;">)</span> <span style="color: #009900;">{</span>
+        mouseDown <span style="color: #339933;">=</span> <span style="color: #003366; font-weight: bold;">true</span><span style="color: #339933;">;</span>
+        lastMouseX <span style="color: #339933;">=</span> event.<span style="color: #660066;">clientX</span><span style="color: #339933;">;</span>
+        lastMouseY <span style="color: #339933;">=</span> event.<span style="color: #660066;">clientY</span><span style="color: #339933;">;</span>
+    <span style="color: #009900;">}</span>
+&nbsp;
+&nbsp;
+    <span style="color: #003366; font-weight: bold;">function</span> handleMouseUp<span style="color: #009900;">(</span>event<span style="color: #009900;">)</span> <span style="color: #009900;">{</span>
+        mouseDown <span style="color: #339933;">=</span> <span style="color: #003366; font-weight: bold;">false</span><span style="color: #339933;">;</span>
+    <span style="color: #009900;">}</span>
+&nbsp;
+&nbsp;
+    <span style="color: #003366; font-weight: bold;">function</span> handleMouseMove<span style="color: #009900;">(</span>event<span style="color: #009900;">)</span> <span style="color: #009900;">{</span>
+        <span style="color: #000066; font-weight: bold;">if</span> <span style="color: #009900;">(</span><span style="color: #339933;">!</span>mouseDown<span style="color: #009900;">)</span> <span style="color: #009900;">{</span>
+            <span style="color: #000066; font-weight: bold;">return</span><span style="color: #339933;">;</span>
+        <span style="color: #009900;">}</span>
+        <span style="color: #003366; font-weight: bold;">var</span> newX <span style="color: #339933;">=</span> event.<span style="color: #660066;">clientX</span><span style="color: #339933;">;</span>
+        <span style="color: #003366; font-weight: bold;">var</span> newY <span style="color: #339933;">=</span> event.<span style="color: #660066;">clientY</span><span style="color: #339933;">;</span>
+&nbsp;
+        <span style="color: #003366; font-weight: bold;">var</span> deltaX <span style="color: #339933;">=</span> newX <span style="color: #339933;">-</span> lastMouseX
+        <span style="color: #003366; font-weight: bold;">var</span> newRotationMatrix <span style="color: #339933;">=</span> <span style="color: #003366; font-weight: bold;">new</span> okMat4<span style="color: #009900;">(</span><span style="color: #009900;">)</span><span style="color: #339933;">;</span>
+        newRotationMatrix.<span style="color: #660066;">rotY</span><span style="color: #009900;">(</span>OAK.<span style="color: #660066;">SPACE_LOCAL</span><span style="color: #339933;">,</span> deltaX <span style="color: #339933;">/</span> <span style="color: #CC0000;">10</span><span style="color: #339933;">,</span> <span style="color: #003366; font-weight: bold;">true</span><span style="color: #009900;">)</span><span style="color: #339933;">;</span>
+&nbsp;
+        <span style="color: #003366; font-weight: bold;">var</span> deltaY <span style="color: #339933;">=</span> newY <span style="color: #339933;">-</span> lastMouseY<span style="color: #339933;">;</span>
+        newRotationMatrix.<span style="color: #660066;">rotX</span><span style="color: #009900;">(</span>OAK.<span style="color: #660066;">SPACE_LOCAL</span><span style="color: #339933;">,</span> deltaY <span style="color: #339933;">/</span> <span style="color: #CC0000;">10</span><span style="color: #339933;">,</span> <span style="color: #003366; font-weight: bold;">true</span><span style="color: #009900;">)</span><span style="color: #339933;">;</span>
+&nbsp;
+        moonRotationMatrix <span style="color: #339933;">=</span> okMat4Mul<span style="color: #009900;">(</span>newRotationMatrix<span style="color: #339933;">,</span> moonRotationMatrix<span style="color: #009900;">)</span><span style="color: #339933;">;</span>
+&nbsp;
+        lastMouseX <span style="color: #339933;">=</span> newX
+        lastMouseY <span style="color: #339933;">=</span> newY<span style="color: #339933;">;</span>
+    <span style="color: #009900;">}</span></pre></td></tr></tbody></table></div>
+
+<p>以上就是本节课的另一个重点。代码中剩下的变化都很简单，比如载入新的纹理和新的变量名称。</p>
+<p>好了！这节课结束了，你学会了如何使用一种简单但是有效的算法来绘制球体；如何捕捉鼠标事件，让用户可以通过拖拽来和你的3D物体交互；如何使用矩阵来表示场景中物体的当前旋转状态。</p>
+<p>下一节课中，我们将会讲解一种新的光源类型：点光源，它是一种来自于场景内部某处并且向外辐射的光源，类似于一个光秃秃的灯泡。</p>
+<div style="clear:both; margin-top:5px; margin-bottom:5px;"></div><div style="float:left"><!-- JiaThis Button BEGIN -->
+<div id="ckepop">
+	<span class="jiathis_txt">分享到：</span>
+	<a class="jiathis_button_tools_1"></a>
+	<a class="jiathis_button_tools_2"></a>
+	<a class="jiathis_button_tools_3"></a>
+	<a class="jiathis_button_tools_4"></a>
+	<a href="http://www.jiathis.com/share" class="jiathis jiathis_txt jiathis_separator jtico jtico_jiathis" target="_blank">更多</a>
+	<a class="jiathis_counter_style"></a>
+</div>
+<script type="text/javascript" src="./Lesson 11 球体、旋转矩阵和鼠标事件 _ HiWebGL_files/jia.js.下载" charset="utf-8"></script>
+<!-- JiaThis Button END --></div><div style="clear:both; margin-top:5px; margin-bottom:5px;"></div>											</div><!-- .entry-content -->
+
+
+					<div class="entry-utility">
+						Posted in <a href="http://www.hiwebgl.com/?cat=17" title="查看 WebGL教程 中的全部文章" rel="category">WebGL教程</a>. Bookmark the <a href="http://www.hiwebgl.com/?p=339" title="Permalink to Lesson 11 球体、旋转矩阵和鼠标事件" rel="bookmark">permalink</a>.											</div><!-- .entry-utility -->
+				</div><!-- #post-## -->
+
+				<div id="nav-below" class="navigation">
+					<div class="nav-previous"><a href="http://www.hiwebgl.com/?p=327" rel="prev"><span class="meta-nav">←</span> Lesson 10 载入世界，以及相机简介</a></div>
+					<div class="nav-next"><a href="http://www.hiwebgl.com/?p=355" rel="next">Lesson 12 点光源 <span class="meta-nav">→</span></a></div>
+				</div><!-- #nav-below -->
+
+				
+
+<div id="comments">
+		<h3 id="comments-title"><span>1 trackback</span></h3>
+	<dl id="trackback_list">
+		<dt><a href="http://www.hiwebgl.com/?p=42" rel="external nofollow" class="url">WebGL教程 | WebGL中文教程翻译工程启动！HiWebGL | HiWebGL | 最好的HTML5 WebGL中文资讯站</a></dt>
+		<dd><span>2011 年 11 月 24 日 下午 11:40</span></dd>
+    </dl>
+    <h3 id="comments-title"><span>2 comments</span></h3>
+	<ol class="commentlist">
+    	
+	<li class="comment even thread-even depth-1" id="li-comment-317">
+    	<div id="comment-317">
+            <div class="comment_meta commentmetadata">
+                <span class="avatar"><img alt="" src="./Lesson 11 球体、旋转矩阵和鼠标事件 _ HiWebGL_files/ad516503a11cd5ca435acc9bb6523536.png" class="avatar avatar-40 photo" height="40" width="40"></span>
+                <span class="comment_author vcard fn">Ciccy</span>
+                <span class="comment_time">2012 年 1 月 5 日 上午 3:48</span>
+            </div>
+            <div class="comment_body">
+                <p></p><p>請問，如果想要固定地球的軸心怎麼半啊？？</p>
+<p></p>
+                <p class="reply"><a class="comment-reply-link" href="http://www.hiwebgl.com/?p=339&amp;replytocom=317#respond" onclick="return addComment.moveForm(&quot;comment-317&quot;, &quot;317&quot;, &quot;respond&quot;, &quot;339&quot;)">回复</a></p>
+            </div>
+		</div>
+        
+        
+    
+</li>
+	<li class="comment odd alt thread-odd thread-alt depth-1" id="li-comment-318">
+    	<div id="comment-318">
+            <div class="comment_meta commentmetadata">
+                <span class="avatar"><img alt="" src="./Lesson 11 球体、旋转矩阵和鼠标事件 _ HiWebGL_files/ad516503a11cd5ca435acc9bb6523536(1).png" class="avatar avatar-40 photo" height="40" width="40"></span>
+                <span class="comment_author vcard fn">CICcy</span>
+                <span class="comment_time">2012 年 1 月 5 日 上午 7:26</span>
+            </div>
+            <div class="comment_body">
+                <p></p><p>555~ 请问有人不? 帮帮忙~</p>
+<p>谢谢~</p>
+<p></p>
+                <p class="reply"><a class="comment-reply-link" href="http://www.hiwebgl.com/?p=339&amp;replytocom=318#respond" onclick="return addComment.moveForm(&quot;comment-318&quot;, &quot;318&quot;, &quot;respond&quot;, &quot;339&quot;)">回复</a></p>
+            </div>
+		</div>
+        
+        
+    
+</li>
+    </ol>
+        
+
+								<div id="respond">
+				<h3 id="reply-title">Post a Comment <small><a rel="nofollow" id="cancel-comment-reply-link" href="http://www.hiwebgl.com/?p=339#respond" style="display:none;">点击这里取消回复。</a></small></h3>
+									<form action="http://www.hiwebgl.com/wp-comments-post.php" method="post" id="commentform">
+																			<p class="comment-notes">电子邮件地址不会被公开。 必填项已用 <span class="required">*</span> 标注</p>							<p class="comment-form-author"><label for="author">姓名</label> <span class="required">*</span><input id="author" name="author" type="text" value="" size="30" aria-required="true"></p>
+<p class="comment-form-email"><label for="email">电子邮件</label> <span class="required">*</span><input id="email" name="email" type="text" value="" size="30" aria-required="true"></p>
+<p class="comment-form-url"><label for="url">站点</label><input id="url" name="url" type="text" value="" size="30"></p>
+												<p class="comment-form-comment"><label for="comment">评论</label><textarea id="comment" name="comment" cols="45" rows="8" aria-required="true"></textarea></p>						<p class="form-allowed-tags">您可以使用这些 <abbr title="HyperText Markup Language">HTML</abbr> 标签和属性： <code>&lt;a href="" title=""&gt; &lt;abbr title=""&gt; &lt;acronym title=""&gt; &lt;b&gt; &lt;blockquote cite=""&gt; &lt;cite&gt; &lt;code&gt; &lt;del datetime=""&gt; &lt;em&gt; &lt;i&gt; &lt;q cite=""&gt; &lt;strike&gt; &lt;strong&gt; </code></p>						<p class="form-submit">
+							<input name="submit" type="submit" id="submit" value="发表评论">
+							<input type="hidden" name="comment_post_ID" value="339" id="comment_post_ID">
+<input type="hidden" name="comment_parent" id="comment_parent" value="0">
+						</p>
+						<p style="display: none;"><input type="hidden" id="akismet_comment_nonce" name="akismet_comment_nonce" value="bf85d9e1e0"></p>					</form>
+							</div><!-- #respond -->
+						
+</div><!-- #comments -->
+
+			</div><!-- #content -->
+		</div><!-- #container -->
+
+<div id="sidebar" class="widget-area" role="complementary">
+	<ul class="xoxo">
+    	<li id="search-2" class="widget-container widget_search"><form id="searchform" method="get" action="http://www.hiwebgl.com/"> 
+	<input type="text" name="s" id="s" class="search_term" value="Type in keyword and hit Enter..." onblur="if (this.value == &#39;&#39;) {this.value = &#39;Type in keyword and hit Enter...&#39;;}" onfocus="if (this.value == &#39;Type in keyword and hit Enter...&#39;) {this.value = &#39;&#39;;}">
+</form></li><li id="text-4" class="widget-container widget_text"><h3 class="widget-title">加入我们的QQ群</h3>			<div class="textwidget"><b>HiWebGL技术讨论群</b><br>①群群号174563471（已满）<br>②群群号133703893（已满）<br>③群群号196778533（已满）<br>④群群号217873851（已满）<br>⑤群群号225923498（已满）<br>500人群群号219549633<br>欢迎各位程序员和工程师加入！<br><a target="_blank" href="http://qun.qq.com/#jointhegroup/gid/219549633"><img border="0" src="./Lesson 11 球体、旋转矩阵和鼠标事件 _ HiWebGL_files/gp.png" alt="点击这里加入此群" title="点击这里加入此群"></a>
+<br><br>
+<b>HiWebGL产业讨论群</b><br>①群群号176289597（已满）<br>②群群号216936388<br>欢迎关注Web3D发展的从业者与富有理想与激情的创业者朋友加入！<br><a target="_blank" href="http://qun.qq.com/#jointhegroup/gid/216936388"><img border="0" src="./Lesson 11 球体、旋转矩阵和鼠标事件 _ HiWebGL_files/gp.png" alt="点击这里加入此群" title="点击这里加入此群"></a></div>
+		</li><style type="text/css" media="screen">
+#mwrapper-wm_show-3 .mcontainer {height: 300px; overflow: hidden;}
+</style>
+<li id="wm_show-3" class="widget-container wm_show"><h3 class="widget-title">关注我们的新浪微博！</h3><div class="mwrapper" id="mwrapper-wm_show-3"><div class="head"><img class="headimg" src="./Lesson 11 球体、旋转矩阵和鼠标事件 _ HiWebGL_files/89c570d0jw1e8qgp5bmzyj2050050aa8.jpg"><a class="headlink" href="http://weibo.com/2311418064" rel="external nofollow" target="_blank">HiWebGL</a><div class="onekey"><iframe width="63" height="24" frameborder="0" allowtransparency="true" marginwidth="0" marginheight="0" scrolling="no" border="0" src="./Lesson 11 球体、旋转矩阵和鼠标事件 _ HiWebGL_files/followbutton.html"></iframe></div></div><a class="scroll up" href="javascript:;"><img src="./Lesson 11 球体、旋转矩阵和鼠标事件 _ HiWebGL_files/transparent.gif"></a><div class="mcontainer"><ul class="microblogs"><li class="tweet">[哆啦A梦吃惊]<div class="rt"><a href="http://weibo.com/crazycomputer" rel="external nofollow" target="_blank">尼奥_</a> : 因写了抢猫粮插件被抓的小喵。<div class="pic rt-pic"><a href="http://ww3.sinaimg.cn/large/6588fb91jw1f8a611qywmj20qo0r743g.jpg" rel="external nofollow" target="_blank"><img src="./Lesson 11 球体、旋转矩阵和鼠标事件 _ HiWebGL_files/6588fb91jw1f8a611qywmj20qo0r743g.jpg"></a></div></div><div class="meta"><a href="http://api.t.sina.com.cn/2311418064/statuses/4025014212843692" rel="external nofollow" target="_blank">9月29日 12:00</a> 来自 <a href="http://weibo.com/2311418064" rel="external nofollow" target="_blank">新浪微博</a></div></li><li class="tweet">转发微博<div class="rt"><a href="http://weibo.com/armcn" rel="external nofollow" target="_blank">ARM中国</a> : 在看颜的时代，如何让一款游戏画面更具高bigger？从8位像素画风到1080P/4K，再到ARM的Enlighten全局光照技术，能够分分钟变化出数十种光照效果，再挑的玩家都给它点赞了，不信你就来看看[围观][围观]<a href="http://t.cn/RcNsHsc" rel="external nofollow" target="_blank">http://t.cn/RcNsHsc</a><div class="pic rt-pic"><a href="http://ww3.sinaimg.cn/large/84217b4fgw1f89g6wubugj20j30q6gr3.jpg" rel="external nofollow" target="_blank"><img src="./Lesson 11 球体、旋转矩阵和鼠标事件 _ HiWebGL_files/84217b4fgw1f89g6wubugj20j30q6gr3.jpg"></a></div></div><div class="meta"><a href="http://api.t.sina.com.cn/2311418064/statuses/4025000392991907" rel="external nofollow" target="_blank">9月29日 11:05</a> 来自 <a href="http://weibo.com/2311418064" rel="external nofollow" target="_blank">新浪微博</a></div></li><li class="tweet">转发微博<div class="rt"><a href="http://weibo.com/baidujs" rel="external nofollow" target="_blank">JS小组</a> : 你知道使用 target='_blank' 也会有安全漏洞么？尤其是在各种 UGC 网站中。不过小编早就玩过了，其实一般倒也不会用在钓鱼上，而是用在各种各样的广告点击中。推荐文章《target='_blank' 安全漏洞示例》地址 <a href="http://t.cn/RchBwVu" rel="external nofollow" target="_blank">http://t.cn/RchBwVu</a>  $w<div class="pic rt-pic"><a href="http://ww2.sinaimg.cn/large/aa9d3df6jw1f7fewekmx8j20g30a1aak.jpg" rel="external nofollow" target="_blank"><img src="./Lesson 11 球体、旋转矩阵和鼠标事件 _ HiWebGL_files/aa9d3df6jw1f7fewekmx8j20g30a1aak.jpg"></a></div></div><div class="meta"><a href="http://api.t.sina.com.cn/2311418064/statuses/4016375595329873" rel="external nofollow" target="_blank">9月5日 15:53</a> 来自 <a href="http://weibo.com/2311418064" rel="external nofollow" target="_blank">新浪微博</a></div></li><li class="tweet">不做游戏，帮转<div class="rt"><a href="http://weibo.com/xdarui" rel="external nofollow" target="_blank">阿里子之</a> : 有做WebVR游戏的公司么，求合作。求圈内大神帮忙转发。@寒冬winter @大城小胖 @w3cplus</div><div class="meta"><a href="http://api.t.sina.com.cn/2311418064/statuses/4015348426770066" rel="external nofollow" target="_blank">9月2日 19:52</a> 来自 <a href="http://weibo.com/2311418064" rel="external nofollow" target="_blank">新浪微博</a></div></li><li class="tweet">阿里云OSS是否支持websockets?有人知道吗？<div class="meta"><a href="http://api.t.sina.com.cn/2311418064/statuses/4006622127044001" rel="external nofollow" target="_blank">8月9日 17:56</a> 来自 <a href="http://weibo.com/2311418064" rel="external nofollow" target="_blank">新浪微博</a></div></li></ul></div><a class="scroll down" href="javascript:;"><img src="./Lesson 11 球体、旋转矩阵和鼠标事件 _ HiWebGL_files/transparent.gif"></a></div></li><li id="recent-comments-2" class="widget-container widget_recent_comments"><h3 class="widget-title">近期评论</h3><ul id="recentcomments"><li class="recentcomments"><a href="http://www.d2film.com/" rel="external nofollow" class="url">企业宣传片制作d2film.com影视视频制作公司QQ30998</a> 发表在《<a href="http://www.hiwebgl.com/?p=42#comment-7984">WebGL中文教程翻译工程启动！</a>》</li><li class="recentcomments"><a href="http://www.128sf.cn/" rel="external nofollow" class="url">魔域服务器架设</a> 发表在《<a href="http://www.hiwebgl.com/?p=312#comment-7858">Lesson 9 优化代码结构实现多物体运动</a>》</li><li class="recentcomments"><a href="http://www.39uc.cn/" rel="external nofollow" class="url">天龙八部师傅m161</a> 发表在《<a href="http://www.hiwebgl.com/?p=70#comment-7857">外媒公布Firefox 6性能测试结果</a>》</li><li class="recentcomments"><a href="http://www.233sf.cn/" rel="external nofollow" class="url">最新奇迹私发网</a> 发表在《<a href="http://www.hiwebgl.com/?p=42#comment-7856">WebGL中文教程翻译工程启动！</a>》</li><li class="recentcomments"><a href="http://www.5aivideo.com/" rel="external nofollow" class="url">婚礼跟拍视频5aivideo.com婚礼摄影MV-QQ73595</a> 发表在《<a href="http://www.hiwebgl.com/?p=42#comment-7829">WebGL中文教程翻译工程启动！</a>》</li></ul></li><li id="categories-2" class="widget-container widget_categories"><h3 class="widget-title">分类目录</h3>		<ul>
+	<li class="cat-item cat-item-16"><a href="http://www.hiwebgl.com/?cat=16" title="查看 Demo大赏 下的所有文章">Demo大赏</a>
+</li>
+	<li class="cat-item cat-item-29"><a href="http://www.hiwebgl.com/?cat=29" title="查看 HTML5新闻 下的所有文章">HTML5新闻</a>
+</li>
+	<li class="cat-item cat-item-57"><a href="http://www.hiwebgl.com/?cat=57" title="Oak3D中文教程">Oak3D教程</a>
+</li>
+	<li class="cat-item cat-item-17"><a href="http://www.hiwebgl.com/?cat=17" title="查看 WebGL教程 下的所有文章">WebGL教程</a>
+</li>
+	<li class="cat-item cat-item-3"><a href="http://www.hiwebgl.com/?cat=3" title="WebGL新闻">WebGL新闻</a>
+</li>
+	<li class="cat-item cat-item-10"><a href="http://www.hiwebgl.com/?cat=10" title="查看 博文精选 下的所有文章">博文精选</a>
+</li>
+	<li class="cat-item cat-item-4"><a href="http://www.hiwebgl.com/?cat=4" title="推荐阅读">推荐</a>
+</li>
+	<li class="cat-item cat-item-1"><a href="http://www.hiwebgl.com/?cat=1" title="查看 未分类 下的所有文章">未分类</a>
+</li>
+		</ul>
+</li><li id="archives-2" class="widget-container widget_archive"><h3 class="widget-title">文章归档</h3>		<ul>
+			<li><a href="http://www.hiwebgl.com/?m=201206" title="2012 年六月">2012 年六月</a></li>
+	<li><a href="http://www.hiwebgl.com/?m=201205" title="2012 年五月">2012 年五月</a></li>
+	<li><a href="http://www.hiwebgl.com/?m=201204" title="2012 年四月">2012 年四月</a></li>
+	<li><a href="http://www.hiwebgl.com/?m=201203" title="2012 年三月">2012 年三月</a></li>
+	<li><a href="http://www.hiwebgl.com/?m=201202" title="2012 年二月">2012 年二月</a></li>
+	<li><a href="http://www.hiwebgl.com/?m=201201" title="2012 年一月">2012 年一月</a></li>
+	<li><a href="http://www.hiwebgl.com/?m=201112" title="2011 年十二月">2011 年十二月</a></li>
+	<li><a href="http://www.hiwebgl.com/?m=201111" title="2011 年十一月">2011 年十一月</a></li>
+	<li><a href="http://www.hiwebgl.com/?m=201110" title="2011 年十月">2011 年十月</a></li>
+	<li><a href="http://www.hiwebgl.com/?m=201109" title="2011 年九月">2011 年九月</a></li>
+	<li><a href="http://www.hiwebgl.com/?m=201108" title="2011 年八月">2011 年八月</a></li>
+		</ul>
+</li>    </ul>
+</div><!-- #sidebar .widget-area -->	</div><!-- #main -->
+    <div id="footer" role="contentinfo">
+    	
+    	<div id="colophon">
+            <div id="site-info" class="clearfix">
+                <div id="generator">Powered by <a href="http://wordpress.org/" title="Semantic Personal Publishing Platform" rel="generator">Wordpress</a> and <a href="http://wpcrunchy.com/" title="Free Premium Quality Wordpress Themes">WPCrunchy</a></div>
+                <div id="credits">Designed by <a href="http://www.hostreviewgeeks.com/" title="best web hosting" target="_blank">best web hosting</a>. In collaboration with <a href="http://www.hostv.com/" title="VPS Hosting" target="_blank">VPS Hosting</a>, <a href="http://broadwaytickets.co/" title="Broadway Tickets" target="_blank">Broadway Tickets</a>, <a href="http://wpcorner.com/" title="Free Wordpress Themes" target="_blank">Free Wordpress Themes</a>.</div>
+            </div>
+        </div>
+    </div><!-- #footer -->
+</div><!-- #wrapper -->
+
+<script type="text/javascript">jQuery(document).ready(function() { if(jQuery("ul.accordion li").length > 2) { jQuery("ul.accordion").accordion(); } });</script><script src="./Lesson 11 球体、旋转矩阵和鼠标事件 _ HiWebGL_files/stat.php" language="JavaScript"></script><script src="./Lesson 11 球体、旋转矩阵和鼠标事件 _ HiWebGL_files/core.php" charset="utf-8" type="text/javascript"></script><a href="http://www.cnzz.com/stat/website.php?web_id=3871765" target="_blank" title="站长统计"><img border="0" hspace="0" vspace="0" src="./Lesson 11 球体、旋转矩阵和鼠标事件 _ HiWebGL_files/pic.gif"></a><script src="./Lesson 11 球体、旋转矩阵和鼠标事件 _ HiWebGL_files/stat.js.下载" defer="defer" async="async"></script>
+ </body></html>

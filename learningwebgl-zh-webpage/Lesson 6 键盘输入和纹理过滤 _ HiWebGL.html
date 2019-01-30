@@ -1,0 +1,775 @@
+<!DOCTYPE html>
+<!-- saved from url=(0029)http://www.hiwebgl.com/?p=263 -->
+<html dir="ltr" lang="zh-CN"><script type="text/javascript">
+    var spector;
+    var captureOnLoad = false;
+    var captureOffScreen = false;
+    window.__SPECTOR_Canvases = [];
+
+    (function() {
+        var __SPECTOR_Origin_EXTENSION_GetContext = HTMLCanvasElement.prototype.getContext;
+        HTMLCanvasElement.prototype.__SPECTOR_Origin_EXTENSION_GetContext = __SPECTOR_Origin_EXTENSION_GetContext;
+
+        HTMLCanvasElement.prototype.getContext = function () {
+            var context = null;
+            if (!arguments.length) {
+                return context;
+            }
+
+            if (arguments.length === 1) {
+                context = this.__SPECTOR_Origin_EXTENSION_GetContext(arguments[0]);
+                if (context === null) {
+                    return context;
+                }
+            }
+            else if (arguments.length === 2) {
+                context = this.__SPECTOR_Origin_EXTENSION_GetContext(arguments[0], arguments[1]);
+                if (context === null) {
+                    return context;
+                }
+            }
+
+            var contextNames = ["webgl", "experimental-webgl", "webgl2", "experimental-webgl2"];
+            if (contextNames.indexOf(arguments[0]) !== -1) {
+                context.canvas.setAttribute("__spector_context_type", arguments[0]);
+                // Notify the page a canvas is available.
+                var myEvent = new CustomEvent("SpectorWebGLCanvasAvailableEvent");
+                document.dispatchEvent(myEvent);
+
+                if (captureOffScreen) {
+                    var found = false;
+                    for (var i = 0; i < window.__SPECTOR_Canvases.length; i++) {
+                        if (window.__SPECTOR_Canvases[i] === this) {
+                            found = true;
+                            break;
+                        }
+                    }
+                    if (!found) {
+                        window.__SPECTOR_Canvases.push(this);
+                    }
+                }
+
+                if (captureOnLoad) {
+                    // Ensures canvas is in the dom to capture the one we are currently tracking.
+                    if (this.parentElement || false) {
+                        spector.captureContext(context, 500, false);
+                        captureOnLoad = false;
+                    }
+                }
+            }
+
+            return context;
+        }
+    })()</script><script>(function main() {
+    // Create enabled event
+    function fireEnabledEvent() {
+        // If gli exists, then we are already present and shouldn't do anything
+        if (!window.gli) {
+            setTimeout(function () {
+                var enabledEvent = document.createEvent("Event");
+                enabledEvent.initEvent("WebGLEnabledEvent", true, true);
+                document.dispatchEvent(enabledEvent);
+            }, 0);
+        } else {
+            //console.log("WebGL Inspector already embedded on the page - disabling extension");
+        }
+    };
+
+    // Grab the path root from the extension
+    document.addEventListener("WebGLInspectorReadyEvent", function (e) {
+        var pathElement = document.getElementById("__webglpathroot");
+        if (window["gliloader"]) {
+            gliloader.pathRoot = pathElement.innerText;
+        } else {
+            // TODO: more?
+            window.gliCssUrl = pathElement.innerText + "gli.all.css";
+        }
+    }, false);
+
+    // Rewrite getContext to snoop for webgl
+    var originalGetContext = HTMLCanvasElement.prototype.getContext;
+    if (!HTMLCanvasElement.prototype.getContextRaw) {
+        HTMLCanvasElement.prototype.getContextRaw = originalGetContext;
+    }
+    HTMLCanvasElement.prototype.getContext = function () {
+        var ignoreCanvas = this.internalInspectorSurface;
+        if (ignoreCanvas) {
+            return originalGetContext.apply(this, arguments);
+        }
+
+        var result = originalGetContext.apply(this, arguments);
+        if (result == null) {
+            return null;
+        }
+
+        var contextNames = ["moz-webgl", "webkit-3d", "experimental-webgl", "webgl", "3d"];
+        var requestingWebGL = contextNames.indexOf(arguments[0]) != -1;
+        if (requestingWebGL) {
+            // Page is requesting a WebGL context!
+            fireEnabledEvent(this);
+
+            // If we are injected, inspect this context
+            if (window.gli) {
+                if (gli.host.inspectContext) {
+                    // TODO: pull options from extension
+                    result = gli.host.inspectContext(this, result);
+                    // NOTE: execute in a timeout so that if the dom is not yet
+                    // loaded this won't error out.
+                    window.setTimeout(function() {
+                        var hostUI = new gli.host.HostUI(result);
+                        result.hostUI = hostUI; // just so we can access it later for debugging
+                    }, 0);
+                }
+            }
+        }
+
+        return result;
+    };
+})();</script><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+
+<title>Lesson 6 键盘输入和纹理过滤 | HiWebGL</title>
+<link rel="profile" href="http://gmpg.org/xfn/11">
+<link rel="stylesheet" type="text/css" media="all" href="./Lesson 6 键盘输入和纹理过滤 _ HiWebGL_files/style.css">
+<!--[if IE]>
+<link rel="stylesheet" type="text/css" media="all" href="http://www.hiwebgl.com/wp-content/themes/mnchrome/style-ie.css" />
+<![endif]-->
+<link rel="stylesheet" type="text/css" media="all" href="./Lesson 6 键盘输入和纹理过滤 _ HiWebGL_files/custom.css"><link rel="pingback" href="http://www.hiwebgl.com/xmlrpc.php">
+<meta name="robots" content="index,follow">
+<link rel="canonical" href="http://www.hiwebgl.com/?p=263">
+<link rel="alternate" type="application/rss+xml" title="HiWebGL » Feed" href="http://www.hiwebgl.com/?feed=rss2">
+<link rel="alternate" type="application/rss+xml" title="HiWebGL » 评论 Feed" href="http://www.hiwebgl.com/?feed=comments-rss2">
+<link rel="alternate" type="application/rss+xml" title="HiWebGL » Lesson 6 键盘输入和纹理过滤 评论 Feed" href="http://www.hiwebgl.com/?feed=rss2&amp;p=263">
+<link rel="stylesheet" id="wm-css" href="./Lesson 6 键盘输入和纹理过滤 _ HiWebGL_files/style(1).css" type="text/css" media="all">
+<link rel="stylesheet" id="toc-screen-css" href="./Lesson 6 键盘输入和纹理过滤 _ HiWebGL_files/screen.css" type="text/css" media="all">
+<link rel="stylesheet" id="codebox-css" href="./Lesson 6 键盘输入和纹理过滤 _ HiWebGL_files/codebox.css" type="text/css" media="screen">
+<script type="text/javascript" src="./Lesson 6 键盘输入和纹理过滤 _ HiWebGL_files/jquery.js.下载"></script>
+<script type="text/javascript" src="./Lesson 6 键盘输入和纹理过滤 _ HiWebGL_files/front.js.下载"></script>
+<script type="text/javascript" src="./Lesson 6 键盘输入和纹理过滤 _ HiWebGL_files/widget.js.下载"></script>
+<script type="text/javascript" src="./Lesson 6 键盘输入和纹理过滤 _ HiWebGL_files/comment-reply.js.下载"></script>
+<script type="text/javascript" src="./Lesson 6 键盘输入和纹理过滤 _ HiWebGL_files/codebox.js.下载"></script>
+<link rel="EditURI" type="application/rsd+xml" title="RSD" href="http://www.hiwebgl.com/xmlrpc.php?rsd">
+<link rel="wlwmanifest" type="application/wlwmanifest+xml" href="http://www.hiwebgl.com/wp-includes/wlwmanifest.xml"> 
+<link rel="prev" title="微软浏览器份额持续下跌 IE10背负艰巨使命" href="http://www.hiwebgl.com/?p=259">
+<link rel="next" title="Lesson 7 平行光和环境光" href="http://www.hiwebgl.com/?p=282">
+<meta name="generator" content="Monochrome 1.0">
+<link rel="canonical" href="http://www.hiwebgl.com/?p=263">
+<script type="text/javascript" src="./Lesson 6 键盘输入和纹理过滤 _ HiWebGL_files/jquery.min.js.下载"></script>
+<script type="text/javascript" src="./Lesson 6 键盘输入和纹理过滤 _ HiWebGL_files/hoverIntent.js.下载"></script>
+<script type="text/javascript" src="./Lesson 6 键盘输入和纹理过滤 _ HiWebGL_files/superfish.js.下载"></script>
+<script type="text/javascript" src="./Lesson 6 键盘输入和纹理过滤 _ HiWebGL_files/supersubs.js.下载"></script>
+<script type="text/javascript" src="./Lesson 6 键盘输入和纹理过滤 _ HiWebGL_files/jquery.accordion.js.下载"></script>
+<script type="text/javascript" src="./Lesson 6 键盘输入和纹理过滤 _ HiWebGL_files/dropdowns.js.下载"></script>
+<style type="text/css" media="all">
+/* <![CDATA[ */
+@import url("http://www.hiwebgl.com/wp-content/plugins/wp-table-reloaded/css/plugin.css?ver=1.9.3");
+@import url("http://www.hiwebgl.com/wp-content/plugins/wp-table-reloaded/css/datatables.css?ver=1.9.3");
+/* ]]> */
+</style></head>
+<body class="single single-post postid-263 single-format-standard">
+<div id="wrapper" class="hfeed">
+	<div id="header">
+    	<div id="masthead">
+        	<div id="branding" role="banner">
+            	<div id="site-logo">
+                	<a href="http://www.hiwebgl.com/" title="HiWebGL" rel="home">
+                    	                    <img src="./Lesson 6 键盘输入和纹理过滤 _ HiWebGL_files/logo.png" align="logo">
+                    					</a>
+                </div>
+                <div id="site-description">最好的HTML5 WebGL中文资讯站！</div>
+                            </div><!-- #branding -->
+            <div id="access" role="navigation">
+            		<div class="menu">
+		<ul class="sf-menu sf-js-enabled">
+			<li>
+            	<a href="http://www.hiwebgl.com/" title="HiWebGL" rel="home">
+				<strong>首页</strong><span>Homepage</span>
+			</a></li>
+						<li>
+				<a href="http://www.hiwebgl.com/?p=42">
+				<strong>教程</strong><span>&nbsp;</span></a>
+							</li>
+						<li>
+				<a href="http://www.hiwebgl.com/?cat=16">
+				<strong>Demo</strong><span>&nbsp;</span></a>
+							</li>
+						<li>
+				<a href="http://www.hiwebgl.com/ask">
+				<strong>有问必答</strong><span>&nbsp;</span></a>
+							</li>
+						<li>
+				<a href="http://hiwebgl.com/forum/">
+				<strong>论坛</strong><span>&nbsp;</span></a>
+							</li>
+					</ul>
+	</div>
+            </div><!-- #access -->
+        </div><!-- #masthead -->
+    </div><!-- #header -->
+    
+    <div id="breadcrumbWrap"><div id="breadcrumb">
+<span>You are here: </span><a href="http://www.hiwebgl.com/">Home</a> » <a href="http://www.hiwebgl.com/?cat=17" title="查看 WebGL教程 中的全部文章">WebGL教程</a> » Lesson 6 键盘输入和纹理过滤</div></div>    
+    <div id="main">
+		<div id="container">
+			<div id="content" role="main">
+
+
+				<div id="post-263" class="post-263 post type-post status-publish format-standard hentry category-webgl">
+					<h1 class="entry-title">Lesson 6 键盘输入和纹理过滤</h1>
+
+					<div class="entry-meta">
+							<span class="meta-author">By admin</span>
+    <span class="meta-date">On 2011 年 9 月 13 日</span>
+    <span class="meta-comment">8 条评论</span>
+						2,960 次浏览					</div><!-- .entry-meta -->
+
+					<div class="entry-content">
+                		<p><span style="color: #808080;"><em>HiWebGL译者声明：因为译者个人方便的原因，我们将原教程中的第三方图形库由glMatrix改为Oak3D实现，这不影响到Demo的最终效果和实现，也不影响到WebGL的讲解和学习。原教程正文中相应的代码和讲解也为做了相应修改！本教程由HiWebGL翻译整理，转载请注明出处！</em></span></p>
+<p><span style="color: #808080;"><em>关于Oak3D：Oak3D是一套简单易用、性能优越的WebGL Javascript Library。您可以在他们的主页找到更多信息。Oak3D主页：<a href="http://www.oak3d.com/" target="_blank"><span style="color: #808080;">http://www.oak3d.com</span></a></em></span></p>
+<p>欢迎来到WebGL教程的第六课，这节课的内容是基于NeHe OpenGL教程的<a href="http://nehe.gamedev.net/data/lessons/lesson.asp?lesson=07" target="_blank">第七节</a>改编的。在这节课上，我们将会介绍如何在WeblGL页面上实现键盘输入。我们将用键盘输入来控制贴上纹理贴图的立方体的旋转方向和旋转速度；并且，我们还可以改变纹理过滤的方式，你可以选择加载速度快但图像质量低，或者加载速度慢但图像质量高的表现形式。在NeHe的OpenGL教程的第七节中，不光介绍了这些，还包括光线；因为光线在WebGL中比OpenGL有更多的作用，所以我在这节课上先不讲，以后拿出来单独讲。</p>
+<p>下面的视频就是我们这节课将会完成的最终效果。</p>
+<p><embed src="http://player.youku.com/player.php/sid/XMzAzODA0NDI4/v.swf" quality="high" width="480" height="400" align="middle" allowscriptaccess="sameDomain" type="application/x-shockwave-flash"></p>
+<p>点击<a href="http://www.hiwebgl.com/webgl_lessons/lesson06/index.html" target="_blank">这里</a>打开一个独立的WebGL页面，如果你的浏览器不支持WebGL，请点击<a href="http://www.hiwebgl.com/?p=52" target="_blank">这里</a>。</p>
+<p>加载完成后，你可以使用Page Up 和 Page Down键来进行缩放；你还可以用方向键来改变立方体的旋转方向（按下的时间越长，旋转的速度越快）。你还可以点击F键在三个不同的纹理过滤之间切换。</p>
+<p>下面我们来看看它是怎么工作的……</p>
+<p>惯例声明：本系列的教程是针对那些已经具备相应编程知识但没有实际3D图形经验的人的；目标是让学习者创建并运行代码，并且明白代码其中的含义，从而可以快速地创建自己的3D Web页面。如果你还没有阅读前一课，请先阅读前一课的内容吧。因为本课中我只会讲解那些与前一课中不同的新知识。</p>
+<p>另外，我编写这套教程是因为我在独立学习WebGL，所以教程中可能（非常可能）会有错误，所以还请风险自担。尽管如此，我还是会不断的修正bug和改正其中的错误的，所以如果你发现了教程中的错误，请告诉我。</p>
+<p>有两种方法可以获得上面实例的代码：在实例的独立页面中选择“查看源代码”；或者点击<a href="http://www.hiwebgl.com/webgl_lessons/lesson06/lesson06.zip" target="_blank">这里</a>下载我们为您准备好的压缩包。</p>
+<p>这节课和之前最大的不同在于，我们需要把重心转到键盘上，我们先来看一看代码，这样的话，比较容易理解我们的课程。在示例代码中，你会发现我们定义了如下的全局变量：</p>
+
+<div class="wp_codebox"><table><tbody><tr id="p2631"><td class="line_numbers"><pre>192
+193
+194
+195
+196
+197
+198
+199
+200
+</pre></td><td class="code" id="p263code1"><pre class="javascript" style="font-family:monospace;">    <span style="color: #003366; font-weight: bold;">var</span> xRot <span style="color: #339933;">=</span> <span style="color: #CC0000;">0</span><span style="color: #339933;">;</span>
+    <span style="color: #003366; font-weight: bold;">var</span> xSpeed <span style="color: #339933;">=</span> <span style="color: #CC0000;">0</span><span style="color: #339933;">;</span>
+&nbsp;
+    <span style="color: #003366; font-weight: bold;">var</span> yRot <span style="color: #339933;">=</span> <span style="color: #CC0000;">0</span><span style="color: #339933;">;</span>
+    <span style="color: #003366; font-weight: bold;">var</span> ySpeed <span style="color: #339933;">=</span> <span style="color: #CC0000;">0</span><span style="color: #339933;">;</span>
+&nbsp;
+    <span style="color: #003366; font-weight: bold;">var</span> z <span style="color: #339933;">=</span> <span style="color: #339933;">-</span><span style="color: #CC0000;">5.0</span><span style="color: #339933;">;</span>
+&nbsp;
+    <span style="color: #003366; font-weight: bold;">var</span> filter <span style="color: #339933;">=</span> <span style="color: #CC0000;">0</span><span style="color: #339933;">;</span></pre></td></tr></tbody></table></div>
+
+<p>在第五课上，我们已经对xRot和yRot很熟悉了，他们代表立方体沿X轴和Y轴的旋转。xSpeed和ySpeed就很明显了，我们将允许用户通过方向键来改变立方体的旋转速度，而对xRot和yRot变量的改变速率就需要储存在xSpeed和ySpeed中。z是立方体的z轴，就是它离浏览者的距离，是通过Page Up 和Page Down控制的。最后，filter是一个从0到2之间的整数，它指明了我们在立方体上覆盖的纹理的过滤方式，这些过滤方式决定了纹理图像的图形质量如何。</p>
+<p>我们来看一下驱动纹理过滤的代码。第一处的改变在于加载纹理的代码，这段代码位于示例代码自上到下三分之一处。这一部分代码和以前有很大不同，因此，我就不标红任何东西了。但是，你们应该还是十分熟悉这样的代码形式。</p>
+
+<div class="wp_codebox"><table><tbody><tr id="p2632"><td class="line_numbers"><pre>120
+121
+122
+123
+124
+125
+126
+127
+128
+129
+130
+131
+132
+133
+134
+135
+136
+137
+138
+139
+140
+141
+142
+143
+144
+145
+146
+147
+148
+149
+150
+151
+152
+153
+154
+155
+156
+157
+158
+</pre></td><td class="code" id="p263code2"><pre class="javascript" style="font-family:monospace;">    <span style="color: #003366; font-weight: bold;">function</span> handleLoadedTexture<span style="color: #009900;">(</span>textures<span style="color: #009900;">)</span> <span style="color: #009900;">{</span>
+        gl.<span style="color: #660066;">pixelStorei</span><span style="color: #009900;">(</span>gl.<span style="color: #660066;">UNPACK_FLIP_Y_WEBGL</span><span style="color: #339933;">,</span> <span style="color: #003366; font-weight: bold;">true</span><span style="color: #009900;">)</span><span style="color: #339933;">;</span>
+&nbsp;
+        gl.<span style="color: #660066;">bindTexture</span><span style="color: #009900;">(</span>gl.<span style="color: #660066;">TEXTURE_2D</span><span style="color: #339933;">,</span> textures<span style="color: #009900;">[</span><span style="color: #CC0000;">0</span><span style="color: #009900;">]</span><span style="color: #009900;">)</span><span style="color: #339933;">;</span>
+        gl.<span style="color: #660066;">texImage2D</span><span style="color: #009900;">(</span>gl.<span style="color: #660066;">TEXTURE_2D</span><span style="color: #339933;">,</span> <span style="color: #CC0000;">0</span><span style="color: #339933;">,</span> gl.<span style="color: #660066;">RGBA</span><span style="color: #339933;">,</span> gl.<span style="color: #660066;">RGBA</span><span style="color: #339933;">,</span> gl.<span style="color: #660066;">UNSIGNED_BYTE</span><span style="color: #339933;">,</span> textures<span style="color: #009900;">[</span><span style="color: #CC0000;">0</span><span style="color: #009900;">]</span>.<span style="color: #660066;">image</span><span style="color: #009900;">)</span><span style="color: #339933;">;</span>
+        gl.<span style="color: #660066;">texParameteri</span><span style="color: #009900;">(</span>gl.<span style="color: #660066;">TEXTURE_2D</span><span style="color: #339933;">,</span> gl.<span style="color: #660066;">TEXTURE_MAG_FILTER</span><span style="color: #339933;">,</span> gl.<span style="color: #660066;">NEAREST</span><span style="color: #009900;">)</span><span style="color: #339933;">;</span>
+        gl.<span style="color: #660066;">texParameteri</span><span style="color: #009900;">(</span>gl.<span style="color: #660066;">TEXTURE_2D</span><span style="color: #339933;">,</span> gl.<span style="color: #660066;">TEXTURE_MIN_FILTER</span><span style="color: #339933;">,</span> gl.<span style="color: #660066;">NEAREST</span><span style="color: #009900;">)</span><span style="color: #339933;">;</span>
+&nbsp;
+        gl.<span style="color: #660066;">bindTexture</span><span style="color: #009900;">(</span>gl.<span style="color: #660066;">TEXTURE_2D</span><span style="color: #339933;">,</span> textures<span style="color: #009900;">[</span><span style="color: #CC0000;">1</span><span style="color: #009900;">]</span><span style="color: #009900;">)</span><span style="color: #339933;">;</span>
+        gl.<span style="color: #660066;">texImage2D</span><span style="color: #009900;">(</span>gl.<span style="color: #660066;">TEXTURE_2D</span><span style="color: #339933;">,</span> <span style="color: #CC0000;">0</span><span style="color: #339933;">,</span> gl.<span style="color: #660066;">RGBA</span><span style="color: #339933;">,</span> gl.<span style="color: #660066;">RGBA</span><span style="color: #339933;">,</span> gl.<span style="color: #660066;">UNSIGNED_BYTE</span><span style="color: #339933;">,</span> textures<span style="color: #009900;">[</span><span style="color: #CC0000;">1</span><span style="color: #009900;">]</span>.<span style="color: #660066;">image</span><span style="color: #009900;">)</span><span style="color: #339933;">;</span>
+        gl.<span style="color: #660066;">texParameteri</span><span style="color: #009900;">(</span>gl.<span style="color: #660066;">TEXTURE_2D</span><span style="color: #339933;">,</span> gl.<span style="color: #660066;">TEXTURE_MAG_FILTER</span><span style="color: #339933;">,</span> gl.<span style="color: #660066;">LINEAR</span><span style="color: #009900;">)</span><span style="color: #339933;">;</span>
+        gl.<span style="color: #660066;">texParameteri</span><span style="color: #009900;">(</span>gl.<span style="color: #660066;">TEXTURE_2D</span><span style="color: #339933;">,</span> gl.<span style="color: #660066;">TEXTURE_MIN_FILTER</span><span style="color: #339933;">,</span> gl.<span style="color: #660066;">LINEAR</span><span style="color: #009900;">)</span><span style="color: #339933;">;</span>
+&nbsp;
+        gl.<span style="color: #660066;">bindTexture</span><span style="color: #009900;">(</span>gl.<span style="color: #660066;">TEXTURE_2D</span><span style="color: #339933;">,</span> textures<span style="color: #009900;">[</span><span style="color: #CC0000;">2</span><span style="color: #009900;">]</span><span style="color: #009900;">)</span><span style="color: #339933;">;</span>
+        gl.<span style="color: #660066;">texImage2D</span><span style="color: #009900;">(</span>gl.<span style="color: #660066;">TEXTURE_2D</span><span style="color: #339933;">,</span> <span style="color: #CC0000;">0</span><span style="color: #339933;">,</span> gl.<span style="color: #660066;">RGBA</span><span style="color: #339933;">,</span> gl.<span style="color: #660066;">RGBA</span><span style="color: #339933;">,</span> gl.<span style="color: #660066;">UNSIGNED_BYTE</span><span style="color: #339933;">,</span> textures<span style="color: #009900;">[</span><span style="color: #CC0000;">2</span><span style="color: #009900;">]</span>.<span style="color: #660066;">image</span><span style="color: #009900;">)</span><span style="color: #339933;">;</span>
+        gl.<span style="color: #660066;">texParameteri</span><span style="color: #009900;">(</span>gl.<span style="color: #660066;">TEXTURE_2D</span><span style="color: #339933;">,</span> gl.<span style="color: #660066;">TEXTURE_MAG_FILTER</span><span style="color: #339933;">,</span> gl.<span style="color: #660066;">LINEAR</span><span style="color: #009900;">)</span><span style="color: #339933;">;</span>
+        gl.<span style="color: #660066;">texParameteri</span><span style="color: #009900;">(</span>gl.<span style="color: #660066;">TEXTURE_2D</span><span style="color: #339933;">,</span> gl.<span style="color: #660066;">TEXTURE_MIN_FILTER</span><span style="color: #339933;">,</span> gl.<span style="color: #660066;">LINEAR_MIPMAP_NEAREST</span><span style="color: #009900;">)</span><span style="color: #339933;">;</span>
+        gl.<span style="color: #660066;">generateMipmap</span><span style="color: #009900;">(</span>gl.<span style="color: #660066;">TEXTURE_2D</span><span style="color: #009900;">)</span><span style="color: #339933;">;</span>
+&nbsp;
+        gl.<span style="color: #660066;">bindTexture</span><span style="color: #009900;">(</span>gl.<span style="color: #660066;">TEXTURE_2D</span><span style="color: #339933;">,</span> <span style="color: #003366; font-weight: bold;">null</span><span style="color: #009900;">)</span><span style="color: #339933;">;</span>
+    <span style="color: #009900;">}</span>
+&nbsp;
+&nbsp;
+    <span style="color: #003366; font-weight: bold;">var</span> crateTextures <span style="color: #339933;">=</span> Array<span style="color: #009900;">(</span><span style="color: #009900;">)</span><span style="color: #339933;">;</span>
+&nbsp;
+    <span style="color: #003366; font-weight: bold;">function</span> initTexture<span style="color: #009900;">(</span><span style="color: #009900;">)</span> <span style="color: #009900;">{</span>
+        <span style="color: #003366; font-weight: bold;">var</span> crateImage <span style="color: #339933;">=</span> <span style="color: #003366; font-weight: bold;">new</span> Image<span style="color: #009900;">(</span><span style="color: #009900;">)</span><span style="color: #339933;">;</span>
+&nbsp;
+        <span style="color: #000066; font-weight: bold;">for</span> <span style="color: #009900;">(</span><span style="color: #003366; font-weight: bold;">var</span> i<span style="color: #339933;">=</span><span style="color: #CC0000;">0</span><span style="color: #339933;">;</span> i <span style="color: #339933;">&lt;</span> <span style="color: #CC0000;">3</span><span style="color: #339933;">;</span> i<span style="color: #339933;">++</span><span style="color: #009900;">)</span> <span style="color: #009900;">{</span>
+            <span style="color: #003366; font-weight: bold;">var</span> texture <span style="color: #339933;">=</span> gl.<span style="color: #660066;">createTexture</span><span style="color: #009900;">(</span><span style="color: #009900;">)</span><span style="color: #339933;">;</span>
+            texture.<span style="color: #660066;">image</span> <span style="color: #339933;">=</span> crateImage<span style="color: #339933;">;</span>
+            crateTextures.<span style="color: #660066;">push</span><span style="color: #009900;">(</span>texture<span style="color: #009900;">)</span><span style="color: #339933;">;</span>
+        <span style="color: #009900;">}</span>
+&nbsp;
+        crateImage.<span style="color: #000066;">onload</span> <span style="color: #339933;">=</span> <span style="color: #003366; font-weight: bold;">function</span> <span style="color: #009900;">(</span><span style="color: #009900;">)</span> <span style="color: #009900;">{</span>
+            handleLoadedTexture<span style="color: #009900;">(</span>crateTextures<span style="color: #009900;">)</span>
+        <span style="color: #009900;">}</span>
+        crateImage.<span style="color: #660066;">src</span> <span style="color: #339933;">=</span> <span style="color: #3366CC;">"crate.gif"</span><span style="color: #339933;">;</span>
+    <span style="color: #009900;">}</span></pre></td></tr></tbody></table></div>
+
+<p>我们首先来看一下函数initTexture 和全局变量crateTextures。我们很明显可以看出，虽然代码已经发生变化，但是代码中根本的不同在于我们创建了3个WebGL纹理对象数组，而不是一个；并且，当图像被加载时，我们通过回调函数将这个数组传递到handleLoadedTexture。当然，我们需要加载一个新的图像，crate.gif而不是nehe.gif。</p>
+<p>handleLoadedTexture 也并没有发生任何复杂的变化。之前，我们只是在初始化了一个带有图像数据的WebGL纹理物体，并且设置了两个参数gl.TEXTURE_MAG_FILTER 和gl.TEXTURE_MIN_FILTER ，他们都被设置为 gl.NEAREST。现在，我们要初始化数组中的3个带有相同图像的纹理，但是各自的参数是不同的，并且最后一个纹理还附加了一些其他的代码。以下就是这些纹理过滤方式具体是在哪些方面不同的。</p>
+<p><strong>Nearest（最近点采样过滤）</strong></p>
+<p>第一个纹理的gl.TEXTURE_MAG_FILTER 和gl.TEXTURE_MIN_FILTER参数都被设置为gl.NEAREST。这个和我们原来的设置是一样的，也就是说，当纹理被按比例放大或者缩小时，WebGL会在原始图像上寻找最近的点来决定指定点的颜色。在没有缩放的情况下，纹理看其来还是不错的；缩小后，图像看起来还过得去；但是纹理图像被放大时，看起来会有很多“马赛克”，因为这种算法实际上只是简单地放大了原始图像的像素，并没有做其他任何优化。</p>
+<p><strong>Linear（线性过滤）</strong></p>
+<p>对于第二个纹理来说，gl.TEXTURE_MAG_FILTER 和gl.TEXTURE_MIN_FILTER参数都被设置为gl.LINEAR。这里，我们在放大缩小时还是使用同样的过滤方式。但是，线性算法能够在纹理被放大时更好的表现物体；基本可以说，它对原始纹理图像上的像素进行了线性插值。说的再大概一下，在一个白的和一个黑的像素之间的像素会被输出为灰色。这样的话，我们看到的画面效果就更加平滑，但是必然原本锐利的边缘部分会看起来有点模糊。（公平的说，放大图像时，图像看起来都不会那么完美，因为你无法看到原始图像中本来就没有的细节。）</p>
+<p><strong>Mipmaps（多级渐进纹理过滤）</strong></p>
+<p>对于第三个纹理来说，gl.TEXTURE_MAG_FILTER参数被设置为gl.LINEAR，而gl.TEXTURE_MIN_FILTER被设置为gl.LINEAR_MIPMAP_NEAREST。这个是三种纹理过滤方式中最复杂的一个。</p>
+<p>Linear过滤在图像被放大时，给出了比较好的效果，但是在图像被缩小时，它的表现不如Nearest过滤。事实上，两种过滤方法都会产生难看的锯齿效果。要想看一看效果是什么样的，请重新加载示例图像，这样它使用的就是Nearest（或者，点击刷新键，你就能看到它原来的状态）；然后，按住Page Up键一会，来缩小图像。当立方体产生改变时，在某些点上，你会发现图像产生了“扭曲”，垂直的线条看起来时有时无。当你观察到这种现象时，稍微放大或缩小一下图像，观察一下扭曲的程度，接着按F键切换到Linear过滤，把立方体拉前推后，你会发现产生的扭曲效果和之前一样。再按一下F键，使用Mipmaps过滤，再次放大和缩小图像，你会发现，扭曲效果被消除了，至少是减少了。</p>
+<p>当立方体离我们比较远时，比如在宽度和高度是Canvas画布的十分之一时，请让它在这个位置旋转然后切换纹理过滤方式。当使用Nearest过滤或者Linear过滤时，你会发现，在某些地方组成木质纹理的暗色线条十分清晰，然而在另外一些地方，这些线条缺消失了，图像看起来污渍斑斑的。这种情况在使用Nearest过滤时，十分严重，在使用Linear 过滤时也好不到哪儿去。只有在使用Mipmaps过滤时，才看的过去。</p>
+<p>Nearest过滤和Linear过滤发生问题的原因是，当纹理被缩小为原来十分之一的尺寸时，纹理过滤将在原始图像的每十个像素中，使用一个来拼凑成缩小的纹理图像。实例中纹理是一个木质颗粒的图案，纹理的整体是浅棕色的，并且在垂直方向上有一些暗色的细线条。假设每个颗粒是10个像素大小，或者换句话说，水平方向上每十个像素就有一个暗棕色像素。当纹理图像被缩小为原图十分之一时，任何一个像素都会有十分之一的几率变成暗棕色，而十分之九的几率是光亮的。换句话说，只有十分之一的暗色的线条看起来会和原始尺寸的纹理图像一样清晰，其他的则都被隐藏了。这样就造成了看起来斑斑点点的效果，并且当纹理图像被放大缩小时，会产生扭曲。</p>
+<p>我们需要做的是，在我们需要将纹理图像缩放为原来十分之一时候和场合，缩小后的图像中的每个像素的颜色，都根据一个10×10像素的像素块的平均值来计算。但是这种处理方式在真实使用时会耗费大量计算开销，因此，我们就有了Mipmap过滤。</p>
+<p>Mipmaps过滤通过为纹理图像生成许多被称为mip level的子图像的方法解决了这个问题。这些图像分别是原图尺寸大小、四分之一大小、十六分之一大小……直到1×1像素大小。所有这些子图像的集合被称为mipmap。每一个mip level都是上一级大一点的mip level的平均值，这样，就很容易为当前缩放规格找出合适的图像版本：这一算法依赖于gl.TEXTURE_MIN_FILTER的值， 它所做的就是根据当前缩放规格，找到最合适的mip level，然后运用Linear过滤获得适合的像素。</p>
+<p>这样就解释的很清楚了。另外，我们给第三个纹理加上了一行代码</p>
+
+<div class="wp_codebox"><table><tbody><tr id="p2633"><td class="line_numbers"><pre>137
+</pre></td><td class="code" id="p263code3"><pre class="javascript" style="font-family:monospace;">        gl.<span style="color: #660066;">generateMipmap</span><span style="color: #009900;">(</span>gl.<span style="color: #660066;">TEXTURE_2D</span><span style="color: #009900;">)</span><span style="color: #339933;">;</span></pre></td></tr></tbody></table></div>
+
+<p>用来告诉WebGL为当前活动纹理生成对应的一系列MipMap层。</p>
+<p>显然，对于Mipmaps我已经讲了非常多了，应当很清楚了，如果还有什么不理解的地方，请留下评论联系我。</p>
+<p>让我们再次回到代码中。目前，我们已经看过了全局变量，并且了解了纹理是如何被加载和设置的。现在，我们来看一下全局变量和纹理在实际场景绘制中的应用。</p>
+<p>drawScene函数位于示例代码的三分之一处，这里只有三处变化。第一处是我们在绘制立方体时，我们使用的是全局变量z，而不是一个固定的点：</p>
+
+<div class="wp_codebox"><table><tbody><tr id="p2634"><td class="line_numbers"><pre>362
+</pre></td><td class="code" id="p263code4"><pre class="javascript" style="font-family:monospace;">        mvMatrix <span style="color: #339933;">=</span> okMat4Trans<span style="color: #009900;">(</span><span style="color: #CC0000;">0.0</span><span style="color: #339933;">,</span> <span style="color: #CC0000;">0.0</span><span style="color: #339933;">,</span> z<span style="color: #009900;">)</span><span style="color: #339933;">;</span></pre></td></tr></tbody></table></div>
+
+<p>第二个变化是我们移除了第五课的一行代码，我们不让立方体围绕Z轴转动了，而是只围绕X轴和Y轴转动：</p>
+
+<div class="wp_codebox"><table><tbody><tr id="p2635"><td class="line_numbers"><pre>364
+365
+</pre></td><td class="code" id="p263code5"><pre class="javascript" style="font-family:monospace;">        mvMatrix.<span style="color: #660066;">rotX</span><span style="color: #009900;">(</span>OAK.<span style="color: #660066;">SPACE_LOCAL</span><span style="color: #339933;">,</span> xRot<span style="color: #339933;">,</span> <span style="color: #003366; font-weight: bold;">true</span><span style="color: #009900;">)</span><span style="color: #339933;">;</span>
+        mvMatrix.<span style="color: #660066;">rotY</span><span style="color: #009900;">(</span>OAK.<span style="color: #660066;">SPACE_LOCAL</span><span style="color: #339933;">,</span> yRot<span style="color: #339933;">,</span> <span style="color: #003366; font-weight: bold;">true</span><span style="color: #009900;">)</span><span style="color: #339933;">;</span></pre></td></tr></tbody></table></div>
+
+<p>最后，我们要开始绘制立方体了，我们需要指明我们使用的那三个纹理。</p>
+
+<div class="wp_codebox"><table><tbody><tr id="p2636"><td class="line_numbers"><pre>376
+</pre></td><td class="code" id="p263code6"><pre class="javascript" style="font-family:monospace;">        gl.<span style="color: #660066;">bindTexture</span><span style="color: #009900;">(</span>gl.<span style="color: #660066;">TEXTURE_2D</span><span style="color: #339933;">,</span> crateTextures<span style="color: #009900;">[</span>filter<span style="color: #009900;">]</span><span style="color: #009900;">)</span><span style="color: #339933;">;</span></pre></td></tr></tbody></table></div>
+
+<p>这些就是drawScene函数中的所有变化。另外在animate中也有一些小的变化，除了改变xRot和yRot的恒定速率，我们还加上了xSpeed 和ySpeed的相关变量：</p>
+
+<div class="wp_codebox"><table><tbody><tr id="p2637"><td class="line_numbers"><pre>392
+393
+</pre></td><td class="code" id="p263code7"><pre class="javascript" style="font-family:monospace;">            xRot <span style="color: #339933;">+=</span> <span style="color: #009900;">(</span>xSpeed <span style="color: #339933;">*</span> elapsed<span style="color: #009900;">)</span> <span style="color: #339933;">/</span> <span style="color: #CC0000;">1000.0</span><span style="color: #339933;">;</span>
+            yRot <span style="color: #339933;">+=</span> <span style="color: #009900;">(</span>ySpeed <span style="color: #339933;">*</span> elapsed<span style="color: #009900;">)</span> <span style="color: #339933;">/</span> <span style="color: #CC0000;">1000.0</span><span style="color: #339933;">;</span></pre></td></tr></tbody></table></div>
+
+<p>这就是图形相关代码中发生的所有变化，但是不包括那些控制用户按键和更新全局变量的代码。下来我们要讲的就是这些。</p>
+<p>出现的第一个相关的变化就在下面，在webGLStart函数中，我们加入了第418行和第419行这两行新的代码。</p>
+
+<div class="wp_codebox"><table><tbody><tr id="p2638"><td class="line_numbers"><pre>408
+409
+410
+411
+412
+413
+414
+415
+416
+417
+418
+419
+420
+421
+422
+</pre></td><td class="code" id="p263code8"><pre class="javascript" style="font-family:monospace;">    <span style="color: #003366; font-weight: bold;">function</span> webGLStart<span style="color: #009900;">(</span><span style="color: #009900;">)</span> <span style="color: #009900;">{</span>
+        <span style="color: #003366; font-weight: bold;">var</span> canvas <span style="color: #339933;">=</span> document.<span style="color: #660066;">getElementById</span><span style="color: #009900;">(</span><span style="color: #3366CC;">"lesson06-canvas"</span><span style="color: #009900;">)</span><span style="color: #339933;">;</span>
+        initGL<span style="color: #009900;">(</span>canvas<span style="color: #009900;">)</span><span style="color: #339933;">;</span>
+        initShaders<span style="color: #009900;">(</span><span style="color: #009900;">)</span><span style="color: #339933;">;</span>
+        initBuffers<span style="color: #009900;">(</span><span style="color: #009900;">)</span><span style="color: #339933;">;</span>
+        initTexture<span style="color: #009900;">(</span><span style="color: #009900;">)</span><span style="color: #339933;">;</span>
+&nbsp;
+        gl.<span style="color: #660066;">clearColor</span><span style="color: #009900;">(</span><span style="color: #CC0000;">0.0</span><span style="color: #339933;">,</span> <span style="color: #CC0000;">0.0</span><span style="color: #339933;">,</span> <span style="color: #CC0000;">0.0</span><span style="color: #339933;">,</span> <span style="color: #CC0000;">1.0</span><span style="color: #009900;">)</span><span style="color: #339933;">;</span>
+        gl.<span style="color: #660066;">enable</span><span style="color: #009900;">(</span>gl.<span style="color: #660066;">DEPTH_TEST</span><span style="color: #009900;">)</span><span style="color: #339933;">;</span>
+&nbsp;
+        document.<span style="color: #660066;">onkeydown</span> <span style="color: #339933;">=</span> handleKeyDown<span style="color: #339933;">;</span>
+        document.<span style="color: #660066;">onkeyup</span> <span style="color: #339933;">=</span> handleKeyUp<span style="color: #339933;">;</span>
+&nbsp;
+        tick<span style="color: #009900;">(</span><span style="color: #009900;">)</span><span style="color: #339933;">;</span>
+    <span style="color: #009900;">}</span></pre></td></tr></tbody></table></div>
+
+<p>我们很明显可以看出，我们在这里告诉JavaScript，当一个按键被按下时，我们希望名为handleKeyDown的函数被调用，当按键被释放时，函数handleKeyUp被调用。</p>
+<p>接着我们看一下这些函数。他们位于示例代码的中间位置，就在我们先前看过的全局变量的下面。他们长这样：</p>
+
+<div class="wp_codebox"><table><tbody><tr id="p2639"><td class="line_numbers"><pre>203
+204
+205
+206
+207
+208
+209
+210
+211
+212
+213
+214
+215
+216
+217
+218
+219
+</pre></td><td class="code" id="p263code9"><pre class="javascript" style="font-family:monospace;">    <span style="color: #003366; font-weight: bold;">var</span> currentlyPressedKeys <span style="color: #339933;">=</span> <span style="color: #009900;">{</span><span style="color: #009900;">}</span><span style="color: #339933;">;</span>
+&nbsp;
+    <span style="color: #003366; font-weight: bold;">function</span> handleKeyDown<span style="color: #009900;">(</span>event<span style="color: #009900;">)</span> <span style="color: #009900;">{</span>
+        currentlyPressedKeys<span style="color: #009900;">[</span>event.<span style="color: #660066;">keyCode</span><span style="color: #009900;">]</span> <span style="color: #339933;">=</span> <span style="color: #003366; font-weight: bold;">true</span><span style="color: #339933;">;</span>
+&nbsp;
+        <span style="color: #000066; font-weight: bold;">if</span> <span style="color: #009900;">(</span>String.<span style="color: #660066;">fromCharCode</span><span style="color: #009900;">(</span>event.<span style="color: #660066;">keyCode</span><span style="color: #009900;">)</span> <span style="color: #339933;">==</span> <span style="color: #3366CC;">"F"</span><span style="color: #009900;">)</span> <span style="color: #009900;">{</span>
+            filter <span style="color: #339933;">+=</span> <span style="color: #CC0000;">1</span><span style="color: #339933;">;</span>
+            <span style="color: #000066; font-weight: bold;">if</span> <span style="color: #009900;">(</span>filter <span style="color: #339933;">==</span> <span style="color: #CC0000;">3</span><span style="color: #009900;">)</span> <span style="color: #009900;">{</span>
+                filter <span style="color: #339933;">=</span> <span style="color: #CC0000;">0</span><span style="color: #339933;">;</span>
+            <span style="color: #009900;">}</span>
+        <span style="color: #009900;">}</span>
+    <span style="color: #009900;">}</span>
+&nbsp;
+&nbsp;
+    <span style="color: #003366; font-weight: bold;">function</span> handleKeyUp<span style="color: #009900;">(</span>event<span style="color: #009900;">)</span> <span style="color: #009900;">{</span>
+        currentlyPressedKeys<span style="color: #009900;">[</span>event.<span style="color: #660066;">keyCode</span><span style="color: #009900;">]</span> <span style="color: #339933;">=</span> <span style="color: #003366; font-weight: bold;">false</span><span style="color: #339933;">;</span>
+    <span style="color: #009900;">}</span></pre></td></tr></tbody></table></div>
+
+<p>在这里我们维护了一个字典，可能你也知道它叫做哈希表（hashtable）或关联数组（associative array）。这个字典用来保存按键代码——键盘上的按键在JavaScript中的数字标示符——能告诉我们按键是否正被用户按下。如果你并不熟悉JavaScript 是如何运作，你会发现，任何对象都能够作为一个单独的字典来使用; 我们用来初始化currentlyPressedKey的语法看起来像一个Python字典，实际上它仅仅是一个空的基础对象类型的实例。</p>
+<p>除了这个之外，我们在处理按键被按下的事件中还增加了另外一些东西，这些东西是为当F键被按下时所准备的。在这段代码中，每次按下F键时，filter全局变量的值都会在0，1，2 这三个数字之间循环改变。</p>
+<p>这里很值得花些时间讲一讲为什么我们用两种不同的方法处理不同的按键。在电脑游戏中，或者在其他类似的3D系统中，按键能以以下两种形式工作：</p>
+<p>一种是立即做出反应。比如发射激光枪！按键后，按某种固定速率自动重复，比如每秒发射两次。</p>
+<p>另一种是根据按键时间长短期发生作用。例如，按方向键向前走，直到松手之后，才会停下。</p>
+<p>对于第二种按键方式来说，当你按住一个键时，你可能还会想按其他的键，这样你就能比如说向前跑、转弯，或者在移动中射击。这样的话，和通常处理文字时的按键解读方式不同，这是一种完全不同的按键解读方法。例如，你在一个文字处理器中按住A键，会出现一长串的A，但是当你按住A的同时时按了B，B会出现，但是一长串A也会停止。如果同样的事情发生在游戏中，你在跑步或者转弯时，就会受阻。这很显然是非常让人厌恶的。</p>
+<p>所以，我们这里只需要将F键按照第一种按键方式处理。字典将在处理第二种按键方式的代码中使用，它会不断记录过程中同时按下的所有按键，而不只是最后一个被按下的键。</p>
+<p>这个字典实际上会被各种不同的函数调用，比如handleKeys。在这之前，请先跳到代码末尾处，我们会看到tick函数也调用了它，就像drawScene和animate一样：</p>
+
+<div class="wp_codebox"><table><tbody><tr id="p26310"><td class="line_numbers"><pre>399
+400
+401
+402
+403
+404
+</pre></td><td class="code" id="p263code10"><pre class="javascript" style="font-family:monospace;">    <span style="color: #003366; font-weight: bold;">function</span> tick<span style="color: #009900;">(</span><span style="color: #009900;">)</span> <span style="color: #009900;">{</span>
+        okRequestAnimationFrame<span style="color: #009900;">(</span>tick<span style="color: #009900;">)</span><span style="color: #339933;">;</span>
+        handleKeys<span style="color: #009900;">(</span><span style="color: #009900;">)</span><span style="color: #339933;">;</span>
+        drawScene<span style="color: #009900;">(</span><span style="color: #009900;">)</span><span style="color: #339933;">;</span>
+        animate<span style="color: #009900;">(</span><span style="color: #009900;">)</span><span style="color: #339933;">;</span>
+    <span style="color: #009900;">}</span></pre></td></tr></tbody></table></div>
+
+<p>代码是这个样子滴：</p>
+
+<div class="wp_codebox"><table><tbody><tr id="p26311"><td class="line_numbers"><pre>222
+223
+224
+225
+226
+227
+228
+229
+230
+231
+232
+233
+234
+235
+236
+237
+238
+239
+240
+241
+242
+243
+244
+245
+246
+247
+</pre></td><td class="code" id="p263code11"><pre class="javascript" style="font-family:monospace;">    <span style="color: #003366; font-weight: bold;">function</span> handleKeys<span style="color: #009900;">(</span><span style="color: #009900;">)</span> <span style="color: #009900;">{</span>
+        <span style="color: #000066; font-weight: bold;">if</span> <span style="color: #009900;">(</span>currentlyPressedKeys<span style="color: #009900;">[</span><span style="color: #CC0000;">33</span><span style="color: #009900;">]</span><span style="color: #009900;">)</span> <span style="color: #009900;">{</span>
+            <span style="color: #006600; font-style: italic;">// Page Up</span>
+            z <span style="color: #339933;">-=</span> <span style="color: #CC0000;">0.05</span><span style="color: #339933;">;</span>
+        <span style="color: #009900;">}</span>
+        <span style="color: #000066; font-weight: bold;">if</span> <span style="color: #009900;">(</span>currentlyPressedKeys<span style="color: #009900;">[</span><span style="color: #CC0000;">34</span><span style="color: #009900;">]</span><span style="color: #009900;">)</span> <span style="color: #009900;">{</span>
+            <span style="color: #006600; font-style: italic;">// Page Down</span>
+            z <span style="color: #339933;">+=</span> <span style="color: #CC0000;">0.05</span><span style="color: #339933;">;</span>
+        <span style="color: #009900;">}</span>
+        <span style="color: #000066; font-weight: bold;">if</span> <span style="color: #009900;">(</span>currentlyPressedKeys<span style="color: #009900;">[</span><span style="color: #CC0000;">37</span><span style="color: #009900;">]</span><span style="color: #009900;">)</span> <span style="color: #009900;">{</span>
+            <span style="color: #006600; font-style: italic;">// Left cursor key</span>
+            ySpeed <span style="color: #339933;">-=</span> <span style="color: #CC0000;">1</span><span style="color: #339933;">;</span>
+        <span style="color: #009900;">}</span>
+        <span style="color: #000066; font-weight: bold;">if</span> <span style="color: #009900;">(</span>currentlyPressedKeys<span style="color: #009900;">[</span><span style="color: #CC0000;">39</span><span style="color: #009900;">]</span><span style="color: #009900;">)</span> <span style="color: #009900;">{</span>
+            <span style="color: #006600; font-style: italic;">// Right cursor key</span>
+            ySpeed <span style="color: #339933;">+=</span> <span style="color: #CC0000;">1</span><span style="color: #339933;">;</span>
+        <span style="color: #009900;">}</span>
+        <span style="color: #000066; font-weight: bold;">if</span> <span style="color: #009900;">(</span>currentlyPressedKeys<span style="color: #009900;">[</span><span style="color: #CC0000;">38</span><span style="color: #009900;">]</span><span style="color: #009900;">)</span> <span style="color: #009900;">{</span>
+            <span style="color: #006600; font-style: italic;">// Up cursor key</span>
+            xSpeed <span style="color: #339933;">-=</span> <span style="color: #CC0000;">1</span><span style="color: #339933;">;</span>
+        <span style="color: #009900;">}</span>
+        <span style="color: #000066; font-weight: bold;">if</span> <span style="color: #009900;">(</span>currentlyPressedKeys<span style="color: #009900;">[</span><span style="color: #CC0000;">40</span><span style="color: #009900;">]</span><span style="color: #009900;">)</span> <span style="color: #009900;">{</span>
+            <span style="color: #006600; font-style: italic;">// Down cursor key</span>
+            xSpeed <span style="color: #339933;">+=</span> <span style="color: #CC0000;">1</span><span style="color: #339933;">;</span>
+        <span style="color: #009900;">}</span>
+    <span style="color: #009900;">}</span></pre></td></tr></tbody></table></div>
+
+<p>这段代码虽然长，但是相对简单，它所做的就是检查是否按键被按下，并且在适当的时候更新全局变量。最重要的，当方向键“上”和“右”同时被按下，他会立即更新xSpeed和ySpeed，从而得到我们需要的效果。</p>
+<p>好了，以上就是本节课的全部内容。在本节课中，你学到了各种不同的纹理过滤方式在处理缩放时的不同，并且还学会了如何在3D动画中读取用户的键盘输入。</p>
+<p>如果你有任何的问题、评论或者修正，都请留下评论。在下节课中，我们将会开始加入光线。</p>
+<div style="clear:both; margin-top:5px; margin-bottom:5px;"></div><div style="float:left"><!-- JiaThis Button BEGIN -->
+<div id="ckepop">
+	<span class="jiathis_txt">分享到：</span>
+	<a class="jiathis_button_tools_1"></a>
+	<a class="jiathis_button_tools_2"></a>
+	<a class="jiathis_button_tools_3"></a>
+	<a class="jiathis_button_tools_4"></a>
+	<a href="http://www.jiathis.com/share" class="jiathis jiathis_txt jiathis_separator jtico jtico_jiathis" target="_blank">更多</a>
+	<a class="jiathis_counter_style"></a>
+</div>
+<script type="text/javascript" src="./Lesson 6 键盘输入和纹理过滤 _ HiWebGL_files/jia.js.下载" charset="utf-8"></script>
+<!-- JiaThis Button END --></div><div style="clear:both; margin-top:5px; margin-bottom:5px;"></div>											</div><!-- .entry-content -->
+
+
+					<div class="entry-utility">
+						Posted in <a href="http://www.hiwebgl.com/?cat=17" title="查看 WebGL教程 中的全部文章" rel="category">WebGL教程</a>. Bookmark the <a href="http://www.hiwebgl.com/?p=263" title="Permalink to Lesson 6 键盘输入和纹理过滤" rel="bookmark">permalink</a>.											</div><!-- .entry-utility -->
+				</div><!-- #post-## -->
+
+				<div id="nav-below" class="navigation">
+					<div class="nav-previous"><a href="http://www.hiwebgl.com/?p=259" rel="prev"><span class="meta-nav">←</span> 微软浏览器份额持续下跌 IE10背负艰巨使命</a></div>
+					<div class="nav-next"><a href="http://www.hiwebgl.com/?p=282" rel="next">Lesson 7 平行光和环境光 <span class="meta-nav">→</span></a></div>
+				</div><!-- #nav-below -->
+
+				
+
+<div id="comments">
+		<h3 id="comments-title"><span>1 trackback</span></h3>
+	<dl id="trackback_list">
+		<dt><a href="http://www.hiwebgl.com/?p=42" rel="external nofollow" class="url">WebGL教程 | WebGL中文教程翻译工程启动！HiWebGL | HiWebGL | 最好的HTML5 WebGL中文资讯站</a></dt>
+		<dd><span>2011 年 9 月 13 日 下午 10:23</span></dd>
+    </dl>
+    <h3 id="comments-title"><span>7 comments</span></h3>
+	<ol class="commentlist">
+    	
+	<li class="comment even thread-even depth-1" id="li-comment-153">
+    	<div id="comment-153">
+            <div class="comment_meta commentmetadata">
+                <span class="avatar"><img alt="" src="./Lesson 6 键盘输入和纹理过滤 _ HiWebGL_files/ad516503a11cd5ca435acc9bb6523536.png" class="avatar avatar-40 photo" height="40" width="40"></span>
+                <span class="comment_author vcard fn">EVSoga</span>
+                <span class="comment_time">2011 年 10 月 19 日 下午 12:30</span>
+            </div>
+            <div class="comment_body">
+                <p></p><p>为什么下载下来的这一课的课件在本地运行的时候显示不出来东西呢？</p>
+<p></p>
+                <p class="reply"><a class="comment-reply-link" href="http://www.hiwebgl.com/?p=263&amp;replytocom=153#respond" onclick="return addComment.moveForm(&quot;comment-153&quot;, &quot;153&quot;, &quot;respond&quot;, &quot;263&quot;)">回复</a></p>
+            </div>
+		</div>
+        
+        
+    
+<ul class="children">
+	<li class="comment byuser comment-author-admin bypostauthor odd alt depth-2" id="li-comment-155">
+    	<div id="comment-155">
+            <div class="comment_meta commentmetadata">
+                <span class="avatar"><img alt="" src="./Lesson 6 键盘输入和纹理过滤 _ HiWebGL_files/ad516503a11cd5ca435acc9bb6523536(1).png" class="avatar avatar-40 photo" height="40" width="40"></span>
+                <span class="comment_author vcard fn">admin</span>
+                <span class="comment_time">2011 年 10 月 20 日 上午 12:30</span>
+            </div>
+            <div class="comment_body">
+                <p></p><p>可以的啊！删掉html中的统计代码试试</p>
+<p></p>
+                <p class="reply"><a class="comment-reply-link" href="http://www.hiwebgl.com/?p=263&amp;replytocom=155#respond" onclick="return addComment.moveForm(&quot;comment-155&quot;, &quot;155&quot;, &quot;respond&quot;, &quot;263&quot;)">回复</a></p>
+            </div>
+		</div>
+        
+        
+    
+<ul class="children">
+	<li class="comment even depth-3" id="li-comment-202">
+    	<div id="comment-202">
+            <div class="comment_meta commentmetadata">
+                <span class="avatar"><img alt="" src="./Lesson 6 键盘输入和纹理过滤 _ HiWebGL_files/ad516503a11cd5ca435acc9bb6523536(2).png" class="avatar avatar-40 photo" height="40" width="40"></span>
+                <span class="comment_author vcard fn">Nayukey</span>
+                <span class="comment_time">2011 年 11 月 9 日 上午 10:08</span>
+            </div>
+            <div class="comment_body">
+                <p></p><p>是的，我也无法显示。。。。</p>
+<p></p>
+                <p class="reply"><a class="comment-reply-link" href="http://www.hiwebgl.com/?p=263&amp;replytocom=202#respond" onclick="return addComment.moveForm(&quot;comment-202&quot;, &quot;202&quot;, &quot;respond&quot;, &quot;263&quot;)">回复</a></p>
+            </div>
+		</div>
+        
+        
+    
+</li>
+</ul>
+</li>
+</ul>
+</li>
+	<li class="comment odd alt thread-odd thread-alt depth-1" id="li-comment-471">
+    	<div id="comment-471">
+            <div class="comment_meta commentmetadata">
+                <span class="avatar"><img alt="" src="./Lesson 6 键盘输入和纹理过滤 _ HiWebGL_files/ad516503a11cd5ca435acc9bb6523536(3).png" class="avatar avatar-40 photo" height="40" width="40"></span>
+                <span class="comment_author vcard fn">pengsuperwar</span>
+                <span class="comment_time">2012 年 2 月 1 日 上午 10:14</span>
+            </div>
+            <div class="comment_body">
+                <p></p><p>可以显示，应该是lx几位的浏览器没有开启本地文件浏览的许可吧，想请问下有无Oak3D的中文api，还有想投身webgl还需要什么类型的基础知识啊，我看代码都觉得有点头大</p>
+<p></p>
+                <p class="reply"><a class="comment-reply-link" href="http://www.hiwebgl.com/?p=263&amp;replytocom=471#respond" onclick="return addComment.moveForm(&quot;comment-471&quot;, &quot;471&quot;, &quot;respond&quot;, &quot;263&quot;)">回复</a></p>
+            </div>
+		</div>
+        
+        
+    
+<ul class="children">
+	<li class="comment even depth-2" id="li-comment-599">
+    	<div id="comment-599">
+            <div class="comment_meta commentmetadata">
+                <span class="avatar"><img alt="" src="./Lesson 6 键盘输入和纹理过滤 _ HiWebGL_files/ad516503a11cd5ca435acc9bb6523536(4).png" class="avatar avatar-40 photo" height="40" width="40"></span>
+                <span class="comment_author vcard fn">王云龙</span>
+                <span class="comment_time">2012 年 2 月 26 日 下午 3:50</span>
+            </div>
+            <div class="comment_body">
+                <p></p><p>+1</p>
+<p></p>
+                <p class="reply"><a class="comment-reply-link" href="http://www.hiwebgl.com/?p=263&amp;replytocom=599#respond" onclick="return addComment.moveForm(&quot;comment-599&quot;, &quot;599&quot;, &quot;respond&quot;, &quot;263&quot;)">回复</a></p>
+            </div>
+		</div>
+        
+        
+    
+</li>
+</ul>
+</li>
+	<li class="comment odd alt thread-even depth-1" id="li-comment-696">
+    	<div id="comment-696">
+            <div class="comment_meta commentmetadata">
+                <span class="avatar"><img alt="" src="./Lesson 6 键盘输入和纹理过滤 _ HiWebGL_files/ad516503a11cd5ca435acc9bb6523536(5).png" class="avatar avatar-40 photo" height="40" width="40"></span>
+                <span class="comment_author vcard fn">ly</span>
+                <span class="comment_time">2012 年 3 月 27 日 下午 6:00</span>
+            </div>
+            <div class="comment_body">
+                <p></p><p>不能显示图片应该是本地浏览的问题，放在服务器里运行能显示，但是…键盘事件没反应，pgup pgdn跟方向键都没反应….</p>
+<p></p>
+                <p class="reply"><a class="comment-reply-link" href="http://www.hiwebgl.com/?p=263&amp;replytocom=696#respond" onclick="return addComment.moveForm(&quot;comment-696&quot;, &quot;696&quot;, &quot;respond&quot;, &quot;263&quot;)">回复</a></p>
+            </div>
+		</div>
+        
+        
+    
+<ul class="children">
+	<li class="comment even depth-2" id="li-comment-699">
+    	<div id="comment-699">
+            <div class="comment_meta commentmetadata">
+                <span class="avatar"><img alt="" src="./Lesson 6 键盘输入和纹理过滤 _ HiWebGL_files/ad516503a11cd5ca435acc9bb6523536(5).png" class="avatar avatar-40 photo" height="40" width="40"></span>
+                <span class="comment_author vcard fn">ly</span>
+                <span class="comment_time">2012 年 3 月 28 日 下午 5:28</span>
+            </div>
+            <div class="comment_body">
+                <p></p><p>代码里给document绑定的onkeydown跟kenup事件，在chrome里不起作用，改成绑定在document.body上就可以了</p>
+<p></p>
+                <p class="reply"><a class="comment-reply-link" href="http://www.hiwebgl.com/?p=263&amp;replytocom=699#respond" onclick="return addComment.moveForm(&quot;comment-699&quot;, &quot;699&quot;, &quot;respond&quot;, &quot;263&quot;)">回复</a></p>
+            </div>
+		</div>
+        
+        
+    
+</li>
+</ul>
+</li>
+    </ol>
+        
+
+								<div id="respond">
+				<h3 id="reply-title">Post a Comment <small><a rel="nofollow" id="cancel-comment-reply-link" href="http://www.hiwebgl.com/?p=263#respond" style="display:none;">点击这里取消回复。</a></small></h3>
+									<form action="http://www.hiwebgl.com/wp-comments-post.php" method="post" id="commentform">
+																			<p class="comment-notes">电子邮件地址不会被公开。 必填项已用 <span class="required">*</span> 标注</p>							<p class="comment-form-author"><label for="author">姓名</label> <span class="required">*</span><input id="author" name="author" type="text" value="" size="30" aria-required="true"></p>
+<p class="comment-form-email"><label for="email">电子邮件</label> <span class="required">*</span><input id="email" name="email" type="text" value="" size="30" aria-required="true"></p>
+<p class="comment-form-url"><label for="url">站点</label><input id="url" name="url" type="text" value="" size="30"></p>
+												<p class="comment-form-comment"><label for="comment">评论</label><textarea id="comment" name="comment" cols="45" rows="8" aria-required="true"></textarea></p>						<p class="form-allowed-tags">您可以使用这些 <abbr title="HyperText Markup Language">HTML</abbr> 标签和属性： <code>&lt;a href="" title=""&gt; &lt;abbr title=""&gt; &lt;acronym title=""&gt; &lt;b&gt; &lt;blockquote cite=""&gt; &lt;cite&gt; &lt;code&gt; &lt;del datetime=""&gt; &lt;em&gt; &lt;i&gt; &lt;q cite=""&gt; &lt;strike&gt; &lt;strong&gt; </code></p>						<p class="form-submit">
+							<input name="submit" type="submit" id="submit" value="发表评论">
+							<input type="hidden" name="comment_post_ID" value="263" id="comment_post_ID">
+<input type="hidden" name="comment_parent" id="comment_parent" value="0">
+						</p>
+						<p style="display: none;"><input type="hidden" id="akismet_comment_nonce" name="akismet_comment_nonce" value="199e299e64"></p>					</form>
+							</div><!-- #respond -->
+						
+</div><!-- #comments -->
+
+			</div><!-- #content -->
+		</div><!-- #container -->
+
+<div id="sidebar" class="widget-area" role="complementary">
+	<ul class="xoxo">
+    	<li id="search-2" class="widget-container widget_search"><form id="searchform" method="get" action="http://www.hiwebgl.com/"> 
+	<input type="text" name="s" id="s" class="search_term" value="Type in keyword and hit Enter..." onblur="if (this.value == &#39;&#39;) {this.value = &#39;Type in keyword and hit Enter...&#39;;}" onfocus="if (this.value == &#39;Type in keyword and hit Enter...&#39;) {this.value = &#39;&#39;;}">
+</form></li><li id="text-4" class="widget-container widget_text"><h3 class="widget-title">加入我们的QQ群</h3>			<div class="textwidget"><b>HiWebGL技术讨论群</b><br>①群群号174563471（已满）<br>②群群号133703893（已满）<br>③群群号196778533（已满）<br>④群群号217873851（已满）<br>⑤群群号225923498（已满）<br>500人群群号219549633<br>欢迎各位程序员和工程师加入！<br><a target="_blank" href="http://qun.qq.com/#jointhegroup/gid/219549633"><img border="0" src="./Lesson 6 键盘输入和纹理过滤 _ HiWebGL_files/gp.png" alt="点击这里加入此群" title="点击这里加入此群"></a>
+<br><br>
+<b>HiWebGL产业讨论群</b><br>①群群号176289597（已满）<br>②群群号216936388<br>欢迎关注Web3D发展的从业者与富有理想与激情的创业者朋友加入！<br><a target="_blank" href="http://qun.qq.com/#jointhegroup/gid/216936388"><img border="0" src="./Lesson 6 键盘输入和纹理过滤 _ HiWebGL_files/gp.png" alt="点击这里加入此群" title="点击这里加入此群"></a></div>
+		</li><style type="text/css" media="screen">
+#mwrapper-wm_show-3 .mcontainer {height: 300px; overflow: hidden;}
+</style>
+<li id="wm_show-3" class="widget-container wm_show"><h3 class="widget-title">关注我们的新浪微博！</h3><div class="mwrapper" id="mwrapper-wm_show-3"><div class="head"><img class="headimg" src="./Lesson 6 键盘输入和纹理过滤 _ HiWebGL_files/89c570d0jw1e8qgp5bmzyj2050050aa8.jpg"><a class="headlink" href="http://weibo.com/2311418064" rel="external nofollow" target="_blank">HiWebGL</a><div class="onekey"><iframe width="63" height="24" frameborder="0" allowtransparency="true" marginwidth="0" marginheight="0" scrolling="no" border="0" src="./Lesson 6 键盘输入和纹理过滤 _ HiWebGL_files/followbutton.html"></iframe></div></div><a class="scroll up" href="javascript:;"><img src="./Lesson 6 键盘输入和纹理过滤 _ HiWebGL_files/transparent.gif"></a><div class="mcontainer"><ul class="microblogs"><li class="tweet">[哆啦A梦吃惊]<div class="rt"><a href="http://weibo.com/crazycomputer" rel="external nofollow" target="_blank">尼奥_</a> : 因写了抢猫粮插件被抓的小喵。<div class="pic rt-pic"><a href="http://ww3.sinaimg.cn/large/6588fb91jw1f8a611qywmj20qo0r743g.jpg" rel="external nofollow" target="_blank"><img src="./Lesson 6 键盘输入和纹理过滤 _ HiWebGL_files/6588fb91jw1f8a611qywmj20qo0r743g.jpg"></a></div></div><div class="meta"><a href="http://api.t.sina.com.cn/2311418064/statuses/4025014212843692" rel="external nofollow" target="_blank">9月29日 12:00</a> 来自 <a href="http://weibo.com/2311418064" rel="external nofollow" target="_blank">新浪微博</a></div></li><li class="tweet">转发微博<div class="rt"><a href="http://weibo.com/armcn" rel="external nofollow" target="_blank">ARM中国</a> : 在看颜的时代，如何让一款游戏画面更具高bigger？从8位像素画风到1080P/4K，再到ARM的Enlighten全局光照技术，能够分分钟变化出数十种光照效果，再挑的玩家都给它点赞了，不信你就来看看[围观][围观]<a href="http://t.cn/RcNsHsc" rel="external nofollow" target="_blank">http://t.cn/RcNsHsc</a><div class="pic rt-pic"><a href="http://ww3.sinaimg.cn/large/84217b4fgw1f89g6wubugj20j30q6gr3.jpg" rel="external nofollow" target="_blank"><img src="./Lesson 6 键盘输入和纹理过滤 _ HiWebGL_files/84217b4fgw1f89g6wubugj20j30q6gr3.jpg"></a></div></div><div class="meta"><a href="http://api.t.sina.com.cn/2311418064/statuses/4025000392991907" rel="external nofollow" target="_blank">9月29日 11:05</a> 来自 <a href="http://weibo.com/2311418064" rel="external nofollow" target="_blank">新浪微博</a></div></li><li class="tweet">转发微博<div class="rt"><a href="http://weibo.com/baidujs" rel="external nofollow" target="_blank">JS小组</a> : 你知道使用 target='_blank' 也会有安全漏洞么？尤其是在各种 UGC 网站中。不过小编早就玩过了，其实一般倒也不会用在钓鱼上，而是用在各种各样的广告点击中。推荐文章《target='_blank' 安全漏洞示例》地址 <a href="http://t.cn/RchBwVu" rel="external nofollow" target="_blank">http://t.cn/RchBwVu</a>  $w<div class="pic rt-pic"><a href="http://ww2.sinaimg.cn/large/aa9d3df6jw1f7fewekmx8j20g30a1aak.jpg" rel="external nofollow" target="_blank"><img src="./Lesson 6 键盘输入和纹理过滤 _ HiWebGL_files/aa9d3df6jw1f7fewekmx8j20g30a1aak.jpg"></a></div></div><div class="meta"><a href="http://api.t.sina.com.cn/2311418064/statuses/4016375595329873" rel="external nofollow" target="_blank">9月5日 15:53</a> 来自 <a href="http://weibo.com/2311418064" rel="external nofollow" target="_blank">新浪微博</a></div></li><li class="tweet">不做游戏，帮转<div class="rt"><a href="http://weibo.com/xdarui" rel="external nofollow" target="_blank">阿里子之</a> : 有做WebVR游戏的公司么，求合作。求圈内大神帮忙转发。@寒冬winter @大城小胖 @w3cplus</div><div class="meta"><a href="http://api.t.sina.com.cn/2311418064/statuses/4015348426770066" rel="external nofollow" target="_blank">9月2日 19:52</a> 来自 <a href="http://weibo.com/2311418064" rel="external nofollow" target="_blank">新浪微博</a></div></li><li class="tweet">阿里云OSS是否支持websockets?有人知道吗？<div class="meta"><a href="http://api.t.sina.com.cn/2311418064/statuses/4006622127044001" rel="external nofollow" target="_blank">8月9日 17:56</a> 来自 <a href="http://weibo.com/2311418064" rel="external nofollow" target="_blank">新浪微博</a></div></li></ul></div><a class="scroll down" href="javascript:;"><img src="./Lesson 6 键盘输入和纹理过滤 _ HiWebGL_files/transparent.gif"></a></div></li><li id="recent-comments-2" class="widget-container widget_recent_comments"><h3 class="widget-title">近期评论</h3><ul id="recentcomments"><li class="recentcomments"><a href="http://www.d2film.com/" rel="external nofollow" class="url">企业宣传片制作d2film.com影视视频制作公司QQ30998</a> 发表在《<a href="http://www.hiwebgl.com/?p=42#comment-7984">WebGL中文教程翻译工程启动！</a>》</li><li class="recentcomments"><a href="http://www.128sf.cn/" rel="external nofollow" class="url">魔域服务器架设</a> 发表在《<a href="http://www.hiwebgl.com/?p=312#comment-7858">Lesson 9 优化代码结构实现多物体运动</a>》</li><li class="recentcomments"><a href="http://www.39uc.cn/" rel="external nofollow" class="url">天龙八部师傅m161</a> 发表在《<a href="http://www.hiwebgl.com/?p=70#comment-7857">外媒公布Firefox 6性能测试结果</a>》</li><li class="recentcomments"><a href="http://www.233sf.cn/" rel="external nofollow" class="url">最新奇迹私发网</a> 发表在《<a href="http://www.hiwebgl.com/?p=42#comment-7856">WebGL中文教程翻译工程启动！</a>》</li><li class="recentcomments"><a href="http://www.5aivideo.com/" rel="external nofollow" class="url">婚礼跟拍视频5aivideo.com婚礼摄影MV-QQ73595</a> 发表在《<a href="http://www.hiwebgl.com/?p=42#comment-7829">WebGL中文教程翻译工程启动！</a>》</li></ul></li><li id="categories-2" class="widget-container widget_categories"><h3 class="widget-title">分类目录</h3>		<ul>
+	<li class="cat-item cat-item-16"><a href="http://www.hiwebgl.com/?cat=16" title="查看 Demo大赏 下的所有文章">Demo大赏</a>
+</li>
+	<li class="cat-item cat-item-29"><a href="http://www.hiwebgl.com/?cat=29" title="查看 HTML5新闻 下的所有文章">HTML5新闻</a>
+</li>
+	<li class="cat-item cat-item-57"><a href="http://www.hiwebgl.com/?cat=57" title="Oak3D中文教程">Oak3D教程</a>
+</li>
+	<li class="cat-item cat-item-17"><a href="http://www.hiwebgl.com/?cat=17" title="查看 WebGL教程 下的所有文章">WebGL教程</a>
+</li>
+	<li class="cat-item cat-item-3"><a href="http://www.hiwebgl.com/?cat=3" title="WebGL新闻">WebGL新闻</a>
+</li>
+	<li class="cat-item cat-item-10"><a href="http://www.hiwebgl.com/?cat=10" title="查看 博文精选 下的所有文章">博文精选</a>
+</li>
+	<li class="cat-item cat-item-4"><a href="http://www.hiwebgl.com/?cat=4" title="推荐阅读">推荐</a>
+</li>
+	<li class="cat-item cat-item-1"><a href="http://www.hiwebgl.com/?cat=1" title="查看 未分类 下的所有文章">未分类</a>
+</li>
+		</ul>
+</li><li id="archives-2" class="widget-container widget_archive"><h3 class="widget-title">文章归档</h3>		<ul>
+			<li><a href="http://www.hiwebgl.com/?m=201206" title="2012 年六月">2012 年六月</a></li>
+	<li><a href="http://www.hiwebgl.com/?m=201205" title="2012 年五月">2012 年五月</a></li>
+	<li><a href="http://www.hiwebgl.com/?m=201204" title="2012 年四月">2012 年四月</a></li>
+	<li><a href="http://www.hiwebgl.com/?m=201203" title="2012 年三月">2012 年三月</a></li>
+	<li><a href="http://www.hiwebgl.com/?m=201202" title="2012 年二月">2012 年二月</a></li>
+	<li><a href="http://www.hiwebgl.com/?m=201201" title="2012 年一月">2012 年一月</a></li>
+	<li><a href="http://www.hiwebgl.com/?m=201112" title="2011 年十二月">2011 年十二月</a></li>
+	<li><a href="http://www.hiwebgl.com/?m=201111" title="2011 年十一月">2011 年十一月</a></li>
+	<li><a href="http://www.hiwebgl.com/?m=201110" title="2011 年十月">2011 年十月</a></li>
+	<li><a href="http://www.hiwebgl.com/?m=201109" title="2011 年九月">2011 年九月</a></li>
+	<li><a href="http://www.hiwebgl.com/?m=201108" title="2011 年八月">2011 年八月</a></li>
+		</ul>
+</li>    </ul>
+</div><!-- #sidebar .widget-area -->	</div><!-- #main -->
+    <div id="footer" role="contentinfo">
+    	
+    	<div id="colophon">
+            <div id="site-info" class="clearfix">
+                <div id="generator">Powered by <a href="http://wordpress.org/" title="Semantic Personal Publishing Platform" rel="generator">Wordpress</a> and <a href="http://wpcrunchy.com/" title="Free Premium Quality Wordpress Themes">WPCrunchy</a></div>
+                <div id="credits">Designed by <a href="http://www.hostreviewgeeks.com/" title="best web hosting" target="_blank">best web hosting</a>. In collaboration with <a href="http://www.hostv.com/" title="VPS Hosting" target="_blank">VPS Hosting</a>, <a href="http://broadwaytickets.co/" title="Broadway Tickets" target="_blank">Broadway Tickets</a>, <a href="http://wpcorner.com/" title="Free Wordpress Themes" target="_blank">Free Wordpress Themes</a>.</div>
+            </div>
+        </div>
+    </div><!-- #footer -->
+</div><!-- #wrapper -->
+
+<script type="text/javascript">jQuery(document).ready(function() { if(jQuery("ul.accordion li").length > 2) { jQuery("ul.accordion").accordion(); } });</script><script src="./Lesson 6 键盘输入和纹理过滤 _ HiWebGL_files/stat.php" language="JavaScript"></script><script src="./Lesson 6 键盘输入和纹理过滤 _ HiWebGL_files/core.php" charset="utf-8" type="text/javascript"></script><a href="http://www.cnzz.com/stat/website.php?web_id=3871765" target="_blank" title="站长统计"><img border="0" hspace="0" vspace="0" src="./Lesson 6 键盘输入和纹理过滤 _ HiWebGL_files/pic.gif"></a><script src="./Lesson 6 键盘输入和纹理过滤 _ HiWebGL_files/stat.js.下载" defer="defer" async="async"></script>
+ </body></html>

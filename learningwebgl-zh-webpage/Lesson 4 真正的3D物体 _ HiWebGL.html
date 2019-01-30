@@ -1,0 +1,982 @@
+<!DOCTYPE html>
+<!-- saved from url=(0029)http://www.hiwebgl.com/?p=186 -->
+<html dir="ltr" lang="zh-CN"><script type="text/javascript">
+    var spector;
+    var captureOnLoad = false;
+    var captureOffScreen = false;
+    window.__SPECTOR_Canvases = [];
+
+    (function() {
+        var __SPECTOR_Origin_EXTENSION_GetContext = HTMLCanvasElement.prototype.getContext;
+        HTMLCanvasElement.prototype.__SPECTOR_Origin_EXTENSION_GetContext = __SPECTOR_Origin_EXTENSION_GetContext;
+
+        HTMLCanvasElement.prototype.getContext = function () {
+            var context = null;
+            if (!arguments.length) {
+                return context;
+            }
+
+            if (arguments.length === 1) {
+                context = this.__SPECTOR_Origin_EXTENSION_GetContext(arguments[0]);
+                if (context === null) {
+                    return context;
+                }
+            }
+            else if (arguments.length === 2) {
+                context = this.__SPECTOR_Origin_EXTENSION_GetContext(arguments[0], arguments[1]);
+                if (context === null) {
+                    return context;
+                }
+            }
+
+            var contextNames = ["webgl", "experimental-webgl", "webgl2", "experimental-webgl2"];
+            if (contextNames.indexOf(arguments[0]) !== -1) {
+                context.canvas.setAttribute("__spector_context_type", arguments[0]);
+                // Notify the page a canvas is available.
+                var myEvent = new CustomEvent("SpectorWebGLCanvasAvailableEvent");
+                document.dispatchEvent(myEvent);
+
+                if (captureOffScreen) {
+                    var found = false;
+                    for (var i = 0; i < window.__SPECTOR_Canvases.length; i++) {
+                        if (window.__SPECTOR_Canvases[i] === this) {
+                            found = true;
+                            break;
+                        }
+                    }
+                    if (!found) {
+                        window.__SPECTOR_Canvases.push(this);
+                    }
+                }
+
+                if (captureOnLoad) {
+                    // Ensures canvas is in the dom to capture the one we are currently tracking.
+                    if (this.parentElement || false) {
+                        spector.captureContext(context, 500, false);
+                        captureOnLoad = false;
+                    }
+                }
+            }
+
+            return context;
+        }
+    })()</script><script>(function main() {
+    // Create enabled event
+    function fireEnabledEvent() {
+        // If gli exists, then we are already present and shouldn't do anything
+        if (!window.gli) {
+            setTimeout(function () {
+                var enabledEvent = document.createEvent("Event");
+                enabledEvent.initEvent("WebGLEnabledEvent", true, true);
+                document.dispatchEvent(enabledEvent);
+            }, 0);
+        } else {
+            //console.log("WebGL Inspector already embedded on the page - disabling extension");
+        }
+    };
+
+    // Grab the path root from the extension
+    document.addEventListener("WebGLInspectorReadyEvent", function (e) {
+        var pathElement = document.getElementById("__webglpathroot");
+        if (window["gliloader"]) {
+            gliloader.pathRoot = pathElement.innerText;
+        } else {
+            // TODO: more?
+            window.gliCssUrl = pathElement.innerText + "gli.all.css";
+        }
+    }, false);
+
+    // Rewrite getContext to snoop for webgl
+    var originalGetContext = HTMLCanvasElement.prototype.getContext;
+    if (!HTMLCanvasElement.prototype.getContextRaw) {
+        HTMLCanvasElement.prototype.getContextRaw = originalGetContext;
+    }
+    HTMLCanvasElement.prototype.getContext = function () {
+        var ignoreCanvas = this.internalInspectorSurface;
+        if (ignoreCanvas) {
+            return originalGetContext.apply(this, arguments);
+        }
+
+        var result = originalGetContext.apply(this, arguments);
+        if (result == null) {
+            return null;
+        }
+
+        var contextNames = ["moz-webgl", "webkit-3d", "experimental-webgl", "webgl", "3d"];
+        var requestingWebGL = contextNames.indexOf(arguments[0]) != -1;
+        if (requestingWebGL) {
+            // Page is requesting a WebGL context!
+            fireEnabledEvent(this);
+
+            // If we are injected, inspect this context
+            if (window.gli) {
+                if (gli.host.inspectContext) {
+                    // TODO: pull options from extension
+                    result = gli.host.inspectContext(this, result);
+                    // NOTE: execute in a timeout so that if the dom is not yet
+                    // loaded this won't error out.
+                    window.setTimeout(function() {
+                        var hostUI = new gli.host.HostUI(result);
+                        result.hostUI = hostUI; // just so we can access it later for debugging
+                    }, 0);
+                }
+            }
+        }
+
+        return result;
+    };
+})();</script><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+
+<title>Lesson 4 真正的3D物体 | HiWebGL</title>
+<link rel="profile" href="http://gmpg.org/xfn/11">
+<link rel="stylesheet" type="text/css" media="all" href="./Lesson 4 真正的3D物体 _ HiWebGL_files/style.css">
+<!--[if IE]>
+<link rel="stylesheet" type="text/css" media="all" href="http://www.hiwebgl.com/wp-content/themes/mnchrome/style-ie.css" />
+<![endif]-->
+<link rel="stylesheet" type="text/css" media="all" href="./Lesson 4 真正的3D物体 _ HiWebGL_files/custom.css"><link rel="pingback" href="http://www.hiwebgl.com/xmlrpc.php">
+<meta name="robots" content="index,follow">
+<link rel="canonical" href="http://www.hiwebgl.com/?p=186">
+<link rel="alternate" type="application/rss+xml" title="HiWebGL » Feed" href="http://www.hiwebgl.com/?feed=rss2">
+<link rel="alternate" type="application/rss+xml" title="HiWebGL » 评论 Feed" href="http://www.hiwebgl.com/?feed=comments-rss2">
+<link rel="alternate" type="application/rss+xml" title="HiWebGL » Lesson 4 真正的3D物体 评论 Feed" href="http://www.hiwebgl.com/?feed=rss2&amp;p=186">
+<link rel="stylesheet" id="wm-css" href="./Lesson 4 真正的3D物体 _ HiWebGL_files/style(1).css" type="text/css" media="all">
+<link rel="stylesheet" id="toc-screen-css" href="./Lesson 4 真正的3D物体 _ HiWebGL_files/screen.css" type="text/css" media="all">
+<link rel="stylesheet" id="codebox-css" href="./Lesson 4 真正的3D物体 _ HiWebGL_files/codebox.css" type="text/css" media="screen">
+<script type="text/javascript" src="./Lesson 4 真正的3D物体 _ HiWebGL_files/jquery.js.下载"></script>
+<script type="text/javascript" src="./Lesson 4 真正的3D物体 _ HiWebGL_files/front.js.下载"></script>
+<script type="text/javascript" src="./Lesson 4 真正的3D物体 _ HiWebGL_files/widget.js.下载"></script>
+<script type="text/javascript" src="./Lesson 4 真正的3D物体 _ HiWebGL_files/comment-reply.js.下载"></script>
+<script type="text/javascript" src="./Lesson 4 真正的3D物体 _ HiWebGL_files/codebox.js.下载"></script>
+<link rel="EditURI" type="application/rsd+xml" title="RSD" href="http://www.hiwebgl.com/xmlrpc.php?rsd">
+<link rel="wlwmanifest" type="application/wlwmanifest+xml" href="http://www.hiwebgl.com/wp-includes/wlwmanifest.xml"> 
+<link rel="prev" title="Firefox 9将为Javascript加入类型推断，预计性能将提高20%到30%" href="http://www.hiwebgl.com/?p=176">
+<link rel="next" title="Lesson 5 引入纹理贴图" href="http://www.hiwebgl.com/?p=201">
+<meta name="generator" content="Monochrome 1.0">
+<link rel="canonical" href="http://www.hiwebgl.com/?p=186">
+<script type="text/javascript" src="./Lesson 4 真正的3D物体 _ HiWebGL_files/jquery.min.js.下载"></script>
+<script type="text/javascript" src="./Lesson 4 真正的3D物体 _ HiWebGL_files/hoverIntent.js.下载"></script>
+<script type="text/javascript" src="./Lesson 4 真正的3D物体 _ HiWebGL_files/superfish.js.下载"></script>
+<script type="text/javascript" src="./Lesson 4 真正的3D物体 _ HiWebGL_files/supersubs.js.下载"></script>
+<script type="text/javascript" src="./Lesson 4 真正的3D物体 _ HiWebGL_files/jquery.accordion.js.下载"></script>
+<script type="text/javascript" src="./Lesson 4 真正的3D物体 _ HiWebGL_files/dropdowns.js.下载"></script>
+<style type="text/css" media="all">
+/* <![CDATA[ */
+@import url("http://www.hiwebgl.com/wp-content/plugins/wp-table-reloaded/css/plugin.css?ver=1.9.3");
+@import url("http://www.hiwebgl.com/wp-content/plugins/wp-table-reloaded/css/datatables.css?ver=1.9.3");
+/* ]]> */
+</style></head>
+<body class="single single-post postid-186 single-format-standard">
+<div id="wrapper" class="hfeed">
+	<div id="header">
+    	<div id="masthead">
+        	<div id="branding" role="banner">
+            	<div id="site-logo">
+                	<a href="http://www.hiwebgl.com/" title="HiWebGL" rel="home">
+                    	                    <img src="./Lesson 4 真正的3D物体 _ HiWebGL_files/logo.png" align="logo">
+                    					</a>
+                </div>
+                <div id="site-description">最好的HTML5 WebGL中文资讯站！</div>
+                            </div><!-- #branding -->
+            <div id="access" role="navigation">
+            		<div class="menu">
+		<ul class="sf-menu sf-js-enabled">
+			<li>
+            	<a href="http://www.hiwebgl.com/" title="HiWebGL" rel="home">
+				<strong>首页</strong><span>Homepage</span>
+			</a></li>
+						<li>
+				<a href="http://www.hiwebgl.com/?p=42">
+				<strong>教程</strong><span>&nbsp;</span></a>
+							</li>
+						<li>
+				<a href="http://www.hiwebgl.com/?cat=16">
+				<strong>Demo</strong><span>&nbsp;</span></a>
+							</li>
+						<li>
+				<a href="http://www.hiwebgl.com/ask">
+				<strong>有问必答</strong><span>&nbsp;</span></a>
+							</li>
+						<li>
+				<a href="http://hiwebgl.com/forum/">
+				<strong>论坛</strong><span>&nbsp;</span></a>
+							</li>
+					</ul>
+	</div>
+            </div><!-- #access -->
+        </div><!-- #masthead -->
+    </div><!-- #header -->
+    
+    <div id="breadcrumbWrap"><div id="breadcrumb">
+<span>You are here: </span><a href="http://www.hiwebgl.com/">Home</a> » <a href="http://www.hiwebgl.com/?cat=17" title="查看 WebGL教程 中的全部文章">WebGL教程</a> » Lesson 4 真正的3D物体</div></div>    
+    <div id="main">
+		<div id="container">
+			<div id="content" role="main">
+
+
+				<div id="post-186" class="post-186 post type-post status-publish format-standard hentry category-webgl tag-webgl-2 tag-46 tag-47">
+					<h1 class="entry-title">Lesson 4 真正的3D物体</h1>
+
+					<div class="entry-meta">
+							<span class="meta-author">By admin</span>
+    <span class="meta-date">On 2011 年 9 月 3 日</span>
+    <span class="meta-comment">17 条评论</span>
+						6,457 次浏览					</div><!-- .entry-meta -->
+
+					<div class="entry-content">
+                		<p><span style="color: #808080;"><em>HiWebGL译者声明：因为译者个人方便的原因，我们将原教程中的第三方图形库由glMatrix改为Oak3D实现，这不影响到Demo的最终效果和实现，也不影响到WebGL的讲解和学习。原教程正文中相应的代码和讲解也为做了相应修改！本教程由HiWebGL翻译整理，转载请注明出处！</em></span></p>
+<p><span style="color: #808080;"><em>关于Oak3D：Oak3D是一套简单易用、性能优越的WebGL Javascript Library。您可以在他们的主页找到更多信息。Oak3D主页：</em><a href="http://www.oak3d.com/" target="_blank"><span style="color: #808080;"><span style="color: #999999;"><em>http://www.oak3d.co</em></span>m</span></a></span></p>
+<p>&nbsp;</p>
+<p>欢迎大家来到WebGL教程的第四课。我将会向大家展示一些真正的3D的物体。这节课的内容是基于NeHe的OpenGL教程的<a href="http://nehe.gamedev.net/data/lessons/lesson.asp?lesson=05" target="_blank">第五节</a>改写的。</p>
+<p>以下这个视频就是本节课最终完成的效果。</p>
+<p><object width="480" height="400" classid="clsid:d27cdb6e-ae6d-11cf-96b8-444553540000" codebase="http://download.macromedia.com/pub/shockwave/cabs/flash/swflash.cab#version=6,0,40,0"><param name="src" value="http://player.youku.com/player.php/sid/XMjk5NDk0MDk2/v.swf"><param name="allowfullscreen" value="true"><param name="quality" value="high"><param name="allowscriptaccess" value="always"><embed width="480" height="400" type="application/x-shockwave-flash" src="http://player.youku.com/player.php/sid/XMjk5NDk0MDk2/v.swf" allowfullscreen="true" quality="high" allowscriptaccess="always"></object></p>
+<p>点击<a href="http://www.hiwebgl.com/webgl_lessons/lesson04/index.html" target="_blank">这里</a>打开一个独立的WebGL页面，如果你的浏览器不支持WebGL，请点击<a href="http://www.hiwebgl.com/?p=52" target="_blank">这里</a>。</p>
+<p>下面我们来看看它是怎么工作的……</p>
+<p>惯例声明：本系列的教程是针对那些已经具备相应编程知识但没有实际3D图形经验的人的；目标是让学习者创建并运行代码，并且明白代码其中的含义，从而可以快速地创建自己的3D Web页面。如果你还没有阅读第一课，请先阅读第一课的内容吧。因为本课中我只会讲解那些与第一课中不同的新知识。</p>
+<p>另外，我编写这套教程是因为我在独立学习WebGL，所以教程中可能（非常可能）会有错误，所以还请风险自担。尽管如此，我还是会不断的修正bug和改正其中的错误的，所以如果你发现了教程中的错误，请告诉我。</p>
+<p>有两种方法可以获得上面实例的代码：在实例的独立页面中选择“查看源代码”；你也可以点击<a href="http://www.hiwebgl.com/webgl_lessons/lesson04/lesson04.zip" target="_blank">这里</a>，下载我们为您打包好的压缩包。</p>
+<p>本课和上一课的不同集中在animate, initBuffers和drawScene这三个函数中. 如果你正在看代码, 请跳到animate函数的函数体部分, 你会看到第一处细小的差别: 用来记录两个物体当前旋转状态的变量名改变了, 上一课中的rTri, rSquare变成了rPyramid与rCube, 同时, Cube的旋转方向也与上一课相反（这样显得更漂亮一些）. 所以, 本课中的旋转代码如下：</p>
+
+<div class="wp_codebox"><table><tbody><tr id="p1861"><td class="line_numbers"><pre>338
+339
+</pre></td><td class="code" id="p186code1"><pre class="javascript" style="font-family:monospace;">            rPyramid <span style="color: #339933;">+=</span> <span style="color: #009900;">(</span><span style="color: #CC0000;">90</span> <span style="color: #339933;">*</span> elapsed<span style="color: #009900;">)</span> <span style="color: #339933;">/</span> <span style="color: #CC0000;">1000.0</span><span style="color: #339933;">;</span>
+            rCube <span style="color: #339933;">-=</span> <span style="color: #009900;">(</span><span style="color: #CC0000;">75</span> <span style="color: #339933;">*</span> elapsed<span style="color: #009900;">)</span> <span style="color: #339933;">/</span> <span style="color: #CC0000;">1000.0</span><span style="color: #339933;">;</span></pre></td></tr></tbody></table></div>
+
+<p>好，介绍完这个函数了，接着我们来看一下drawScene函数，在定义函数之前，我么将定义两个新的变量。</p>
+
+<div class="wp_codebox"><table><tbody><tr id="p1862"><td class="line_numbers"><pre>284
+285
+</pre></td><td class="code" id="p186code2"><pre class="javascript" style="font-family:monospace;">    <span style="color: #003366; font-weight: bold;">var</span> rPyramid <span style="color: #339933;">=</span> <span style="color: #CC0000;">0</span><span style="color: #339933;">;</span>
+    <span style="color: #003366; font-weight: bold;">var</span> rCube <span style="color: #339933;">=</span> <span style="color: #CC0000;">0</span><span style="color: #339933;">;</span></pre></td></tr></tbody></table></div>
+
+<p>接着是函数头，绘制工作的初始化及确认椎体绘制位置，之后我们让它沿着Y轴转动，就像我们在前一节课上对那个三角形所做的操作一样，角度大小由rPyramid指定。</p>
+
+<div class="wp_codebox"><table><tbody><tr id="p1863"><td class="line_numbers"><pre>296
+</pre></td><td class="code" id="p186code3"><pre class="javascript" style="font-family:monospace;">        mvMatrix.<span style="color: #660066;">rotY</span><span style="color: #009900;">(</span>OAK.<span style="color: #660066;">SPACE_LOCAL</span><span style="color: #339933;">,</span> rPyramid<span style="color: #339933;">,</span> <span style="color: #003366; font-weight: bold;">true</span><span style="color: #009900;">)</span><span style="color: #339933;">;</span></pre></td></tr></tbody></table></div>
+
+<p>然后开始绘制。新代码中，我们画这个彩色的锥体的代码与上一节教程里我们画那个彩色的三角形所用的代码的唯一不同就是它拥有更多的顶点和颜色，而这些工作, 都是由initBuffers来完成的.（这也是我们马上要讲的）。这就意味着，除了我们所使用的buffer名字不同外，代码是完全相同的。</p>
+
+<div class="wp_codebox"><table><tbody><tr id="p1864"><td class="line_numbers"><pre>298
+299
+300
+301
+302
+303
+304
+305
+</pre></td><td class="code" id="p186code4"><pre class="javascript" style="font-family:monospace;">        gl.<span style="color: #660066;">bindBuffer</span><span style="color: #009900;">(</span>gl.<span style="color: #660066;">ARRAY_BUFFER</span><span style="color: #339933;">,</span> pyramidVertexPositionBuffer<span style="color: #009900;">)</span><span style="color: #339933;">;</span>
+        gl.<span style="color: #660066;">vertexAttribPointer</span><span style="color: #009900;">(</span>shaderProgram.<span style="color: #660066;">vertexPositionAttribute</span><span style="color: #339933;">,</span> pyramidVertexPositionBuffer.<span style="color: #660066;">itemSize</span><span style="color: #339933;">,</span> gl.<span style="color: #660066;">FLOAT</span><span style="color: #339933;">,</span> <span style="color: #003366; font-weight: bold;">false</span><span style="color: #339933;">,</span> <span style="color: #CC0000;">0</span><span style="color: #339933;">,</span> <span style="color: #CC0000;">0</span><span style="color: #009900;">)</span><span style="color: #339933;">;</span>
+&nbsp;
+        gl.<span style="color: #660066;">bindBuffer</span><span style="color: #009900;">(</span>gl.<span style="color: #660066;">ARRAY_BUFFER</span><span style="color: #339933;">,</span> pyramidVertexColorBuffer<span style="color: #009900;">)</span><span style="color: #339933;">;</span>
+        gl.<span style="color: #660066;">vertexAttribPointer</span><span style="color: #009900;">(</span>shaderProgram.<span style="color: #660066;">vertexColorAttribute</span><span style="color: #339933;">,</span> pyramidVertexColorBuffer.<span style="color: #660066;">itemSize</span><span style="color: #339933;">,</span> gl.<span style="color: #660066;">FLOAT</span><span style="color: #339933;">,</span> <span style="color: #003366; font-weight: bold;">false</span><span style="color: #339933;">,</span> <span style="color: #CC0000;">0</span><span style="color: #339933;">,</span> <span style="color: #CC0000;">0</span><span style="color: #009900;">)</span><span style="color: #339933;">;</span>
+&nbsp;
+        setMatrixUniforms<span style="color: #009900;">(</span><span style="color: #009900;">)</span><span style="color: #339933;">;</span>
+        gl.<span style="color: #660066;">drawArrays</span><span style="color: #009900;">(</span>gl.<span style="color: #660066;">TRIANGLES</span><span style="color: #339933;">,</span> <span style="color: #CC0000;">0</span><span style="color: #339933;">,</span> pyramidVertexPositionBuffer.<span style="color: #660066;">numItems</span><span style="color: #009900;">)</span><span style="color: #339933;">;</span></pre></td></tr></tbody></table></div>
+
+<p>看吧，很简单，接着我们再来看一下立方体的代码。第一步，就是旋转它。这一次，我们不仅仅需要让他沿X轴旋转，还需要让他沿着一个从右至上的轴，向你的方向（观看者的方向）旋转。</p>
+
+<div class="wp_codebox"><table><tbody><tr id="p1865"><td class="line_numbers"><pre>313
+</pre></td><td class="code" id="p186code5"><pre class="javascript" style="font-family:monospace;">        mvMatrix.<span style="color: #660066;">rot</span><span style="color: #009900;">(</span>OAK.<span style="color: #660066;">SPACE_LOCAL</span><span style="color: #339933;">,</span> rCube<span style="color: #339933;">,</span> <span style="color: #CC0000;">1.0</span><span style="color: #339933;">,</span> <span style="color: #CC0000;">1.0</span><span style="color: #339933;">,</span> <span style="color: #CC0000;">1.0</span><span style="color: #339933;">,</span> <span style="color: #003366; font-weight: bold;">true</span><span style="color: #009900;">)</span><span style="color: #339933;">;</span></pre></td></tr></tbody></table></div>
+
+<p>接着，我们开始画这个立方体，这可能会有点复杂。有三种方法可以画出一个立方体。</p>
+<ol>
+<li>使用三角形带（Triangle Strip）， 如果整个立方体是单色的, 那Triangle Strip方式可以很好的绘制我们想要的东西——首先，我们使用最开始的三个顶点来绘制一个三角面，之后，增加一个顶点（译者注：原文中为增加两个点，但似乎strip方式绘制三角形每次都只需增加一个点，也许原文作者想要表达的是webgl目前并不支持的quad strip），并和刚才绘制的三角形中最后两个顶点组合为一个新的三角面进行绘制，以此类推，直到完成整个绘制过程， 这非常简单高效，但可惜在这里我们不能使用这种技术，因为我们想要立方体在不同的面可以有不同的颜色，立方体中，每一个顶点都被三个不同的面所共享，因此我们需要每个顶点被独立使用三次。这样做十分的麻烦，没必要花时间解释这个……</li>
+<li>我们可以采用一些投机取巧的方法来绘制这个我们需要的立方体，让我们先来绘制六个独立正方形，每一个正方形都是立方体的一个面，我们分别设置这些正方形的顶点和颜色。这个课程的第一个版本（2009年10月30日之前的版本）就是这样做的。很好用，但是却并不是实用的好方法，因为每次独立的绘制调用都会带来额外的性能开销，我们应当将调用drawArrays的次数最小化来提高绘制的性能.</li>
+<li>最后一种选择就是将立方体指定为六个正方形，每个正方形有两个三角形构成，但是我们将让WebGL一次性完成这些图形的绘制。这个方法有点类似我们用三角形带制作立方体。但由于我们每次都是定义一个完整的三角形，而不是通过添加点来定义三角形，我们很容易来定义每一个面的颜色。这个方法的另一个好处就是它的代码是最简洁的，也方便我来介绍一个新函数 – drawElements, 我们就用这个方法来实现它。</li>
+</ol>
+<p>首先，我们将包含有这个立方体的顶点的数组对象和我们将会在initbuffers中用到的颜色通过适当的属性关联起来，就像我们处理锥体的过程一样。</p>
+
+<div class="wp_codebox"><table><tbody><tr id="p1866"><td class="line_numbers"><pre>316
+317
+318
+319
+320
+</pre></td><td class="code" id="p186code6"><pre class="javascript" style="font-family:monospace;">        gl.<span style="color: #660066;">bindBuffer</span><span style="color: #009900;">(</span>gl.<span style="color: #660066;">ARRAY_BUFFER</span><span style="color: #339933;">,</span> cubeVertexPositionBuffer<span style="color: #009900;">)</span><span style="color: #339933;">;</span>
+        gl.<span style="color: #660066;">vertexAttribPointer</span><span style="color: #009900;">(</span>shaderProgram.<span style="color: #660066;">vertexPositionAttribute</span><span style="color: #339933;">,</span> cubeVertexPositionBuffer.<span style="color: #660066;">itemSize</span><span style="color: #339933;">,</span> gl.<span style="color: #660066;">FLOAT</span><span style="color: #339933;">,</span> <span style="color: #003366; font-weight: bold;">false</span><span style="color: #339933;">,</span> <span style="color: #CC0000;">0</span><span style="color: #339933;">,</span> <span style="color: #CC0000;">0</span><span style="color: #009900;">)</span><span style="color: #339933;">;</span>
+&nbsp;
+        gl.<span style="color: #660066;">bindBuffer</span><span style="color: #009900;">(</span>gl.<span style="color: #660066;">ARRAY_BUFFER</span><span style="color: #339933;">,</span> cubeVertexColorBuffer<span style="color: #009900;">)</span><span style="color: #339933;">;</span>
+        gl.<span style="color: #660066;">vertexAttribPointer</span><span style="color: #009900;">(</span>shaderProgram.<span style="color: #660066;">vertexColorAttribute</span><span style="color: #339933;">,</span> cubeVertexColorBuffer.<span style="color: #660066;">itemSize</span><span style="color: #339933;">,</span> gl.<span style="color: #660066;">FLOAT</span><span style="color: #339933;">,</span> <span style="color: #003366; font-weight: bold;">false</span><span style="color: #339933;">,</span> <span style="color: #CC0000;">0</span><span style="color: #339933;">,</span> <span style="color: #CC0000;">0</span><span style="color: #009900;">)</span><span style="color: #339933;">;</span></pre></td></tr></tbody></table></div>
+
+<p>下一个步骤就是绘制那些三角形，这里有一些小问题，我们需要考虑一下哪个面在前，我们一共有4个顶点，每一个点都有一个与之相关的颜色。每一个面需要有两个三角形构成。由于我们使用的是简单三角形，我们需要为每个三角形分别指定顶点，而不是像三角形带一样共享顶点，这样的话，我们就需要为它制定6个顶点。但是我们在数组对象里面只提供了四个。</p>
+<p>我们将要做的是，先绘制一个由前三个储存在数组对象中的顶点组成的三角形，接着用第一个、第三个和第四个顶点绘制另一个三角形，这样，我们就有了立方体的正面。绘制余下三角形的方法也和这个类似，这就是我们所需要做的。</p>
+<p>在这里，我们将使用的是元素数组对象（Element Array Buffer）和一个叫做 drawElements的函数。和我们一直使用的数组对象（Array Buffer） 一样，元素数组对象将在 initBuffers里面被赋予适当的值，并且，它会通过基于零点索引的方式，为顶点位置和顶点颜色保留一份顶点数据列表。</p>
+<p>为了使用它，我们需要指定我们的立方体的元素数组对象成为我们当前使用的数组对象(WebGL 保留不同的当前数组对象和当前元素数组对象，因此我们必须调用gl.bindBuffer来指定哪一个数组对象是我们绑定的)，之后我们就像往常一样，将模型视图矩阵和投影矩阵传送到显卡端，最后调用drawElements 来绘制我们需要的三角形。</p>
+
+<div class="wp_codebox"><table><tbody><tr id="p1867"><td class="line_numbers"><pre>322
+323
+324
+</pre></td><td class="code" id="p186code7"><pre class="javascript" style="font-family:monospace;">        gl.<span style="color: #660066;">bindBuffer</span><span style="color: #009900;">(</span>gl.<span style="color: #660066;">ELEMENT_ARRAY_BUFFER</span><span style="color: #339933;">,</span> cubeVertexIndexBuffer<span style="color: #009900;">)</span><span style="color: #339933;">;</span>
+        setMatrixUniforms<span style="color: #009900;">(</span><span style="color: #009900;">)</span><span style="color: #339933;">;</span>
+        gl.<span style="color: #660066;">drawElements</span><span style="color: #009900;">(</span>gl.<span style="color: #660066;">TRIANGLES</span><span style="color: #339933;">,</span> cubeVertexIndexBuffer.<span style="color: #660066;">numItems</span><span style="color: #339933;">,</span> gl.<span style="color: #660066;">UNSIGNED_SHORT</span><span style="color: #339933;">,</span> <span style="color: #CC0000;">0</span><span style="color: #009900;">)</span><span style="color: #339933;">;</span></pre></td></tr></tbody></table></div>
+
+<p>这就是drawScene代码。代码的剩余部分在initBuffers 里面，而且十分浅显易懂。我们将会使用新的名字来定义新的buffers，以反映我们将要处理的新的物体。我们在立方体的顶点索引数组对象里面将加入新的项。</p>
+
+<div class="wp_codebox"><table><tbody><tr id="p1868"><td class="line_numbers"><pre>142
+143
+144
+145
+146
+</pre></td><td class="code" id="p186code8"><pre class="javascript" style="font-family:monospace;">    <span style="color: #003366; font-weight: bold;">var</span> pyramidVertexPositionBuffer<span style="color: #339933;">;</span>
+    <span style="color: #003366; font-weight: bold;">var</span> pyramidVertexColorBuffer<span style="color: #339933;">;</span>
+    <span style="color: #003366; font-weight: bold;">var</span> cubeVertexPositionBuffer<span style="color: #339933;">;</span>
+    <span style="color: #003366; font-weight: bold;">var</span> cubeVertexColorBuffer<span style="color: #339933;">;</span>
+    <span style="color: #003366; font-weight: bold;">var</span> cubeVertexIndexBuffer<span style="color: #339933;">;</span></pre></td></tr></tbody></table></div>
+
+<p>我们在锥体的顶点位置数组内为每个面填入相应的值，另外对numItems参数也作出相应的修改。</p>
+
+<div class="wp_codebox"><table><tbody><tr id="p1869"><td class="line_numbers"><pre>149
+150
+151
+152
+153
+154
+155
+156
+157
+158
+159
+160
+161
+162
+163
+164
+165
+166
+167
+168
+169
+170
+171
+172
+173
+174
+</pre></td><td class="code" id="p186code9"><pre class="javascript" style="font-family:monospace;">        pyramidVertexPositionBuffer <span style="color: #339933;">=</span> gl.<span style="color: #660066;">createBuffer</span><span style="color: #009900;">(</span><span style="color: #009900;">)</span><span style="color: #339933;">;</span>
+        gl.<span style="color: #660066;">bindBuffer</span><span style="color: #009900;">(</span>gl.<span style="color: #660066;">ARRAY_BUFFER</span><span style="color: #339933;">,</span> pyramidVertexPositionBuffer<span style="color: #009900;">)</span><span style="color: #339933;">;</span>
+        <span style="color: #003366; font-weight: bold;">var</span> vertices <span style="color: #339933;">=</span> <span style="color: #009900;">[</span>
+            <span style="color: #006600; font-style: italic;">// Front face</span>
+             <span style="color: #CC0000;">0.0</span><span style="color: #339933;">,</span>  <span style="color: #CC0000;">1.0</span><span style="color: #339933;">,</span>  <span style="color: #CC0000;">0.0</span><span style="color: #339933;">,</span>
+            <span style="color: #339933;">-</span><span style="color: #CC0000;">1.0</span><span style="color: #339933;">,</span> <span style="color: #339933;">-</span><span style="color: #CC0000;">1.0</span><span style="color: #339933;">,</span>  <span style="color: #CC0000;">1.0</span><span style="color: #339933;">,</span>
+             <span style="color: #CC0000;">1.0</span><span style="color: #339933;">,</span> <span style="color: #339933;">-</span><span style="color: #CC0000;">1.0</span><span style="color: #339933;">,</span>  <span style="color: #CC0000;">1.0</span><span style="color: #339933;">,</span>
+&nbsp;
+            <span style="color: #006600; font-style: italic;">// Right face</span>
+             <span style="color: #CC0000;">0.0</span><span style="color: #339933;">,</span>  <span style="color: #CC0000;">1.0</span><span style="color: #339933;">,</span>  <span style="color: #CC0000;">0.0</span><span style="color: #339933;">,</span>
+             <span style="color: #CC0000;">1.0</span><span style="color: #339933;">,</span> <span style="color: #339933;">-</span><span style="color: #CC0000;">1.0</span><span style="color: #339933;">,</span>  <span style="color: #CC0000;">1.0</span><span style="color: #339933;">,</span>
+             <span style="color: #CC0000;">1.0</span><span style="color: #339933;">,</span> <span style="color: #339933;">-</span><span style="color: #CC0000;">1.0</span><span style="color: #339933;">,</span> <span style="color: #339933;">-</span><span style="color: #CC0000;">1.0</span><span style="color: #339933;">,</span>
+&nbsp;
+            <span style="color: #006600; font-style: italic;">// Back face</span>
+             <span style="color: #CC0000;">0.0</span><span style="color: #339933;">,</span>  <span style="color: #CC0000;">1.0</span><span style="color: #339933;">,</span>  <span style="color: #CC0000;">0.0</span><span style="color: #339933;">,</span>
+             <span style="color: #CC0000;">1.0</span><span style="color: #339933;">,</span> <span style="color: #339933;">-</span><span style="color: #CC0000;">1.0</span><span style="color: #339933;">,</span> <span style="color: #339933;">-</span><span style="color: #CC0000;">1.0</span><span style="color: #339933;">,</span>
+            <span style="color: #339933;">-</span><span style="color: #CC0000;">1.0</span><span style="color: #339933;">,</span> <span style="color: #339933;">-</span><span style="color: #CC0000;">1.0</span><span style="color: #339933;">,</span> <span style="color: #339933;">-</span><span style="color: #CC0000;">1.0</span><span style="color: #339933;">,</span>
+&nbsp;
+            <span style="color: #006600; font-style: italic;">// Left face</span>
+             <span style="color: #CC0000;">0.0</span><span style="color: #339933;">,</span>  <span style="color: #CC0000;">1.0</span><span style="color: #339933;">,</span>  <span style="color: #CC0000;">0.0</span><span style="color: #339933;">,</span>
+            <span style="color: #339933;">-</span><span style="color: #CC0000;">1.0</span><span style="color: #339933;">,</span> <span style="color: #339933;">-</span><span style="color: #CC0000;">1.0</span><span style="color: #339933;">,</span> <span style="color: #339933;">-</span><span style="color: #CC0000;">1.0</span><span style="color: #339933;">,</span>
+            <span style="color: #339933;">-</span><span style="color: #CC0000;">1.0</span><span style="color: #339933;">,</span> <span style="color: #339933;">-</span><span style="color: #CC0000;">1.0</span><span style="color: #339933;">,</span>  <span style="color: #CC0000;">1.0</span>
+        <span style="color: #009900;">]</span><span style="color: #339933;">;</span>
+        gl.<span style="color: #660066;">bufferData</span><span style="color: #009900;">(</span>gl.<span style="color: #660066;">ARRAY_BUFFER</span><span style="color: #339933;">,</span> <span style="color: #003366; font-weight: bold;">new</span> Float32Array<span style="color: #009900;">(</span>vertices<span style="color: #009900;">)</span><span style="color: #339933;">,</span> gl.<span style="color: #660066;">STATIC_DRAW</span><span style="color: #009900;">)</span><span style="color: #339933;">;</span>
+        pyramidVertexPositionBuffer.<span style="color: #660066;">itemSize</span> <span style="color: #339933;">=</span> <span style="color: #CC0000;">3</span><span style="color: #339933;">;</span>
+        pyramidVertexPositionBuffer.<span style="color: #660066;">numItems</span> <span style="color: #339933;">=</span> <span style="color: #CC0000;">12</span><span style="color: #339933;">;</span></pre></td></tr></tbody></table></div>
+
+<p>对于锥体的顶点颜色数组也一样:</p>
+
+<div class="wp_codebox"><table><tbody><tr id="p18610"><td class="line_numbers"><pre>176
+177
+178
+179
+180
+181
+182
+183
+184
+185
+186
+187
+188
+189
+190
+191
+192
+193
+194
+195
+196
+197
+198
+199
+200
+201
+</pre></td><td class="code" id="p186code10"><pre class="javascript" style="font-family:monospace;">        pyramidVertexColorBuffer <span style="color: #339933;">=</span> gl.<span style="color: #660066;">createBuffer</span><span style="color: #009900;">(</span><span style="color: #009900;">)</span><span style="color: #339933;">;</span>
+        gl.<span style="color: #660066;">bindBuffer</span><span style="color: #009900;">(</span>gl.<span style="color: #660066;">ARRAY_BUFFER</span><span style="color: #339933;">,</span> pyramidVertexColorBuffer<span style="color: #009900;">)</span><span style="color: #339933;">;</span>
+        <span style="color: #003366; font-weight: bold;">var</span> colors <span style="color: #339933;">=</span> <span style="color: #009900;">[</span>
+            <span style="color: #006600; font-style: italic;">// Front face</span>
+            <span style="color: #CC0000;">1.0</span><span style="color: #339933;">,</span> <span style="color: #CC0000;">0.0</span><span style="color: #339933;">,</span> <span style="color: #CC0000;">0.0</span><span style="color: #339933;">,</span> <span style="color: #CC0000;">1.0</span><span style="color: #339933;">,</span>
+            <span style="color: #CC0000;">0.0</span><span style="color: #339933;">,</span> <span style="color: #CC0000;">1.0</span><span style="color: #339933;">,</span> <span style="color: #CC0000;">0.0</span><span style="color: #339933;">,</span> <span style="color: #CC0000;">1.0</span><span style="color: #339933;">,</span>
+            <span style="color: #CC0000;">0.0</span><span style="color: #339933;">,</span> <span style="color: #CC0000;">0.0</span><span style="color: #339933;">,</span> <span style="color: #CC0000;">1.0</span><span style="color: #339933;">,</span> <span style="color: #CC0000;">1.0</span><span style="color: #339933;">,</span>
+&nbsp;
+            <span style="color: #006600; font-style: italic;">// Right face</span>
+            <span style="color: #CC0000;">1.0</span><span style="color: #339933;">,</span> <span style="color: #CC0000;">0.0</span><span style="color: #339933;">,</span> <span style="color: #CC0000;">0.0</span><span style="color: #339933;">,</span> <span style="color: #CC0000;">1.0</span><span style="color: #339933;">,</span>
+            <span style="color: #CC0000;">0.0</span><span style="color: #339933;">,</span> <span style="color: #CC0000;">0.0</span><span style="color: #339933;">,</span> <span style="color: #CC0000;">1.0</span><span style="color: #339933;">,</span> <span style="color: #CC0000;">1.0</span><span style="color: #339933;">,</span>
+            <span style="color: #CC0000;">0.0</span><span style="color: #339933;">,</span> <span style="color: #CC0000;">1.0</span><span style="color: #339933;">,</span> <span style="color: #CC0000;">0.0</span><span style="color: #339933;">,</span> <span style="color: #CC0000;">1.0</span><span style="color: #339933;">,</span>
+&nbsp;
+            <span style="color: #006600; font-style: italic;">// Back face</span>
+            <span style="color: #CC0000;">1.0</span><span style="color: #339933;">,</span> <span style="color: #CC0000;">0.0</span><span style="color: #339933;">,</span> <span style="color: #CC0000;">0.0</span><span style="color: #339933;">,</span> <span style="color: #CC0000;">1.0</span><span style="color: #339933;">,</span>
+            <span style="color: #CC0000;">0.0</span><span style="color: #339933;">,</span> <span style="color: #CC0000;">1.0</span><span style="color: #339933;">,</span> <span style="color: #CC0000;">0.0</span><span style="color: #339933;">,</span> <span style="color: #CC0000;">1.0</span><span style="color: #339933;">,</span>
+            <span style="color: #CC0000;">0.0</span><span style="color: #339933;">,</span> <span style="color: #CC0000;">0.0</span><span style="color: #339933;">,</span> <span style="color: #CC0000;">1.0</span><span style="color: #339933;">,</span> <span style="color: #CC0000;">1.0</span><span style="color: #339933;">,</span>
+&nbsp;
+            <span style="color: #006600; font-style: italic;">// Left face</span>
+            <span style="color: #CC0000;">1.0</span><span style="color: #339933;">,</span> <span style="color: #CC0000;">0.0</span><span style="color: #339933;">,</span> <span style="color: #CC0000;">0.0</span><span style="color: #339933;">,</span> <span style="color: #CC0000;">1.0</span><span style="color: #339933;">,</span>
+            <span style="color: #CC0000;">0.0</span><span style="color: #339933;">,</span> <span style="color: #CC0000;">0.0</span><span style="color: #339933;">,</span> <span style="color: #CC0000;">1.0</span><span style="color: #339933;">,</span> <span style="color: #CC0000;">1.0</span><span style="color: #339933;">,</span>
+            <span style="color: #CC0000;">0.0</span><span style="color: #339933;">,</span> <span style="color: #CC0000;">1.0</span><span style="color: #339933;">,</span> <span style="color: #CC0000;">0.0</span><span style="color: #339933;">,</span> <span style="color: #CC0000;">1.0</span>
+        <span style="color: #009900;">]</span><span style="color: #339933;">;</span>
+        gl.<span style="color: #660066;">bufferData</span><span style="color: #009900;">(</span>gl.<span style="color: #660066;">ARRAY_BUFFER</span><span style="color: #339933;">,</span> <span style="color: #003366; font-weight: bold;">new</span> Float32Array<span style="color: #009900;">(</span>colors<span style="color: #009900;">)</span><span style="color: #339933;">,</span> gl.<span style="color: #660066;">STATIC_DRAW</span><span style="color: #009900;">)</span><span style="color: #339933;">;</span>
+        pyramidVertexColorBuffer.<span style="color: #660066;">itemSize</span> <span style="color: #339933;">=</span> <span style="color: #CC0000;">4</span><span style="color: #339933;">;</span>
+        pyramidVertexColorBuffer.<span style="color: #660066;">numItems</span> <span style="color: #339933;">=</span> <span style="color: #CC0000;">12</span><span style="color: #339933;">;</span></pre></td></tr></tbody></table></div>
+
+<p>对于立方体的顶点位置数组：</p>
+
+<div class="wp_codebox"><table><tbody><tr id="p18611"><td class="line_numbers"><pre>204
+205
+206
+207
+208
+209
+210
+211
+212
+213
+214
+215
+216
+217
+218
+219
+220
+221
+222
+223
+224
+225
+226
+227
+228
+229
+230
+231
+232
+233
+234
+235
+236
+237
+238
+239
+240
+241
+242
+243
+244
+245
+</pre></td><td class="code" id="p186code11"><pre class="javascript" style="font-family:monospace;">        cubeVertexPositionBuffer <span style="color: #339933;">=</span> gl.<span style="color: #660066;">createBuffer</span><span style="color: #009900;">(</span><span style="color: #009900;">)</span><span style="color: #339933;">;</span>
+        gl.<span style="color: #660066;">bindBuffer</span><span style="color: #009900;">(</span>gl.<span style="color: #660066;">ARRAY_BUFFER</span><span style="color: #339933;">,</span> cubeVertexPositionBuffer<span style="color: #009900;">)</span><span style="color: #339933;">;</span>
+        vertices <span style="color: #339933;">=</span> <span style="color: #009900;">[</span>
+            <span style="color: #006600; font-style: italic;">// Front face</span>
+            <span style="color: #339933;">-</span><span style="color: #CC0000;">1.0</span><span style="color: #339933;">,</span> <span style="color: #339933;">-</span><span style="color: #CC0000;">1.0</span><span style="color: #339933;">,</span>  <span style="color: #CC0000;">1.0</span><span style="color: #339933;">,</span>
+             <span style="color: #CC0000;">1.0</span><span style="color: #339933;">,</span> <span style="color: #339933;">-</span><span style="color: #CC0000;">1.0</span><span style="color: #339933;">,</span>  <span style="color: #CC0000;">1.0</span><span style="color: #339933;">,</span>
+             <span style="color: #CC0000;">1.0</span><span style="color: #339933;">,</span>  <span style="color: #CC0000;">1.0</span><span style="color: #339933;">,</span>  <span style="color: #CC0000;">1.0</span><span style="color: #339933;">,</span>
+            <span style="color: #339933;">-</span><span style="color: #CC0000;">1.0</span><span style="color: #339933;">,</span>  <span style="color: #CC0000;">1.0</span><span style="color: #339933;">,</span>  <span style="color: #CC0000;">1.0</span><span style="color: #339933;">,</span>
+&nbsp;
+            <span style="color: #006600; font-style: italic;">// Back face</span>
+            <span style="color: #339933;">-</span><span style="color: #CC0000;">1.0</span><span style="color: #339933;">,</span> <span style="color: #339933;">-</span><span style="color: #CC0000;">1.0</span><span style="color: #339933;">,</span> <span style="color: #339933;">-</span><span style="color: #CC0000;">1.0</span><span style="color: #339933;">,</span>
+            <span style="color: #339933;">-</span><span style="color: #CC0000;">1.0</span><span style="color: #339933;">,</span>  <span style="color: #CC0000;">1.0</span><span style="color: #339933;">,</span> <span style="color: #339933;">-</span><span style="color: #CC0000;">1.0</span><span style="color: #339933;">,</span>
+             <span style="color: #CC0000;">1.0</span><span style="color: #339933;">,</span>  <span style="color: #CC0000;">1.0</span><span style="color: #339933;">,</span> <span style="color: #339933;">-</span><span style="color: #CC0000;">1.0</span><span style="color: #339933;">,</span>
+             <span style="color: #CC0000;">1.0</span><span style="color: #339933;">,</span> <span style="color: #339933;">-</span><span style="color: #CC0000;">1.0</span><span style="color: #339933;">,</span> <span style="color: #339933;">-</span><span style="color: #CC0000;">1.0</span><span style="color: #339933;">,</span>
+&nbsp;
+            <span style="color: #006600; font-style: italic;">// Top face</span>
+            <span style="color: #339933;">-</span><span style="color: #CC0000;">1.0</span><span style="color: #339933;">,</span>  <span style="color: #CC0000;">1.0</span><span style="color: #339933;">,</span> <span style="color: #339933;">-</span><span style="color: #CC0000;">1.0</span><span style="color: #339933;">,</span>
+            <span style="color: #339933;">-</span><span style="color: #CC0000;">1.0</span><span style="color: #339933;">,</span>  <span style="color: #CC0000;">1.0</span><span style="color: #339933;">,</span>  <span style="color: #CC0000;">1.0</span><span style="color: #339933;">,</span>
+             <span style="color: #CC0000;">1.0</span><span style="color: #339933;">,</span>  <span style="color: #CC0000;">1.0</span><span style="color: #339933;">,</span>  <span style="color: #CC0000;">1.0</span><span style="color: #339933;">,</span>
+             <span style="color: #CC0000;">1.0</span><span style="color: #339933;">,</span>  <span style="color: #CC0000;">1.0</span><span style="color: #339933;">,</span> <span style="color: #339933;">-</span><span style="color: #CC0000;">1.0</span><span style="color: #339933;">,</span>
+&nbsp;
+            <span style="color: #006600; font-style: italic;">// Bottom face</span>
+            <span style="color: #339933;">-</span><span style="color: #CC0000;">1.0</span><span style="color: #339933;">,</span> <span style="color: #339933;">-</span><span style="color: #CC0000;">1.0</span><span style="color: #339933;">,</span> <span style="color: #339933;">-</span><span style="color: #CC0000;">1.0</span><span style="color: #339933;">,</span>
+             <span style="color: #CC0000;">1.0</span><span style="color: #339933;">,</span> <span style="color: #339933;">-</span><span style="color: #CC0000;">1.0</span><span style="color: #339933;">,</span> <span style="color: #339933;">-</span><span style="color: #CC0000;">1.0</span><span style="color: #339933;">,</span>
+             <span style="color: #CC0000;">1.0</span><span style="color: #339933;">,</span> <span style="color: #339933;">-</span><span style="color: #CC0000;">1.0</span><span style="color: #339933;">,</span>  <span style="color: #CC0000;">1.0</span><span style="color: #339933;">,</span>
+            <span style="color: #339933;">-</span><span style="color: #CC0000;">1.0</span><span style="color: #339933;">,</span> <span style="color: #339933;">-</span><span style="color: #CC0000;">1.0</span><span style="color: #339933;">,</span>  <span style="color: #CC0000;">1.0</span><span style="color: #339933;">,</span>
+&nbsp;
+            <span style="color: #006600; font-style: italic;">// Right face</span>
+             <span style="color: #CC0000;">1.0</span><span style="color: #339933;">,</span> <span style="color: #339933;">-</span><span style="color: #CC0000;">1.0</span><span style="color: #339933;">,</span> <span style="color: #339933;">-</span><span style="color: #CC0000;">1.0</span><span style="color: #339933;">,</span>
+             <span style="color: #CC0000;">1.0</span><span style="color: #339933;">,</span>  <span style="color: #CC0000;">1.0</span><span style="color: #339933;">,</span> <span style="color: #339933;">-</span><span style="color: #CC0000;">1.0</span><span style="color: #339933;">,</span>
+             <span style="color: #CC0000;">1.0</span><span style="color: #339933;">,</span>  <span style="color: #CC0000;">1.0</span><span style="color: #339933;">,</span>  <span style="color: #CC0000;">1.0</span><span style="color: #339933;">,</span>
+             <span style="color: #CC0000;">1.0</span><span style="color: #339933;">,</span> <span style="color: #339933;">-</span><span style="color: #CC0000;">1.0</span><span style="color: #339933;">,</span>  <span style="color: #CC0000;">1.0</span><span style="color: #339933;">,</span>
+&nbsp;
+            <span style="color: #006600; font-style: italic;">// Left face</span>
+            <span style="color: #339933;">-</span><span style="color: #CC0000;">1.0</span><span style="color: #339933;">,</span> <span style="color: #339933;">-</span><span style="color: #CC0000;">1.0</span><span style="color: #339933;">,</span> <span style="color: #339933;">-</span><span style="color: #CC0000;">1.0</span><span style="color: #339933;">,</span>
+            <span style="color: #339933;">-</span><span style="color: #CC0000;">1.0</span><span style="color: #339933;">,</span> <span style="color: #339933;">-</span><span style="color: #CC0000;">1.0</span><span style="color: #339933;">,</span>  <span style="color: #CC0000;">1.0</span><span style="color: #339933;">,</span>
+            <span style="color: #339933;">-</span><span style="color: #CC0000;">1.0</span><span style="color: #339933;">,</span>  <span style="color: #CC0000;">1.0</span><span style="color: #339933;">,</span>  <span style="color: #CC0000;">1.0</span><span style="color: #339933;">,</span>
+            <span style="color: #339933;">-</span><span style="color: #CC0000;">1.0</span><span style="color: #339933;">,</span>  <span style="color: #CC0000;">1.0</span><span style="color: #339933;">,</span> <span style="color: #339933;">-</span><span style="color: #CC0000;">1.0</span>
+        <span style="color: #009900;">]</span><span style="color: #339933;">;</span>
+        gl.<span style="color: #660066;">bufferData</span><span style="color: #009900;">(</span>gl.<span style="color: #660066;">ARRAY_BUFFER</span><span style="color: #339933;">,</span> <span style="color: #003366; font-weight: bold;">new</span> Float32Array<span style="color: #009900;">(</span>vertices<span style="color: #009900;">)</span><span style="color: #339933;">,</span> gl.<span style="color: #660066;">STATIC_DRAW</span><span style="color: #009900;">)</span><span style="color: #339933;">;</span>
+        cubeVertexPositionBuffer.<span style="color: #660066;">itemSize</span> <span style="color: #339933;">=</span> <span style="color: #CC0000;">3</span><span style="color: #339933;">;</span>
+        cubeVertexPositionBuffer.<span style="color: #660066;">numItems</span> <span style="color: #339933;">=</span> <span style="color: #CC0000;">24</span><span style="color: #339933;">;</span></pre></td></tr></tbody></table></div>
+
+<p>颜色数组会稍微复杂一些，因为我们使用一个循环来生成一个顶点颜色的列表，这样我们就不必定义4次颜色，每个顶点一次：</p>
+
+<div class="wp_codebox"><table><tbody><tr id="p18612"><td class="line_numbers"><pre>247
+248
+249
+250
+251
+252
+253
+254
+255
+256
+257
+258
+259
+260
+261
+262
+263
+264
+265
+266
+</pre></td><td class="code" id="p186code12"><pre class="javascript" style="font-family:monospace;">        cubeVertexColorBuffer <span style="color: #339933;">=</span> gl.<span style="color: #660066;">createBuffer</span><span style="color: #009900;">(</span><span style="color: #009900;">)</span><span style="color: #339933;">;</span>
+        gl.<span style="color: #660066;">bindBuffer</span><span style="color: #009900;">(</span>gl.<span style="color: #660066;">ARRAY_BUFFER</span><span style="color: #339933;">,</span> cubeVertexColorBuffer<span style="color: #009900;">)</span><span style="color: #339933;">;</span>
+        colors <span style="color: #339933;">=</span> <span style="color: #009900;">[</span>
+            <span style="color: #009900;">[</span><span style="color: #CC0000;">1.0</span><span style="color: #339933;">,</span> <span style="color: #CC0000;">0.0</span><span style="color: #339933;">,</span> <span style="color: #CC0000;">0.0</span><span style="color: #339933;">,</span> <span style="color: #CC0000;">1.0</span><span style="color: #009900;">]</span><span style="color: #339933;">,</span> <span style="color: #006600; font-style: italic;">// Front face</span>
+            <span style="color: #009900;">[</span><span style="color: #CC0000;">1.0</span><span style="color: #339933;">,</span> <span style="color: #CC0000;">1.0</span><span style="color: #339933;">,</span> <span style="color: #CC0000;">0.0</span><span style="color: #339933;">,</span> <span style="color: #CC0000;">1.0</span><span style="color: #009900;">]</span><span style="color: #339933;">,</span> <span style="color: #006600; font-style: italic;">// Back face</span>
+            <span style="color: #009900;">[</span><span style="color: #CC0000;">0.0</span><span style="color: #339933;">,</span> <span style="color: #CC0000;">1.0</span><span style="color: #339933;">,</span> <span style="color: #CC0000;">0.0</span><span style="color: #339933;">,</span> <span style="color: #CC0000;">1.0</span><span style="color: #009900;">]</span><span style="color: #339933;">,</span> <span style="color: #006600; font-style: italic;">// Top face</span>
+            <span style="color: #009900;">[</span><span style="color: #CC0000;">1.0</span><span style="color: #339933;">,</span> <span style="color: #CC0000;">0.5</span><span style="color: #339933;">,</span> <span style="color: #CC0000;">0.5</span><span style="color: #339933;">,</span> <span style="color: #CC0000;">1.0</span><span style="color: #009900;">]</span><span style="color: #339933;">,</span> <span style="color: #006600; font-style: italic;">// Bottom face</span>
+            <span style="color: #009900;">[</span><span style="color: #CC0000;">1.0</span><span style="color: #339933;">,</span> <span style="color: #CC0000;">0.0</span><span style="color: #339933;">,</span> <span style="color: #CC0000;">1.0</span><span style="color: #339933;">,</span> <span style="color: #CC0000;">1.0</span><span style="color: #009900;">]</span><span style="color: #339933;">,</span> <span style="color: #006600; font-style: italic;">// Right face</span>
+            <span style="color: #009900;">[</span><span style="color: #CC0000;">0.0</span><span style="color: #339933;">,</span> <span style="color: #CC0000;">0.0</span><span style="color: #339933;">,</span> <span style="color: #CC0000;">1.0</span><span style="color: #339933;">,</span> <span style="color: #CC0000;">1.0</span><span style="color: #009900;">]</span>  <span style="color: #006600; font-style: italic;">// Left face</span>
+        <span style="color: #009900;">]</span><span style="color: #339933;">;</span>
+        <span style="color: #003366; font-weight: bold;">var</span> unpackedColors <span style="color: #339933;">=</span> <span style="color: #009900;">[</span><span style="color: #009900;">]</span><span style="color: #339933;">;</span>
+        <span style="color: #000066; font-weight: bold;">for</span> <span style="color: #009900;">(</span><span style="color: #003366; font-weight: bold;">var</span> i <span style="color: #000066; font-weight: bold;">in</span> colors<span style="color: #009900;">)</span> <span style="color: #009900;">{</span>
+            <span style="color: #003366; font-weight: bold;">var</span> color <span style="color: #339933;">=</span> colors<span style="color: #009900;">[</span>i<span style="color: #009900;">]</span><span style="color: #339933;">;</span>
+            <span style="color: #000066; font-weight: bold;">for</span> <span style="color: #009900;">(</span><span style="color: #003366; font-weight: bold;">var</span> j<span style="color: #339933;">=</span><span style="color: #CC0000;">0</span><span style="color: #339933;">;</span> j <span style="color: #339933;">&lt;</span> <span style="color: #CC0000;">4</span><span style="color: #339933;">;</span> j<span style="color: #339933;">++</span><span style="color: #009900;">)</span> <span style="color: #009900;">{</span>
+                unpackedColors <span style="color: #339933;">=</span> unpackedColors.<span style="color: #660066;">concat</span><span style="color: #009900;">(</span>color<span style="color: #009900;">)</span><span style="color: #339933;">;</span>
+            <span style="color: #009900;">}</span>
+        <span style="color: #009900;">}</span>
+        gl.<span style="color: #660066;">bufferData</span><span style="color: #009900;">(</span>gl.<span style="color: #660066;">ARRAY_BUFFER</span><span style="color: #339933;">,</span> <span style="color: #003366; font-weight: bold;">new</span> Float32Array<span style="color: #009900;">(</span>unpackedColors<span style="color: #009900;">)</span><span style="color: #339933;">,</span> gl.<span style="color: #660066;">STATIC_DRAW</span><span style="color: #009900;">)</span><span style="color: #339933;">;</span>
+        cubeVertexColorBuffer.<span style="color: #660066;">itemSize</span> <span style="color: #339933;">=</span> <span style="color: #CC0000;">4</span><span style="color: #339933;">;</span>
+        cubeVertexColorBuffer.<span style="color: #660066;">numItems</span> <span style="color: #339933;">=</span> <span style="color: #CC0000;">24</span><span style="color: #339933;">;</span></pre></td></tr></tbody></table></div>
+
+<p>最后，我们要定义元素数组对象。请注意gl.bindBuffer和gl.bufferData这两个函数的第一个参数与之前的不同，之前都是gl.ARRAY_BUFFER，用于指定这是一个用于存放顶点属性数据的缓存对象；现在则是gl.ELEMENT_ARRAY_BUFFER，用于指定这是一个用于存放索引数据的缓存对象。<br>
+）。</p>
+
+<div class="wp_codebox"><table><tbody><tr id="p18613"><td class="line_numbers"><pre>268
+269
+270
+271
+272
+273
+274
+275
+276
+277
+278
+279
+280
+</pre></td><td class="code" id="p186code13"><pre class="javascript" style="font-family:monospace;">        cubeVertexIndexBuffer <span style="color: #339933;">=</span> gl.<span style="color: #660066;">createBuffer</span><span style="color: #009900;">(</span><span style="color: #009900;">)</span><span style="color: #339933;">;</span>
+        gl.<span style="color: #660066;">bindBuffer</span><span style="color: #009900;">(</span>gl.<span style="color: #660066;">ELEMENT_ARRAY_BUFFER</span><span style="color: #339933;">,</span> cubeVertexIndexBuffer<span style="color: #009900;">)</span><span style="color: #339933;">;</span>
+        <span style="color: #003366; font-weight: bold;">var</span> cubeVertexIndices <span style="color: #339933;">=</span> <span style="color: #009900;">[</span>
+            <span style="color: #CC0000;">0</span><span style="color: #339933;">,</span> <span style="color: #CC0000;">1</span><span style="color: #339933;">,</span> <span style="color: #CC0000;">2</span><span style="color: #339933;">,</span>      <span style="color: #CC0000;">0</span><span style="color: #339933;">,</span> <span style="color: #CC0000;">2</span><span style="color: #339933;">,</span> <span style="color: #CC0000;">3</span><span style="color: #339933;">,</span>    <span style="color: #006600; font-style: italic;">// Front face</span>
+            <span style="color: #CC0000;">4</span><span style="color: #339933;">,</span> <span style="color: #CC0000;">5</span><span style="color: #339933;">,</span> <span style="color: #CC0000;">6</span><span style="color: #339933;">,</span>      <span style="color: #CC0000;">4</span><span style="color: #339933;">,</span> <span style="color: #CC0000;">6</span><span style="color: #339933;">,</span> <span style="color: #CC0000;">7</span><span style="color: #339933;">,</span>    <span style="color: #006600; font-style: italic;">// Back face</span>
+            <span style="color: #CC0000;">8</span><span style="color: #339933;">,</span> <span style="color: #CC0000;">9</span><span style="color: #339933;">,</span> <span style="color: #CC0000;">10</span><span style="color: #339933;">,</span>     <span style="color: #CC0000;">8</span><span style="color: #339933;">,</span> <span style="color: #CC0000;">10</span><span style="color: #339933;">,</span> <span style="color: #CC0000;">11</span><span style="color: #339933;">,</span>  <span style="color: #006600; font-style: italic;">// Top face</span>
+            <span style="color: #CC0000;">12</span><span style="color: #339933;">,</span> <span style="color: #CC0000;">13</span><span style="color: #339933;">,</span> <span style="color: #CC0000;">14</span><span style="color: #339933;">,</span>   <span style="color: #CC0000;">12</span><span style="color: #339933;">,</span> <span style="color: #CC0000;">14</span><span style="color: #339933;">,</span> <span style="color: #CC0000;">15</span><span style="color: #339933;">,</span> <span style="color: #006600; font-style: italic;">// Bottom face</span>
+            <span style="color: #CC0000;">16</span><span style="color: #339933;">,</span> <span style="color: #CC0000;">17</span><span style="color: #339933;">,</span> <span style="color: #CC0000;">18</span><span style="color: #339933;">,</span>   <span style="color: #CC0000;">16</span><span style="color: #339933;">,</span> <span style="color: #CC0000;">18</span><span style="color: #339933;">,</span> <span style="color: #CC0000;">19</span><span style="color: #339933;">,</span> <span style="color: #006600; font-style: italic;">// Right face</span>
+            <span style="color: #CC0000;">20</span><span style="color: #339933;">,</span> <span style="color: #CC0000;">21</span><span style="color: #339933;">,</span> <span style="color: #CC0000;">22</span><span style="color: #339933;">,</span>   <span style="color: #CC0000;">20</span><span style="color: #339933;">,</span> <span style="color: #CC0000;">22</span><span style="color: #339933;">,</span> <span style="color: #CC0000;">23</span>  <span style="color: #006600; font-style: italic;">// Left face</span>
+        <span style="color: #009900;">]</span><span style="color: #339933;">;</span>
+        gl.<span style="color: #660066;">bufferData</span><span style="color: #009900;">(</span>gl.<span style="color: #660066;">ELEMENT_ARRAY_BUFFER</span><span style="color: #339933;">,</span> <span style="color: #003366; font-weight: bold;">new</span> Uint16Array<span style="color: #009900;">(</span>cubeVertexIndices<span style="color: #009900;">)</span><span style="color: #339933;">,</span> gl.<span style="color: #660066;">STATIC_DRAW</span><span style="color: #009900;">)</span><span style="color: #339933;">;</span>
+        cubeVertexIndexBuffer.<span style="color: #660066;">itemSize</span> <span style="color: #339933;">=</span> <span style="color: #CC0000;">1</span><span style="color: #339933;">;</span>
+        cubeVertexIndexBuffer.<span style="color: #660066;">numItems</span> <span style="color: #339933;">=</span> <span style="color: #CC0000;">36</span><span style="color: #339933;">;</span></pre></td></tr></tbody></table></div>
+
+<p>记住，每个在buffer里面的数字都是对于一个顶点位置和颜色buffer的索引。所以，在第一行内，结合在drawScene里面绘制三角形的说明，这个代码意味着我们利用顶点0,1,2绘制一个三角形，接着用0,2,3绘制了另一个三角形，这两个三角形的颜色都是一样的。因为两个三角形颜色一样，彼此邻近，这样就绘制出了一个以0，1，2，3为顶点的正方形。在绘制下一个正方形的时候再次循环这个过程。</p>
+<p>这样，你就知道了如何使用3D物体制作WebGL场景。并且你们还知道了该如何通过element array buffers 和 drawElements 来循环使用你在array buffers 指定的顶点。如果有什么问题，请留下评论。</p>
+<p>在下节课中，我们将会引入纹理。</p>
+<div style="clear:both; margin-top:5px; margin-bottom:5px;"></div><div style="float:left"><!-- JiaThis Button BEGIN -->
+<div id="ckepop">
+	<span class="jiathis_txt">分享到：</span>
+	<a class="jiathis_button_tools_1"></a>
+	<a class="jiathis_button_tools_2"></a>
+	<a class="jiathis_button_tools_3"></a>
+	<a class="jiathis_button_tools_4"></a>
+	<a href="http://www.jiathis.com/share" class="jiathis jiathis_txt jiathis_separator jtico jtico_jiathis" target="_blank">更多</a>
+	<a class="jiathis_counter_style"></a>
+</div>
+<script type="text/javascript" src="./Lesson 4 真正的3D物体 _ HiWebGL_files/jia.js.下载" charset="utf-8"></script>
+<!-- JiaThis Button END --></div><div style="clear:both; margin-top:5px; margin-bottom:5px;"></div>											</div><!-- .entry-content -->
+
+
+					<div class="entry-utility">
+						Posted in <a href="http://www.hiwebgl.com/?cat=17" title="查看 WebGL教程 中的全部文章" rel="category">WebGL教程</a> and tagged <a href="http://www.hiwebgl.com/?tag=webgl%e6%95%99%e7%a8%8b-2" rel="tag">webgl教程</a>, <a href="http://www.hiwebgl.com/?tag=%e6%a4%8e%e4%bd%93" rel="tag">椎体</a>, <a href="http://www.hiwebgl.com/?tag=%e7%ab%8b%e6%96%b9%e4%bd%93" rel="tag">立方体</a>. Bookmark the <a href="http://www.hiwebgl.com/?p=186" title="Permalink to Lesson 4 真正的3D物体" rel="bookmark">permalink</a>.											</div><!-- .entry-utility -->
+				</div><!-- #post-## -->
+
+				<div id="nav-below" class="navigation">
+					<div class="nav-previous"><a href="http://www.hiwebgl.com/?p=176" rel="prev"><span class="meta-nav">←</span> Firefox 9将为Javascript加入类型推断，预计性能将提高20%到30%</a></div>
+					<div class="nav-next"><a href="http://www.hiwebgl.com/?p=201" rel="next">Lesson 5 引入纹理贴图 <span class="meta-nav">→</span></a></div>
+				</div><!-- #nav-below -->
+
+				
+
+<div id="comments">
+		<h3 id="comments-title"><span>2 trackbacks</span></h3>
+	<dl id="trackback_list">
+		<dt><a href="http://www.hiwebgl.com/?p=42" rel="external nofollow" class="url">WebGL教程 | WebGL中文教程翻译工程启动！HiWebGL | HiWebGL | 最好的HTML5 WebGL中文资讯站</a></dt>
+		<dd><span>2011 年 9 月 3 日 下午 11:43</span></dd>
+		<dt><a href="http://www.hiwebgl.com/?p=681" rel="external nofollow" class="url">WebGL新闻 | WebGL 教程第三、四课中文学习笔记HiWebGL | HiWebGL | 最好的HTML5 WebGL中文资讯站</a></dt>
+		<dd><span>2011 年 12 月 9 日 上午 8:34</span></dd>
+    </dl>
+    <h3 id="comments-title"><span>15 comments</span></h3>
+	<ol class="commentlist">
+    	
+	<li class="comment even thread-even depth-1" id="li-comment-45">
+    	<div id="comment-45">
+            <div class="comment_meta commentmetadata">
+                <span class="avatar"><img alt="" src="./Lesson 4 真正的3D物体 _ HiWebGL_files/cd8e6e09d1b09708411c25abe3d79b5b.jpeg" class="avatar avatar-40 photo" height="40" width="40"></span>
+                <span class="comment_author vcard fn"><a href="http://www.iplaymid.com/" rel="external nofollow" class="url">safaring</a></span>
+                <span class="comment_time">2011 年 9 月 6 日 下午 11:47</span>
+            </div>
+            <div class="comment_body">
+                <p></p><p>这个需要怎么的opengl的基础？</p>
+<p></p>
+                <p class="reply"><a class="comment-reply-link" href="http://www.hiwebgl.com/?p=186&amp;replytocom=45#respond" onclick="return addComment.moveForm(&quot;comment-45&quot;, &quot;45&quot;, &quot;respond&quot;, &quot;186&quot;)">回复</a></p>
+            </div>
+		</div>
+        
+        
+    
+</li>
+	<li class="comment odd alt thread-odd thread-alt depth-1" id="li-comment-47">
+    	<div id="comment-47">
+            <div class="comment_meta commentmetadata">
+                <span class="avatar"><img alt="" src="./Lesson 4 真正的3D物体 _ HiWebGL_files/ad516503a11cd5ca435acc9bb6523536.png" class="avatar avatar-40 photo" height="40" width="40"></span>
+                <span class="comment_author vcard fn">HIwEBGL</span>
+                <span class="comment_time">2011 年 9 月 8 日 上午 12:16</span>
+            </div>
+            <div class="comment_body">
+                <p></p><p>WEBGL接口继承自OpenGLES2.0, 严格来说, 学习WEBGL并不需要有OPENGL的基础, 你可以直接将WEBGL作为你进入3D领域的切入点, 因为它很简单, 不像opengl需要考虑很多系统相关的事情.<br>
+不过当然, 如果你已经有了opengl的基础, 那么对你学习webgl是非常有帮助的</p>
+<p></p>
+                <p class="reply"><a class="comment-reply-link" href="http://www.hiwebgl.com/?p=186&amp;replytocom=47#respond" onclick="return addComment.moveForm(&quot;comment-47&quot;, &quot;47&quot;, &quot;respond&quot;, &quot;186&quot;)">回复</a></p>
+            </div>
+		</div>
+        
+        
+    
+</li>
+	<li class="comment even thread-even depth-1" id="li-comment-199">
+    	<div id="comment-199">
+            <div class="comment_meta commentmetadata">
+                <span class="avatar"><img alt="" src="./Lesson 4 真正的3D物体 _ HiWebGL_files/ad516503a11cd5ca435acc9bb6523536(1).png" class="avatar avatar-40 photo" height="40" width="40"></span>
+                <span class="comment_author vcard fn">Nayukey</span>
+                <span class="comment_time">2011 年 11 月 7 日 下午 5:07</span>
+            </div>
+            <div class="comment_body">
+                <p></p><p>这个立方体，实际上只有8个顶点，那么我们在定义array_buffrt的时候，通过索引使用8个顶点，是否也可以实现这样的效果。。</p>
+<p></p>
+                <p class="reply"><a class="comment-reply-link" href="http://www.hiwebgl.com/?p=186&amp;replytocom=199#respond" onclick="return addComment.moveForm(&quot;comment-199&quot;, &quot;199&quot;, &quot;respond&quot;, &quot;186&quot;)">回复</a></p>
+            </div>
+		</div>
+        
+        
+    
+<ul class="children">
+	<li class="comment odd alt depth-2" id="li-comment-775">
+    	<div id="comment-775">
+            <div class="comment_meta commentmetadata">
+                <span class="avatar"><img alt="" src="./Lesson 4 真正的3D物体 _ HiWebGL_files/ad516503a11cd5ca435acc9bb6523536(2).png" class="avatar avatar-40 photo" height="40" width="40"></span>
+                <span class="comment_author vcard fn">dingollw</span>
+                <span class="comment_time">2012 年 4 月 24 日 下午 1:56</span>
+            </div>
+            <div class="comment_body">
+                <p></p><p>索引8个顶点是不行的，因为每次画正方形的时候，都是先通过画三角形来实现的； 所以一个面的正方形必须画两次完整的三角形，即一个面会需要6个顶点索引。</p>
+<p></p>
+                <p class="reply"><a class="comment-reply-link" href="http://www.hiwebgl.com/?p=186&amp;replytocom=775#respond" onclick="return addComment.moveForm(&quot;comment-775&quot;, &quot;775&quot;, &quot;respond&quot;, &quot;186&quot;)">回复</a></p>
+            </div>
+		</div>
+        
+        
+    
+<ul class="children">
+	<li class="comment even depth-3" id="li-comment-778">
+    	<div id="comment-778">
+            <div class="comment_meta commentmetadata">
+                <span class="avatar"><img alt="" src="./Lesson 4 真正的3D物体 _ HiWebGL_files/a439402fec8627a3026c26572c0722e2.jpeg" class="avatar avatar-40 photo" height="40" width="40"></span>
+                <span class="comment_author vcard fn">xiaoyi</span>
+                <span class="comment_time">2012 年 4 月 25 日 下午 3:46</span>
+            </div>
+            <div class="comment_body">
+                <p></p><p>在这个例子里，需要24个顶点是每个面的颜色决定的。<br>
+如果不考虑面的颜色，按照顶点绘制颜色，8个顶点就是足够的。</p>
+<p></p>
+                <p class="reply"><a class="comment-reply-link" href="http://www.hiwebgl.com/?p=186&amp;replytocom=778#respond" onclick="return addComment.moveForm(&quot;comment-778&quot;, &quot;778&quot;, &quot;respond&quot;, &quot;186&quot;)">回复</a></p>
+            </div>
+		</div>
+        
+        
+    
+<ul class="children">
+	<li class="comment odd alt depth-4" id="li-comment-1059">
+    	<div id="comment-1059">
+            <div class="comment_meta commentmetadata">
+                <span class="avatar"><img alt="" src="./Lesson 4 真正的3D物体 _ HiWebGL_files/ad516503a11cd5ca435acc9bb6523536(3).png" class="avatar avatar-40 photo" height="40" width="40"></span>
+                <span class="comment_author vcard fn">bin381</span>
+                <span class="comment_time">2012 年 6 月 1 日 下午 2:49</span>
+            </div>
+            <div class="comment_body">
+                <p></p><p>我觉得8个还是不行的。因为并没有画正方形的。</p>
+<p></p>
+                <p class="reply"><a class="comment-reply-link" href="http://www.hiwebgl.com/?p=186&amp;replytocom=1059#respond" onclick="return addComment.moveForm(&quot;comment-1059&quot;, &quot;1059&quot;, &quot;respond&quot;, &quot;186&quot;)">回复</a></p>
+            </div>
+		</div>
+        
+        
+    
+</li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+</li>
+
+	<li class="comment even thread-odd thread-alt depth-1" id="li-comment-406">
+    	<div id="comment-406">
+            <div class="comment_meta commentmetadata">
+                <span class="avatar"><img alt="" src="./Lesson 4 真正的3D物体 _ HiWebGL_files/ad516503a11cd5ca435acc9bb6523536(4).png" class="avatar avatar-40 photo" height="40" width="40"></span>
+                <span class="comment_author vcard fn">韩笑</span>
+                <span class="comment_time">2012 年 1 月 19 日 下午 3:12</span>
+            </div>
+            <div class="comment_body">
+                <p></p><p>不太清楚元素数组对象和数组对象的区别，楼主可否再详细帮忙详细说明一下？谢谢啦O(∩_∩)O~</p>
+<p></p>
+                <p class="reply"><a class="comment-reply-link" href="http://www.hiwebgl.com/?p=186&amp;replytocom=406#respond" onclick="return addComment.moveForm(&quot;comment-406&quot;, &quot;406&quot;, &quot;respond&quot;, &quot;186&quot;)">回复</a></p>
+            </div>
+		</div>
+        
+        
+    
+<ul class="children">
+	<li class="comment odd alt depth-2" id="li-comment-776">
+    	<div id="comment-776">
+            <div class="comment_meta commentmetadata">
+                <span class="avatar"><img alt="" src="./Lesson 4 真正的3D物体 _ HiWebGL_files/ad516503a11cd5ca435acc9bb6523536(2).png" class="avatar avatar-40 photo" height="40" width="40"></span>
+                <span class="comment_author vcard fn">dingollw</span>
+                <span class="comment_time">2012 年 4 月 24 日 下午 2:08</span>
+            </div>
+            <div class="comment_body">
+                <p></p><p>按我的理解，元素数组对象跟数组对象是因为  所定义的实例对象的不同，相应的对象类型就不同；索引是element元素类型，所以定义缓存块的时候，要赋予相应的类型。</p>
+<p></p>
+                <p class="reply"><a class="comment-reply-link" href="http://www.hiwebgl.com/?p=186&amp;replytocom=776#respond" onclick="return addComment.moveForm(&quot;comment-776&quot;, &quot;776&quot;, &quot;respond&quot;, &quot;186&quot;)">回复</a></p>
+            </div>
+		</div>
+        
+        
+    
+</li>
+</ul>
+</li>
+	<li class="comment even thread-even depth-1" id="li-comment-405">
+    	<div id="comment-405">
+            <div class="comment_meta commentmetadata">
+                <span class="avatar"><img alt="" src="./Lesson 4 真正的3D物体 _ HiWebGL_files/ad516503a11cd5ca435acc9bb6523536(4).png" class="avatar avatar-40 photo" height="40" width="40"></span>
+                <span class="comment_author vcard fn">韩笑</span>
+                <span class="comment_time">2012 年 1 月 19 日 下午 3:12</span>
+            </div>
+            <div class="comment_body">
+                <p></p><p>不太清楚元素数组对象和数组对象的区别，楼主可否再详细帮忙详细说明一下？谢谢啦O(∩_∩)O~</p>
+<p></p>
+                <p class="reply"><a class="comment-reply-link" href="http://www.hiwebgl.com/?p=186&amp;replytocom=405#respond" onclick="return addComment.moveForm(&quot;comment-405&quot;, &quot;405&quot;, &quot;respond&quot;, &quot;186&quot;)">回复</a></p>
+            </div>
+		</div>
+        
+        
+    
+</li>
+	<li class="comment odd alt thread-odd thread-alt depth-1" id="li-comment-521">
+    	<div id="comment-521">
+            <div class="comment_meta commentmetadata">
+                <span class="avatar"><img alt="" src="./Lesson 4 真正的3D物体 _ HiWebGL_files/ad516503a11cd5ca435acc9bb6523536(5).png" class="avatar avatar-40 photo" height="40" width="40"></span>
+                <span class="comment_author vcard fn">YAOshiyi</span>
+                <span class="comment_time">2012 年 2 月 6 日 下午 4:37</span>
+            </div>
+            <div class="comment_body">
+                <p></p><p>我把立方体的六个面的顶点顺序混以顺时针和逆时针共存,也能够画出同样的效果，但是我看NEHE的教程中说了下面这句话：“注意所有的面－三角形都是逆时针次序绘制的。这点十分重要，在以后的课程中我会作出解释。现在，您只需明白要么都逆时针，要么都顺时针，但永远不要将两种次序混在一起，除非您有足够的理由必须这么做。” 这句话的意思是不是混用会带来麻烦？<br>
+另外还有一句话：”接下来开始画立方体。他由六个四边形组成。所有的四边形都以逆时针次序绘制。就是说先画右上角，然后左上角、左下角、最后右下角。您也许认为画立方体的背面的时候这个次序看起来好像顺时针，但别忘了我们从立方体的背后看背面的时候，与您现在所想的正好相反。“ 在这一课中我们的顶点并非从右上角，然后左上角、左下角、最后右下角这样一个顺序。我试着打乱原先代码的中的一些顶点顺序，似乎没有对结果产生影响。<br>
+那么问题是：在webgl中定义顶点时是否都要按照逆时针顺序？定义是否需要按照右上角，然后左上角、左下角、最后右下角这样一个顺序？ 请赐教。</p>
+<p></p>
+                <p class="reply"><a class="comment-reply-link" href="http://www.hiwebgl.com/?p=186&amp;replytocom=521#respond" onclick="return addComment.moveForm(&quot;comment-521&quot;, &quot;521&quot;, &quot;respond&quot;, &quot;186&quot;)">回复</a></p>
+            </div>
+		</div>
+        
+        
+    
+<ul class="children">
+	<li class="comment even depth-2" id="li-comment-726">
+    	<div id="comment-726">
+            <div class="comment_meta commentmetadata">
+                <span class="avatar"><img alt="" src="./Lesson 4 真正的3D物体 _ HiWebGL_files/ad516503a11cd5ca435acc9bb6523536(6).png" class="avatar avatar-40 photo" height="40" width="40"></span>
+                <span class="comment_author vcard fn">王新龙</span>
+                <span class="comment_time">2012 年 4 月 6 日 下午 4:36</span>
+            </div>
+            <div class="comment_body">
+                <p></p><p>以我的Opengl的知识来看，这里之所以要保持顺时针或者逆时针的一致是为了确保你画出的物体每个面的正面都冲外或者冲里，因为之后可能会做像“取消显示背面”这样的操作（貌似这样会对渲染的速度有所优化）或者”正背面贴上不同的纹理“，如果不一致会使物体看起来奇怪</p>
+<p></p>
+                <p class="reply"><a class="comment-reply-link" href="http://www.hiwebgl.com/?p=186&amp;replytocom=726#respond" onclick="return addComment.moveForm(&quot;comment-726&quot;, &quot;726&quot;, &quot;respond&quot;, &quot;186&quot;)">回复</a></p>
+            </div>
+		</div>
+        
+        
+    
+</li>
+	<li class="comment odd alt depth-2" id="li-comment-779">
+    	<div id="comment-779">
+            <div class="comment_meta commentmetadata">
+                <span class="avatar"><img alt="" src="./Lesson 4 真正的3D物体 _ HiWebGL_files/a439402fec8627a3026c26572c0722e2.jpeg" class="avatar avatar-40 photo" height="40" width="40"></span>
+                <span class="comment_author vcard fn">xiaoyi</span>
+                <span class="comment_time">2012 年 4 月 25 日 下午 3:48</span>
+            </div>
+            <div class="comment_body">
+                <p></p><p>可以在顺时针上绘制逆时针图行达到裁切效果。</p>
+<p></p>
+                <p class="reply"><a class="comment-reply-link" href="http://www.hiwebgl.com/?p=186&amp;replytocom=779#respond" onclick="return addComment.moveForm(&quot;comment-779&quot;, &quot;779&quot;, &quot;respond&quot;, &quot;186&quot;)">回复</a></p>
+            </div>
+		</div>
+        
+        
+    
+</li>
+</ul>
+</li>
+	<li class="comment byuser comment-author-ispring even thread-even depth-1" id="li-comment-806">
+    	<div id="comment-806">
+            <div class="comment_meta commentmetadata">
+                <span class="avatar"><img alt="" src="./Lesson 4 真正的3D物体 _ HiWebGL_files/ad516503a11cd5ca435acc9bb6523536(7).png" class="avatar avatar-40 photo" height="40" width="40"></span>
+                <span class="comment_author vcard fn">iSpring</span>
+                <span class="comment_time">2012 年 5 月 3 日 下午 4:04</span>
+            </div>
+            <div class="comment_body">
+                <p></p><p>感觉这个例子还可以做优化，本例子画立方体用了24个顶点，其实重复的有很多，画立方体的时候用8个顶点就够了，然后通过索引来使用数组中不同的顶点来画出多个三角形</p>
+<p></p>
+                <p class="reply"><a class="comment-reply-link" href="http://www.hiwebgl.com/?p=186&amp;replytocom=806#respond" onclick="return addComment.moveForm(&quot;comment-806&quot;, &quot;806&quot;, &quot;respond&quot;, &quot;186&quot;)">回复</a></p>
+            </div>
+		</div>
+        
+        
+    
+<ul class="children">
+	<li class="comment odd alt depth-2" id="li-comment-1247">
+    	<div id="comment-1247">
+            <div class="comment_meta commentmetadata">
+                <span class="avatar"><img alt="" src="./Lesson 4 真正的3D物体 _ HiWebGL_files/4b238cb2de54a149a56b772ee666f119.jpeg" class="avatar avatar-40 photo" height="40" width="40"></span>
+                <span class="comment_author vcard fn">xy</span>
+                <span class="comment_time">2012 年 7 月 17 日 下午 2:51</span>
+            </div>
+            <div class="comment_body">
+                <p></p><p>它的目的就是每个顶点要有3种颜色，所以自然需要24个点了。</p>
+<p></p>
+                <p class="reply"><a class="comment-reply-link" href="http://www.hiwebgl.com/?p=186&amp;replytocom=1247#respond" onclick="return addComment.moveForm(&quot;comment-1247&quot;, &quot;1247&quot;, &quot;respond&quot;, &quot;186&quot;)">回复</a></p>
+            </div>
+		</div>
+        
+        
+    
+</li>
+</ul>
+</li>
+	<li class="comment even thread-odd thread-alt depth-1" id="li-comment-1591">
+    	<div id="comment-1591">
+            <div class="comment_meta commentmetadata">
+                <span class="avatar"><img alt="" src="./Lesson 4 真正的3D物体 _ HiWebGL_files/ad516503a11cd5ca435acc9bb6523536(8).png" class="avatar avatar-40 photo" height="40" width="40"></span>
+                <span class="comment_author vcard fn">Olivier</span>
+                <span class="comment_time">2012 年 8 月 21 日 上午 11:40</span>
+            </div>
+            <div class="comment_body">
+                <p></p><p>我之前试过用gl.quads画正方形，但是为什么画出来的只有四个点呢？难道一定要用triangle_strip画？</p>
+<p></p>
+                <p class="reply"><a class="comment-reply-link" href="http://www.hiwebgl.com/?p=186&amp;replytocom=1591#respond" onclick="return addComment.moveForm(&quot;comment-1591&quot;, &quot;1591&quot;, &quot;respond&quot;, &quot;186&quot;)">回复</a></p>
+            </div>
+		</div>
+        
+        
+    
+</li>
+    </ol>
+        
+
+								<div id="respond">
+				<h3 id="reply-title">Post a Comment <small><a rel="nofollow" id="cancel-comment-reply-link" href="http://www.hiwebgl.com/?p=186#respond" style="display:none;">点击这里取消回复。</a></small></h3>
+									<form action="http://www.hiwebgl.com/wp-comments-post.php" method="post" id="commentform">
+																			<p class="comment-notes">电子邮件地址不会被公开。 必填项已用 <span class="required">*</span> 标注</p>							<p class="comment-form-author"><label for="author">姓名</label> <span class="required">*</span><input id="author" name="author" type="text" value="" size="30" aria-required="true"></p>
+<p class="comment-form-email"><label for="email">电子邮件</label> <span class="required">*</span><input id="email" name="email" type="text" value="" size="30" aria-required="true"></p>
+<p class="comment-form-url"><label for="url">站点</label><input id="url" name="url" type="text" value="" size="30"></p>
+												<p class="comment-form-comment"><label for="comment">评论</label><textarea id="comment" name="comment" cols="45" rows="8" aria-required="true"></textarea></p>						<p class="form-allowed-tags">您可以使用这些 <abbr title="HyperText Markup Language">HTML</abbr> 标签和属性： <code>&lt;a href="" title=""&gt; &lt;abbr title=""&gt; &lt;acronym title=""&gt; &lt;b&gt; &lt;blockquote cite=""&gt; &lt;cite&gt; &lt;code&gt; &lt;del datetime=""&gt; &lt;em&gt; &lt;i&gt; &lt;q cite=""&gt; &lt;strike&gt; &lt;strong&gt; </code></p>						<p class="form-submit">
+							<input name="submit" type="submit" id="submit" value="发表评论">
+							<input type="hidden" name="comment_post_ID" value="186" id="comment_post_ID">
+<input type="hidden" name="comment_parent" id="comment_parent" value="0">
+						</p>
+						<p style="display: none;"><input type="hidden" id="akismet_comment_nonce" name="akismet_comment_nonce" value="2f4f3bf221"></p>					</form>
+							</div><!-- #respond -->
+						
+</div><!-- #comments -->
+
+			</div><!-- #content -->
+		</div><!-- #container -->
+
+<div id="sidebar" class="widget-area" role="complementary">
+	<ul class="xoxo">
+    	<li id="search-2" class="widget-container widget_search"><form id="searchform" method="get" action="http://www.hiwebgl.com/"> 
+	<input type="text" name="s" id="s" class="search_term" value="Type in keyword and hit Enter..." onblur="if (this.value == &#39;&#39;) {this.value = &#39;Type in keyword and hit Enter...&#39;;}" onfocus="if (this.value == &#39;Type in keyword and hit Enter...&#39;) {this.value = &#39;&#39;;}">
+</form></li><li id="text-4" class="widget-container widget_text"><h3 class="widget-title">加入我们的QQ群</h3>			<div class="textwidget"><b>HiWebGL技术讨论群</b><br>①群群号174563471（已满）<br>②群群号133703893（已满）<br>③群群号196778533（已满）<br>④群群号217873851（已满）<br>⑤群群号225923498（已满）<br>500人群群号219549633<br>欢迎各位程序员和工程师加入！<br><a target="_blank" href="http://qun.qq.com/#jointhegroup/gid/219549633"><img border="0" src="./Lesson 4 真正的3D物体 _ HiWebGL_files/gp.png" alt="点击这里加入此群" title="点击这里加入此群"></a>
+<br><br>
+<b>HiWebGL产业讨论群</b><br>①群群号176289597（已满）<br>②群群号216936388<br>欢迎关注Web3D发展的从业者与富有理想与激情的创业者朋友加入！<br><a target="_blank" href="http://qun.qq.com/#jointhegroup/gid/216936388"><img border="0" src="./Lesson 4 真正的3D物体 _ HiWebGL_files/gp.png" alt="点击这里加入此群" title="点击这里加入此群"></a></div>
+		</li><style type="text/css" media="screen">
+#mwrapper-wm_show-3 .mcontainer {height: 300px; overflow: hidden;}
+</style>
+<li id="wm_show-3" class="widget-container wm_show"><h3 class="widget-title">关注我们的新浪微博！</h3><div class="mwrapper" id="mwrapper-wm_show-3"><div class="head"><img class="headimg" src="./Lesson 4 真正的3D物体 _ HiWebGL_files/89c570d0jw1e8qgp5bmzyj2050050aa8.jpg"><a class="headlink" href="http://weibo.com/2311418064" rel="external nofollow" target="_blank">HiWebGL</a><div class="onekey"><iframe width="63" height="24" frameborder="0" allowtransparency="true" marginwidth="0" marginheight="0" scrolling="no" border="0" src="./Lesson 4 真正的3D物体 _ HiWebGL_files/followbutton.html"></iframe></div></div><a class="scroll up" href="javascript:;"><img src="./Lesson 4 真正的3D物体 _ HiWebGL_files/transparent.gif"></a><div class="mcontainer"><ul class="microblogs"><li class="tweet">[哆啦A梦吃惊]<div class="rt"><a href="http://weibo.com/crazycomputer" rel="external nofollow" target="_blank">尼奥_</a> : 因写了抢猫粮插件被抓的小喵。<div class="pic rt-pic"><a href="http://ww3.sinaimg.cn/large/6588fb91jw1f8a611qywmj20qo0r743g.jpg" rel="external nofollow" target="_blank"><img src="./Lesson 4 真正的3D物体 _ HiWebGL_files/6588fb91jw1f8a611qywmj20qo0r743g.jpg"></a></div></div><div class="meta"><a href="http://api.t.sina.com.cn/2311418064/statuses/4025014212843692" rel="external nofollow" target="_blank">9月29日 12:00</a> 来自 <a href="http://weibo.com/2311418064" rel="external nofollow" target="_blank">新浪微博</a></div></li><li class="tweet">转发微博<div class="rt"><a href="http://weibo.com/armcn" rel="external nofollow" target="_blank">ARM中国</a> : 在看颜的时代，如何让一款游戏画面更具高bigger？从8位像素画风到1080P/4K，再到ARM的Enlighten全局光照技术，能够分分钟变化出数十种光照效果，再挑的玩家都给它点赞了，不信你就来看看[围观][围观]<a href="http://t.cn/RcNsHsc" rel="external nofollow" target="_blank">http://t.cn/RcNsHsc</a><div class="pic rt-pic"><a href="http://ww3.sinaimg.cn/large/84217b4fgw1f89g6wubugj20j30q6gr3.jpg" rel="external nofollow" target="_blank"><img src="./Lesson 4 真正的3D物体 _ HiWebGL_files/84217b4fgw1f89g6wubugj20j30q6gr3.jpg"></a></div></div><div class="meta"><a href="http://api.t.sina.com.cn/2311418064/statuses/4025000392991907" rel="external nofollow" target="_blank">9月29日 11:05</a> 来自 <a href="http://weibo.com/2311418064" rel="external nofollow" target="_blank">新浪微博</a></div></li><li class="tweet">转发微博<div class="rt"><a href="http://weibo.com/baidujs" rel="external nofollow" target="_blank">JS小组</a> : 你知道使用 target='_blank' 也会有安全漏洞么？尤其是在各种 UGC 网站中。不过小编早就玩过了，其实一般倒也不会用在钓鱼上，而是用在各种各样的广告点击中。推荐文章《target='_blank' 安全漏洞示例》地址 <a href="http://t.cn/RchBwVu" rel="external nofollow" target="_blank">http://t.cn/RchBwVu</a>  $w<div class="pic rt-pic"><a href="http://ww2.sinaimg.cn/large/aa9d3df6jw1f7fewekmx8j20g30a1aak.jpg" rel="external nofollow" target="_blank"><img src="./Lesson 4 真正的3D物体 _ HiWebGL_files/aa9d3df6jw1f7fewekmx8j20g30a1aak.jpg"></a></div></div><div class="meta"><a href="http://api.t.sina.com.cn/2311418064/statuses/4016375595329873" rel="external nofollow" target="_blank">9月5日 15:53</a> 来自 <a href="http://weibo.com/2311418064" rel="external nofollow" target="_blank">新浪微博</a></div></li><li class="tweet">不做游戏，帮转<div class="rt"><a href="http://weibo.com/xdarui" rel="external nofollow" target="_blank">阿里子之</a> : 有做WebVR游戏的公司么，求合作。求圈内大神帮忙转发。@寒冬winter @大城小胖 @w3cplus</div><div class="meta"><a href="http://api.t.sina.com.cn/2311418064/statuses/4015348426770066" rel="external nofollow" target="_blank">9月2日 19:52</a> 来自 <a href="http://weibo.com/2311418064" rel="external nofollow" target="_blank">新浪微博</a></div></li><li class="tweet">阿里云OSS是否支持websockets?有人知道吗？<div class="meta"><a href="http://api.t.sina.com.cn/2311418064/statuses/4006622127044001" rel="external nofollow" target="_blank">8月9日 17:56</a> 来自 <a href="http://weibo.com/2311418064" rel="external nofollow" target="_blank">新浪微博</a></div></li></ul></div><a class="scroll down" href="javascript:;"><img src="./Lesson 4 真正的3D物体 _ HiWebGL_files/transparent.gif"></a></div></li><li id="recent-comments-2" class="widget-container widget_recent_comments"><h3 class="widget-title">近期评论</h3><ul id="recentcomments"><li class="recentcomments"><a href="http://www.d2film.com/" rel="external nofollow" class="url">企业宣传片制作d2film.com影视视频制作公司QQ30998</a> 发表在《<a href="http://www.hiwebgl.com/?p=42#comment-7984">WebGL中文教程翻译工程启动！</a>》</li><li class="recentcomments"><a href="http://www.128sf.cn/" rel="external nofollow" class="url">魔域服务器架设</a> 发表在《<a href="http://www.hiwebgl.com/?p=312#comment-7858">Lesson 9 优化代码结构实现多物体运动</a>》</li><li class="recentcomments"><a href="http://www.39uc.cn/" rel="external nofollow" class="url">天龙八部师傅m161</a> 发表在《<a href="http://www.hiwebgl.com/?p=70#comment-7857">外媒公布Firefox 6性能测试结果</a>》</li><li class="recentcomments"><a href="http://www.233sf.cn/" rel="external nofollow" class="url">最新奇迹私发网</a> 发表在《<a href="http://www.hiwebgl.com/?p=42#comment-7856">WebGL中文教程翻译工程启动！</a>》</li><li class="recentcomments"><a href="http://www.5aivideo.com/" rel="external nofollow" class="url">婚礼跟拍视频5aivideo.com婚礼摄影MV-QQ73595</a> 发表在《<a href="http://www.hiwebgl.com/?p=42#comment-7829">WebGL中文教程翻译工程启动！</a>》</li></ul></li><li id="categories-2" class="widget-container widget_categories"><h3 class="widget-title">分类目录</h3>		<ul>
+	<li class="cat-item cat-item-16"><a href="http://www.hiwebgl.com/?cat=16" title="查看 Demo大赏 下的所有文章">Demo大赏</a>
+</li>
+	<li class="cat-item cat-item-29"><a href="http://www.hiwebgl.com/?cat=29" title="查看 HTML5新闻 下的所有文章">HTML5新闻</a>
+</li>
+	<li class="cat-item cat-item-57"><a href="http://www.hiwebgl.com/?cat=57" title="Oak3D中文教程">Oak3D教程</a>
+</li>
+	<li class="cat-item cat-item-17"><a href="http://www.hiwebgl.com/?cat=17" title="查看 WebGL教程 下的所有文章">WebGL教程</a>
+</li>
+	<li class="cat-item cat-item-3"><a href="http://www.hiwebgl.com/?cat=3" title="WebGL新闻">WebGL新闻</a>
+</li>
+	<li class="cat-item cat-item-10"><a href="http://www.hiwebgl.com/?cat=10" title="查看 博文精选 下的所有文章">博文精选</a>
+</li>
+	<li class="cat-item cat-item-4"><a href="http://www.hiwebgl.com/?cat=4" title="推荐阅读">推荐</a>
+</li>
+	<li class="cat-item cat-item-1"><a href="http://www.hiwebgl.com/?cat=1" title="查看 未分类 下的所有文章">未分类</a>
+</li>
+		</ul>
+</li><li id="archives-2" class="widget-container widget_archive"><h3 class="widget-title">文章归档</h3>		<ul>
+			<li><a href="http://www.hiwebgl.com/?m=201206" title="2012 年六月">2012 年六月</a></li>
+	<li><a href="http://www.hiwebgl.com/?m=201205" title="2012 年五月">2012 年五月</a></li>
+	<li><a href="http://www.hiwebgl.com/?m=201204" title="2012 年四月">2012 年四月</a></li>
+	<li><a href="http://www.hiwebgl.com/?m=201203" title="2012 年三月">2012 年三月</a></li>
+	<li><a href="http://www.hiwebgl.com/?m=201202" title="2012 年二月">2012 年二月</a></li>
+	<li><a href="http://www.hiwebgl.com/?m=201201" title="2012 年一月">2012 年一月</a></li>
+	<li><a href="http://www.hiwebgl.com/?m=201112" title="2011 年十二月">2011 年十二月</a></li>
+	<li><a href="http://www.hiwebgl.com/?m=201111" title="2011 年十一月">2011 年十一月</a></li>
+	<li><a href="http://www.hiwebgl.com/?m=201110" title="2011 年十月">2011 年十月</a></li>
+	<li><a href="http://www.hiwebgl.com/?m=201109" title="2011 年九月">2011 年九月</a></li>
+	<li><a href="http://www.hiwebgl.com/?m=201108" title="2011 年八月">2011 年八月</a></li>
+		</ul>
+</li>    </ul>
+</div><!-- #sidebar .widget-area -->	</div><!-- #main -->
+    <div id="footer" role="contentinfo">
+    	
+    	<div id="colophon">
+            <div id="site-info" class="clearfix">
+                <div id="generator">Powered by <a href="http://wordpress.org/" title="Semantic Personal Publishing Platform" rel="generator">Wordpress</a> and <a href="http://wpcrunchy.com/" title="Free Premium Quality Wordpress Themes">WPCrunchy</a></div>
+                <div id="credits">Designed by <a href="http://www.hostreviewgeeks.com/" title="best web hosting" target="_blank">best web hosting</a>. In collaboration with <a href="http://www.hostv.com/" title="VPS Hosting" target="_blank">VPS Hosting</a>, <a href="http://broadwaytickets.co/" title="Broadway Tickets" target="_blank">Broadway Tickets</a>, <a href="http://wpcorner.com/" title="Free Wordpress Themes" target="_blank">Free Wordpress Themes</a>.</div>
+            </div>
+        </div>
+    </div><!-- #footer -->
+</div><!-- #wrapper -->
+
+<script type="text/javascript">jQuery(document).ready(function() { if(jQuery("ul.accordion li").length > 2) { jQuery("ul.accordion").accordion(); } });</script><script src="./Lesson 4 真正的3D物体 _ HiWebGL_files/stat.php" language="JavaScript"></script><script src="./Lesson 4 真正的3D物体 _ HiWebGL_files/core.php" charset="utf-8" type="text/javascript"></script><a href="http://www.cnzz.com/stat/website.php?web_id=3871765" target="_blank" title="站长统计"><img border="0" hspace="0" vspace="0" src="./Lesson 4 真正的3D物体 _ HiWebGL_files/pic.gif"></a><script src="./Lesson 4 真正的3D物体 _ HiWebGL_files/stat.js.下载" defer="defer" async="async"></script>
+ </body></html>

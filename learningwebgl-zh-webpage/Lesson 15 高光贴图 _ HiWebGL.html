@@ -1,0 +1,528 @@
+<!DOCTYPE html>
+<!-- saved from url=(0029)http://www.hiwebgl.com/?p=398 -->
+<html dir="ltr" lang="zh-CN"><script type="text/javascript">
+    var spector;
+    var captureOnLoad = false;
+    var captureOffScreen = false;
+    window.__SPECTOR_Canvases = [];
+
+    (function() {
+        var __SPECTOR_Origin_EXTENSION_GetContext = HTMLCanvasElement.prototype.getContext;
+        HTMLCanvasElement.prototype.__SPECTOR_Origin_EXTENSION_GetContext = __SPECTOR_Origin_EXTENSION_GetContext;
+
+        HTMLCanvasElement.prototype.getContext = function () {
+            var context = null;
+            if (!arguments.length) {
+                return context;
+            }
+
+            if (arguments.length === 1) {
+                context = this.__SPECTOR_Origin_EXTENSION_GetContext(arguments[0]);
+                if (context === null) {
+                    return context;
+                }
+            }
+            else if (arguments.length === 2) {
+                context = this.__SPECTOR_Origin_EXTENSION_GetContext(arguments[0], arguments[1]);
+                if (context === null) {
+                    return context;
+                }
+            }
+
+            var contextNames = ["webgl", "experimental-webgl", "webgl2", "experimental-webgl2"];
+            if (contextNames.indexOf(arguments[0]) !== -1) {
+                context.canvas.setAttribute("__spector_context_type", arguments[0]);
+                // Notify the page a canvas is available.
+                var myEvent = new CustomEvent("SpectorWebGLCanvasAvailableEvent");
+                document.dispatchEvent(myEvent);
+
+                if (captureOffScreen) {
+                    var found = false;
+                    for (var i = 0; i < window.__SPECTOR_Canvases.length; i++) {
+                        if (window.__SPECTOR_Canvases[i] === this) {
+                            found = true;
+                            break;
+                        }
+                    }
+                    if (!found) {
+                        window.__SPECTOR_Canvases.push(this);
+                    }
+                }
+
+                if (captureOnLoad) {
+                    // Ensures canvas is in the dom to capture the one we are currently tracking.
+                    if (this.parentElement || false) {
+                        spector.captureContext(context, 500, false);
+                        captureOnLoad = false;
+                    }
+                }
+            }
+
+            return context;
+        }
+    })()</script><script>(function main() {
+    // Create enabled event
+    function fireEnabledEvent() {
+        // If gli exists, then we are already present and shouldn't do anything
+        if (!window.gli) {
+            setTimeout(function () {
+                var enabledEvent = document.createEvent("Event");
+                enabledEvent.initEvent("WebGLEnabledEvent", true, true);
+                document.dispatchEvent(enabledEvent);
+            }, 0);
+        } else {
+            //console.log("WebGL Inspector already embedded on the page - disabling extension");
+        }
+    };
+
+    // Grab the path root from the extension
+    document.addEventListener("WebGLInspectorReadyEvent", function (e) {
+        var pathElement = document.getElementById("__webglpathroot");
+        if (window["gliloader"]) {
+            gliloader.pathRoot = pathElement.innerText;
+        } else {
+            // TODO: more?
+            window.gliCssUrl = pathElement.innerText + "gli.all.css";
+        }
+    }, false);
+
+    // Rewrite getContext to snoop for webgl
+    var originalGetContext = HTMLCanvasElement.prototype.getContext;
+    if (!HTMLCanvasElement.prototype.getContextRaw) {
+        HTMLCanvasElement.prototype.getContextRaw = originalGetContext;
+    }
+    HTMLCanvasElement.prototype.getContext = function () {
+        var ignoreCanvas = this.internalInspectorSurface;
+        if (ignoreCanvas) {
+            return originalGetContext.apply(this, arguments);
+        }
+
+        var result = originalGetContext.apply(this, arguments);
+        if (result == null) {
+            return null;
+        }
+
+        var contextNames = ["moz-webgl", "webkit-3d", "experimental-webgl", "webgl", "3d"];
+        var requestingWebGL = contextNames.indexOf(arguments[0]) != -1;
+        if (requestingWebGL) {
+            // Page is requesting a WebGL context!
+            fireEnabledEvent(this);
+
+            // If we are injected, inspect this context
+            if (window.gli) {
+                if (gli.host.inspectContext) {
+                    // TODO: pull options from extension
+                    result = gli.host.inspectContext(this, result);
+                    // NOTE: execute in a timeout so that if the dom is not yet
+                    // loaded this won't error out.
+                    window.setTimeout(function() {
+                        var hostUI = new gli.host.HostUI(result);
+                        result.hostUI = hostUI; // just so we can access it later for debugging
+                    }, 0);
+                }
+            }
+        }
+
+        return result;
+    };
+})();</script><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+
+<title>Lesson 15 高光贴图 | HiWebGL</title>
+<link rel="profile" href="http://gmpg.org/xfn/11">
+<link rel="stylesheet" type="text/css" media="all" href="./Lesson 15 高光贴图 _ HiWebGL_files/style.css">
+<!--[if IE]>
+<link rel="stylesheet" type="text/css" media="all" href="http://www.hiwebgl.com/wp-content/themes/mnchrome/style-ie.css" />
+<![endif]-->
+<link rel="stylesheet" type="text/css" media="all" href="./Lesson 15 高光贴图 _ HiWebGL_files/custom.css"><link rel="pingback" href="http://www.hiwebgl.com/xmlrpc.php">
+<meta name="robots" content="index,follow">
+<link rel="canonical" href="http://www.hiwebgl.com/?p=398">
+<link rel="alternate" type="application/rss+xml" title="HiWebGL » Feed" href="http://www.hiwebgl.com/?feed=rss2">
+<link rel="alternate" type="application/rss+xml" title="HiWebGL » 评论 Feed" href="http://www.hiwebgl.com/?feed=comments-rss2">
+<link rel="alternate" type="application/rss+xml" title="HiWebGL » Lesson 15 高光贴图 评论 Feed" href="http://www.hiwebgl.com/?feed=rss2&amp;p=398">
+<link rel="stylesheet" id="wm-css" href="./Lesson 15 高光贴图 _ HiWebGL_files/style(1).css" type="text/css" media="all">
+<link rel="stylesheet" id="toc-screen-css" href="./Lesson 15 高光贴图 _ HiWebGL_files/screen.css" type="text/css" media="all">
+<link rel="stylesheet" id="codebox-css" href="./Lesson 15 高光贴图 _ HiWebGL_files/codebox.css" type="text/css" media="screen">
+<script type="text/javascript" src="./Lesson 15 高光贴图 _ HiWebGL_files/jquery.js.下载"></script>
+<script type="text/javascript" src="./Lesson 15 高光贴图 _ HiWebGL_files/front.js.下载"></script>
+<script type="text/javascript" src="./Lesson 15 高光贴图 _ HiWebGL_files/widget.js.下载"></script>
+<script type="text/javascript" src="./Lesson 15 高光贴图 _ HiWebGL_files/comment-reply.js.下载"></script>
+<script type="text/javascript" src="./Lesson 15 高光贴图 _ HiWebGL_files/codebox.js.下载"></script>
+<link rel="EditURI" type="application/rsd+xml" title="RSD" href="http://www.hiwebgl.com/xmlrpc.php?rsd">
+<link rel="wlwmanifest" type="application/wlwmanifest+xml" href="http://www.hiwebgl.com/wp-includes/wlwmanifest.xml"> 
+<link rel="prev" title="Google Chrome AngryBirds电视广告提及WebGL" href="http://www.hiwebgl.com/?p=393">
+<link rel="next" title="Lesson 16 渲染到纹理" href="http://www.hiwebgl.com/?p=432">
+<meta name="generator" content="Monochrome 1.0">
+<link rel="canonical" href="http://www.hiwebgl.com/?p=398">
+<script type="text/javascript" src="./Lesson 15 高光贴图 _ HiWebGL_files/jquery.min.js.下载"></script>
+<script type="text/javascript" src="./Lesson 15 高光贴图 _ HiWebGL_files/hoverIntent.js.下载"></script>
+<script type="text/javascript" src="./Lesson 15 高光贴图 _ HiWebGL_files/superfish.js.下载"></script>
+<script type="text/javascript" src="./Lesson 15 高光贴图 _ HiWebGL_files/supersubs.js.下载"></script>
+<script type="text/javascript" src="./Lesson 15 高光贴图 _ HiWebGL_files/jquery.accordion.js.下载"></script>
+<script type="text/javascript" src="./Lesson 15 高光贴图 _ HiWebGL_files/dropdowns.js.下载"></script>
+<style type="text/css" media="all">
+/* <![CDATA[ */
+@import url("http://www.hiwebgl.com/wp-content/plugins/wp-table-reloaded/css/plugin.css?ver=1.9.3");
+@import url("http://www.hiwebgl.com/wp-content/plugins/wp-table-reloaded/css/datatables.css?ver=1.9.3");
+/* ]]> */
+</style></head>
+<body class="single single-post postid-398 single-format-standard">
+<div id="wrapper" class="hfeed">
+	<div id="header">
+    	<div id="masthead">
+        	<div id="branding" role="banner">
+            	<div id="site-logo">
+                	<a href="http://www.hiwebgl.com/" title="HiWebGL" rel="home">
+                    	                    <img src="./Lesson 15 高光贴图 _ HiWebGL_files/logo.png" align="logo">
+                    					</a>
+                </div>
+                <div id="site-description">最好的HTML5 WebGL中文资讯站！</div>
+                            </div><!-- #branding -->
+            <div id="access" role="navigation">
+            		<div class="menu">
+		<ul class="sf-menu sf-js-enabled">
+			<li>
+            	<a href="http://www.hiwebgl.com/" title="HiWebGL" rel="home">
+				<strong>首页</strong><span>Homepage</span>
+			</a></li>
+						<li>
+				<a href="http://www.hiwebgl.com/?p=42">
+				<strong>教程</strong><span>&nbsp;</span></a>
+							</li>
+						<li>
+				<a href="http://www.hiwebgl.com/?cat=16">
+				<strong>Demo</strong><span>&nbsp;</span></a>
+							</li>
+						<li>
+				<a href="http://www.hiwebgl.com/ask">
+				<strong>有问必答</strong><span>&nbsp;</span></a>
+							</li>
+						<li>
+				<a href="http://hiwebgl.com/forum/">
+				<strong>论坛</strong><span>&nbsp;</span></a>
+							</li>
+					</ul>
+	</div>
+            </div><!-- #access -->
+        </div><!-- #masthead -->
+    </div><!-- #header -->
+    
+    <div id="breadcrumbWrap"><div id="breadcrumb">
+<span>You are here: </span><a href="http://www.hiwebgl.com/">Home</a> » <a href="http://www.hiwebgl.com/?cat=17" title="查看 WebGL教程 中的全部文章">WebGL教程</a> » Lesson 15 高光贴图</div></div>    
+    <div id="main">
+		<div id="container">
+			<div id="content" role="main">
+
+
+				<div id="post-398" class="post-398 post type-post status-publish format-standard hentry category-webgl">
+					<h1 class="entry-title">Lesson 15 高光贴图</h1>
+
+					<div class="entry-meta">
+							<span class="meta-author">By admin</span>
+    <span class="meta-date">On 2011 年 9 月 29 日</span>
+    <span class="meta-comment">3 条评论</span>
+						2,154 次浏览					</div><!-- .entry-meta -->
+
+					<div class="entry-content">
+                		<p><span style="color: #888888;"><em>HiWebGL译者声明：因为译者个人方便的原因，我们将原教程中的第三方图形库由glMatrix改为Oak3D实现，这不影响到Demo的最终效果和实现，也不影响到WebGL的讲解和学习。原教程正文中相应的代码和讲解也为做了相应修改！本教程由HiWebGL翻译整理，转载请注明出处！</em></span></p>
+<p><span style="color: #888888;"><em>关于Oak3D：Oak3D是一套简单易用、性能优越的WebGL Javascript Library。您可以在他们的主页找到更多信息。Oak3D主页：<a href="http://www.oak3d.com/" target="_blank"><span style="color: #888888;">http://www.oak3d.com</span></a>&nbsp;</em></span></p>
+<p>欢迎来到系列教程的第15课！在这一课中，我们将介绍高光贴图技术。就像普通纹理用来指定物体表面的颜色一样，高光贴图可以用来指定物体表面每一处细节的光照反射程度，因此可以大大增强物体的真实感。本课中并没有太多新增的代码， 只会在前几课基础上进行简单的改动，但从意义上来讲，本课将引入一种全新的概念。</p>
+<p>下面的视频就是我们这节课将会完成的最终效果。</p>
+<p><embed src="http://player.youku.com/player.php/sid/XMzA4MjI5MjY4/v.swf" quality="high" width="480" height="400" align="middle" allowscriptaccess="sameDomain" type="application/x-shockwave-flash"></p>
+<p>点击<a href="http://www.hiwebgl.com/webgl_lessons/lesson15/index.html" target="_blank">这里</a>打开一个独立的WebGL页面，如果你的浏览器不支持WebGL，请点击<a href="http://www.hiwebgl.com/?p=52" target="_blank">这里</a>。</p>
+<p>在本课的演示程序中，你应当会看到一个旋转的地球，地球表面有从太阳反射出的光斑。如果你仔细观察，你会发现高光反射只存在于地球表面的海洋部分，而对于陆地部分，正像你预想的那样，不会反射太阳的光照。</p>
+<p>如果你尝试取消“开启高光贴图”选项(此选项位于canvas的下方)。你会发现高光反射就会出现在陆地上，这种效果非常不真实，看起来像是一个超大的聚光灯正在对着地球照射。这就是高光贴图的作用， 它可以允许你精确的控制物体表面的反光细节。</p>
+<p>重新打开“开启高光贴图”选项，并降低光源的漫反射强度, 比如将漫反射强度设为(0.5,0.5,0.5), 之后, 再关掉高光贴图， 你会发现地球表面的颜色纹理已经几乎看不到了，但是高光却没有变化，依然同时出现在海洋和陆地区域。</p>
+<p>下面我们来看看它是怎么工作的……</p>
+<p>惯例声明：本系列的教程是针对那些已经具备相应编程知识但没有实际3D图形经验的人的；目标是让学习者创建并运行代码，并且明白代码其中的含义，从而可以快速地创建自己的3D Web页面。如果你还没有阅读前一课，请先阅读前一课的内容吧。因为本课中我只会讲解那些与前一课中不同的新知识。</p>
+<p>另外，我编写这套教程是因为我在独立学习WebGL，所以教程中可能（非常可能）会有错误，所以还请风险自担。尽管如此，我还是会不断的修正bug和改正其中的错误的，所以如果你发现了教程中的错误，请告诉我。</p>
+<p>有两种方法可以获得上面实例的代码：在实例的独立页面中选择“查看源代码”；或者点击<a href="http://www.hiwebgl.com/webgl_lessons/lesson15/lesson15.zip" target="_blank">这里</a>下载我们为您准备好的压缩包。</p>
+<p>在解释代码细节之前，让我们先来了解一下背景知识。到目前为止，我们一直将纹理用作一种蒙在物体表面的图像。我们指定一张图像，并为每个顶点设定纹理坐标（纹理坐标标明顶点应该对应到纹理图像中的哪个位置），然后在fragment shader中, 从sampler中取出对应位置的纹理颜色, 并将它作为当前像素的颜色输出。</p>
+<p>高光贴图则将我们上面对纹理的认识扩展了一下。一张纹理有R,G, B, A四个通道，在shader中, 每个通道都是一个float类型的标量值, 但并没有限定我们一定要将纹理数据当做颜色来对待。上一课中，我们了了解到，材质的反光度（shinness）也是一个float类型标量值，所以我们可以通过纹理来将物体表面的反光度属性赋给每一个对应的像素，就像我们使用纹理为像素赋颜色一样。</p>
+<p>这就是我们在本课中使用的技巧，我们将两张纹理同时传给用于绘制地球的fragment shader，一张用来指定颜色，如下图：</p>
+<p><a href="./Lesson 15 高光贴图 _ HiWebGL_files/earth.jpg"><img class="size-full wp-image-399 aligncenter" title="earth" src="./Lesson 15 高光贴图 _ HiWebGL_files/earth.jpg" alt="" width="614" height="307"></a></p>
+<p>另一张低分辨率的用来指定反光度：</p>
+<p><a href="./Lesson 15 高光贴图 _ HiWebGL_files/earth-specular.gif"><img class="size-full wp-image-400 aligncenter" title="earth-specular" src="./Lesson 15 高光贴图 _ HiWebGL_files/earth-specular.gif" alt="" width="614" height="307"></a></p>
+<p>上图只是一张普通的GIF图片， 是我在PAINT.NET中通过修改颜色纹理生成的。在本课中，我们假设RGB通道的反光度都是相同的， 同时， 我们需要选择一种颜色作为完全不反光的标志（按照我们的设计，如果需要得到反光度32，则纹理中会存储深灰色（32，32，32）），这里我们指定纯白色为完全不反光。</p>
+<p>好了，需要预先解释的都已经说清楚了，下面我们来看代码。本课代码与14课内容只有非常微小的改动，而最主要的部分在fragment shader中，所以在这里我们主要看一下shader部分的内容:</p>
+<p>第一个不同是shader多了两个新的uniform常量用来标明是否使用颜色和高光纹理 （第17、18行）：</p>
+
+<div class="wp_codebox"><table><tbody><tr id="p3981"><td class="line_numbers"><pre>9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+</pre></td><td class="code" id="p398code1"><pre class="glsl" style="font-family:monospace;">&nbsp;
+    <span style="color: #000066; font-weight: bold;">precision</span> <span style="color: #000066; font-weight: bold;">mediump</span> <span style="color: #000066; font-weight: bold;">float</span><span style="color: #000066;">;</span>
+&nbsp;
+&nbsp;
+    <span style="color: #333399; font-weight: bold;">varying</span> <span style="color: #000066; font-weight: bold;">vec2</span> vTextureCoord<span style="color: #000066;">;</span>
+    <span style="color: #333399; font-weight: bold;">varying</span> <span style="color: #000066; font-weight: bold;">vec3</span> vTransformedNormal<span style="color: #000066;">;</span>
+    <span style="color: #333399; font-weight: bold;">varying</span> <span style="color: #000066; font-weight: bold;">vec4</span> vPosition<span style="color: #000066;">;</span>
+&nbsp;
+    <span style="color: #333399; font-weight: bold;">uniform</span> <span style="color: #000066; font-weight: bold;">bool</span> uUseColorMap<span style="color: #000066;">;</span>
+    <span style="color: #333399; font-weight: bold;">uniform</span> <span style="color: #000066; font-weight: bold;">bool</span> uUseSpecularMap<span style="color: #000066;">;</span>
+    <span style="color: #333399; font-weight: bold;">uniform</span> <span style="color: #000066; font-weight: bold;">bool</span> uUseLighting<span style="color: #000066;">;</span></pre></td></tr></tbody></table></div>
+
+<p>接下来，是两个sampler，用于代表两张纹理。这里将颜色纹理重命名为uColorMapSampler，同时，增加了一个sampler用来表示高光贴图（第27、28行）：</p>
+
+<div class="wp_codebox"><table><tbody><tr id="p3982"><td class="line_numbers"><pre>21
+22
+23
+24
+25
+26
+27
+28
+</pre></td><td class="code" id="p398code2"><pre class="glsl" style="font-family:monospace;">    <span style="color: #333399; font-weight: bold;">uniform</span> <span style="color: #000066; font-weight: bold;">vec3</span> uAmbientColor<span style="color: #000066;">;</span>
+&nbsp;
+    <span style="color: #333399; font-weight: bold;">uniform</span> <span style="color: #000066; font-weight: bold;">vec3</span> uPointLightingLocation<span style="color: #000066;">;</span>
+    <span style="color: #333399; font-weight: bold;">uniform</span> <span style="color: #000066; font-weight: bold;">vec3</span> uPointLightingSpecularColor<span style="color: #000066;">;</span>
+    <span style="color: #333399; font-weight: bold;">uniform</span> <span style="color: #000066; font-weight: bold;">vec3</span> uPointLightingDiffuseColor<span style="color: #000066;">;</span>
+&nbsp;
+    <span style="color: #333399; font-weight: bold;">uniform</span> <span style="color: #000066; font-weight: bold;">sampler2D</span> uColorMapSampler<span style="color: #000066;">;</span>
+    <span style="color: #333399; font-weight: bold;">uniform</span> <span style="color: #000066; font-weight: bold;">sampler2D</span> uSpecularMapSampler<span style="color: #000066;">;</span></pre></td></tr></tbody></table></div>
+
+<p>下面，是常规的切换是否进行光照的代码，并计算法线和光照方向：</p>
+
+<div class="wp_codebox"><table><tbody><tr id="p3983"><td class="line_numbers"><pre>31
+32
+33
+34
+35
+36
+37
+</pre></td><td class="code" id="p398code3"><pre class="glsl" style="font-family:monospace;">    <span style="color: #000066; font-weight: bold;">void</span> main<span style="color: #000066;">(</span><span style="color: #000066; font-weight: bold;">void</span><span style="color: #000066;">)</span> <span style="color: #000066;">{</span>
+        <span style="color: #000066; font-weight: bold;">vec3</span> lightWeighting<span style="color: #000066;">;</span>
+        <span style="color: #000000; font-weight: bold;">if</span> <span style="color: #000066;">(</span><span style="color: #000066;">!</span>uUseLighting<span style="color: #000066;">)</span> <span style="color: #000066;">{</span>
+            lightWeighting <span style="color: #000066;">=</span> <span style="color: #000066; font-weight: bold;">vec3</span><span style="color: #000066;">(</span><span style="color: #0000ff;">1.0</span><span style="color: #000066;">,</span> <span style="color: #0000ff;">1.0</span><span style="color: #000066;">,</span> <span style="color: #0000ff;">1.0</span><span style="color: #000066;">)</span><span style="color: #000066;">;</span>
+        <span style="color: #000066;">}</span> <span style="color: #000000; font-weight: bold;">else</span> <span style="color: #000066;">{</span>
+            <span style="color: #000066; font-weight: bold;">vec3</span> lightDirection <span style="color: #000066;">=</span> <span style="color: #993333; font-weight: bold;">normalize</span><span style="color: #000066;">(</span>uPointLightingLocation <span style="color: #000066;">-</span> vPosition<span style="color: #000066;">.</span><span style="color: #006600;">xyz</span><span style="color: #000066;">)</span><span style="color: #000066;">;</span>
+            <span style="color: #000066; font-weight: bold;">vec3</span> normal <span style="color: #000066;">=</span> <span style="color: #993333; font-weight: bold;">normalize</span><span style="color: #000066;">(</span>vTransformedNormal<span style="color: #000066;">)</span><span style="color: #000066;">;</span></pre></td></tr></tbody></table></div>
+
+<p>最后，就是实际处理高光贴图的代码。首先，我们定义了一个变量用来表示specular光照的权重；如果最终不应进行高光反射，则这个变量将被赋为0。</p>
+
+<div class="wp_codebox"><table><tbody><tr id="p3984"><td class="line_numbers"><pre>39
+</pre></td><td class="code" id="p398code4"><pre class="glsl" style="font-family:monospace;">            <span style="color: #000066; font-weight: bold;">float</span> specularLightWeighting <span style="color: #000066;">=</span> <span style="color: #0000ff;">0.0</span><span style="color: #000066;">;</span></pre></td></tr></tbody></table></div>
+
+<p>接下来，开始处理材质的反光度部分。在这里，如果用户选择不使用高光贴图，我们就会默认将反光度初始化为32，否则，我们会从高光贴图中取出对应的反光数值，就像从颜色纹理中取出颜色一样。因为我们假设RGB通道的反光度相同（这就是为什么本课中的高光贴图看起来是一张灰度图），因此在这里我们只取高光贴图纹理的R通道数据，实际上，你从任何一个通道读取，结果都是一样的。</p>
+
+<div class="wp_codebox"><table><tbody><tr id="p3985"><td class="line_numbers"><pre>40
+41
+42
+43
+</pre></td><td class="code" id="p398code5"><pre class="glsl" style="font-family:monospace;">            <span style="color: #000066; font-weight: bold;">float</span> shininess <span style="color: #000066;">=</span> <span style="color: #0000ff;">32.0</span><span style="color: #000066;">;</span>
+            <span style="color: #000000; font-weight: bold;">if</span> <span style="color: #000066;">(</span>uUseSpecularMap<span style="color: #000066;">)</span> <span style="color: #000066;">{</span>
+                shininess <span style="color: #000066;">=</span> <span style="color: #993333; font-weight: bold;">texture2D</span><span style="color: #000066;">(</span>uSpecularMapSampler<span style="color: #000066;">,</span> <span style="color: #000066; font-weight: bold;">vec2</span><span style="color: #000066;">(</span>vTextureCoord<span style="color: #000066;">.</span><span style="color: #006600;">s</span><span style="color: #000066;">,</span> vTextureCoord<span style="color: #000066;">.</span><span style="color: #006600;">t</span><span style="color: #000066;">)</span><span style="color: #000066;">)</span><span style="color: #000066;">.</span><span style="color: #006600;">r</span> <span style="color: #000066;">*</span> <span style="color: #0000ff;">255.0</span><span style="color: #000066;">;</span>
+            <span style="color: #000066;">}</span></pre></td></tr></tbody></table></div>
+
+<p>现在，你需要根据取出的反光度来判断是否需要进行反光，还记得吗？前文中我们提到将纯白色作为不进行反光的标志，因此在这里，我们将只对小于255的反光度进行实际的高光计算。</p>
+
+<div class="wp_codebox"><table><tbody><tr id="p3986"><td class="line_numbers"><pre>44
+</pre></td><td class="code" id="p398code6"><pre class="glsl" style="font-family:monospace;">            <span style="color: #000000; font-weight: bold;">if</span> <span style="color: #000066;">(</span>shininess <span style="color: #000066;">&lt;</span> <span style="color: #0000ff;">255.0</span><span style="color: #000066;">)</span> <span style="color: #000066;">{</span></pre></td></tr></tbody></table></div>
+
+<p>下面的代码和上一课中的高光计算基本相同，唯一的区别就是这里的反光度是从高光贴图中取出的，而不像之前那样从shader外部传入。</p>
+
+<div class="wp_codebox"><table><tbody><tr id="p3987"><td class="line_numbers"><pre>45
+46
+47
+48
+49
+</pre></td><td class="code" id="p398code7"><pre class="glsl" style="font-family:monospace;">                <span style="color: #000066; font-weight: bold;">vec3</span> eyeDirection <span style="color: #000066;">=</span> <span style="color: #993333; font-weight: bold;">normalize</span><span style="color: #000066;">(</span><span style="color: #000066;">-</span>vPosition<span style="color: #000066;">.</span><span style="color: #006600;">xyz</span><span style="color: #000066;">)</span><span style="color: #000066;">;</span>
+                <span style="color: #000066; font-weight: bold;">vec3</span> reflectionDirection <span style="color: #000066;">=</span> <span style="color: #993333; font-weight: bold;">reflect</span><span style="color: #000066;">(</span><span style="color: #000066;">-</span>lightDirection<span style="color: #000066;">,</span> normal<span style="color: #000066;">)</span><span style="color: #000066;">;</span>
+&nbsp;
+                specularLightWeighting <span style="color: #000066;">=</span> <span style="color: #993333; font-weight: bold;">pow</span><span style="color: #000066;">(</span><span style="color: #993333; font-weight: bold;">max</span><span style="color: #000066;">(</span><span style="color: #993333; font-weight: bold;">dot</span><span style="color: #000066;">(</span>reflectionDirection<span style="color: #000066;">,</span> eyeDirection<span style="color: #000066;">)</span><span style="color: #000066;">,</span> <span style="color: #0000ff;">0.0</span><span style="color: #000066;">)</span><span style="color: #000066;">,</span> shininess<span style="color: #000066;">)</span><span style="color: #000066;">;</span>
+            <span style="color: #000066;">}</span></pre></td></tr></tbody></table></div>
+
+<p>最后，我们将所有类型的光照元素组合到一起，并使用这个结果作为物体颜色的权重。对于物体颜色，当用户选择使用颜色纹理，也就是uUseColorMap为true的时候，物体颜色是从颜色纹理中取出的，而当不使用颜色纹理时，我们默认认为物体颜色为纯白色。</p>
+
+<div class="wp_codebox"><table><tbody><tr id="p3988"><td class="line_numbers"><pre>51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+</pre></td><td class="code" id="p398code8"><pre class="glsl" style="font-family:monospace;">            <span style="color: #000066; font-weight: bold;">float</span> diffuseLightWeighting <span style="color: #000066;">=</span> <span style="color: #993333; font-weight: bold;">max</span><span style="color: #000066;">(</span><span style="color: #993333; font-weight: bold;">dot</span><span style="color: #000066;">(</span>normal<span style="color: #000066;">,</span> lightDirection<span style="color: #000066;">)</span><span style="color: #000066;">,</span> <span style="color: #0000ff;">0.0</span><span style="color: #000066;">)</span><span style="color: #000066;">;</span>
+            lightWeighting <span style="color: #000066;">=</span> uAmbientColor
+                <span style="color: #000066;">+</span> uPointLightingSpecularColor <span style="color: #000066;">*</span> specularLightWeighting
+                <span style="color: #000066;">+</span> uPointLightingDiffuseColor <span style="color: #000066;">*</span> diffuseLightWeighting<span style="color: #000066;">;</span>
+        <span style="color: #000066;">}</span>
+&nbsp;
+        <span style="color: #000066; font-weight: bold;">vec4</span> fragmentColor<span style="color: #000066;">;</span>
+        <span style="color: #000000; font-weight: bold;">if</span> <span style="color: #000066;">(</span>uUseColorMap<span style="color: #000066;">)</span> <span style="color: #000066;">{</span>
+            fragmentColor <span style="color: #000066;">=</span> <span style="color: #993333; font-weight: bold;">texture2D</span><span style="color: #000066;">(</span>uColorMapSampler<span style="color: #000066;">,</span> <span style="color: #000066; font-weight: bold;">vec2</span><span style="color: #000066;">(</span>vTextureCoord<span style="color: #000066;">.</span><span style="color: #006600;">s</span><span style="color: #000066;">,</span> vTextureCoord<span style="color: #000066;">.</span><span style="color: #006600;">t</span><span style="color: #000066;">)</span><span style="color: #000066;">)</span><span style="color: #000066;">;</span>
+        <span style="color: #000066;">}</span> <span style="color: #000000; font-weight: bold;">else</span> <span style="color: #000066;">{</span>
+            fragmentColor <span style="color: #000066;">=</span> <span style="color: #000066; font-weight: bold;">vec4</span><span style="color: #000066;">(</span><span style="color: #0000ff;">1.0</span><span style="color: #000066;">,</span> <span style="color: #0000ff;">1.0</span><span style="color: #000066;">,</span> <span style="color: #0000ff;">1.0</span><span style="color: #000066;">,</span> <span style="color: #0000ff;">1.0</span><span style="color: #000066;">)</span><span style="color: #000066;">;</span>
+        <span style="color: #000066;">}</span>
+        <span style="color: #551111;">gl_FragColor</span> <span style="color: #000066;">=</span> <span style="color: #000066; font-weight: bold;">vec4</span><span style="color: #000066;">(</span>fragmentColor<span style="color: #000066;">.</span><span style="color: #006600;">rgb</span> <span style="color: #000066;">*</span> lightWeighting<span style="color: #000066;">,</span> fragmentColor<span style="color: #000066;">.</span><span style="color: #006600;">a</span><span style="color: #000066;">)</span><span style="color: #000066;">;</span>
+    <span style="color: #000066;">}</span></pre></td></tr></tbody></table></div>
+
+<p>当你阅读到这里，你应该已经理解了实现高光贴图所需要的全部知识。除此之外，代码中还有一些其它的改动，但这些细小变化并不值得去细细研究。initShaders函数中添加了用于传输新uniform常量的代码，initTextures则需要加载两张新的纹理，而前一课中加载teapot的代码则被替换为11课中的initBuffers函数，drawScene的内容由绘制茶壶变为了绘制一个球形，同时用户交互UI和animate函数也有对应本课的改动。</p>
+<p>That’s it！这就是本课的全部内容。在这一课中，你了解了怎样通过纹理来提供材质反光度所需要的数据，同时，其实你也可以通过纹理来提供其它的表面细节信息，比如，人们经常会用纹理来提供物体表面的法线信息，这样，可以在保持较低顶点数量的前提下，为模型增加一些表面细节，在未来课程中，对这一部分内容我们会特别提到。</p>
+<div style="clear:both; margin-top:5px; margin-bottom:5px;"></div><div style="float:left"><!-- JiaThis Button BEGIN -->
+<div id="ckepop">
+	<span class="jiathis_txt">分享到：</span>
+	<a class="jiathis_button_tools_1"></a>
+	<a class="jiathis_button_tools_2"></a>
+	<a class="jiathis_button_tools_3"></a>
+	<a class="jiathis_button_tools_4"></a>
+	<a href="http://www.jiathis.com/share" class="jiathis jiathis_txt jiathis_separator jtico jtico_jiathis" target="_blank">更多</a>
+	<a class="jiathis_counter_style"></a>
+</div>
+<script type="text/javascript" src="./Lesson 15 高光贴图 _ HiWebGL_files/jia.js.下载" charset="utf-8"></script>
+<!-- JiaThis Button END --></div><div style="clear:both; margin-top:5px; margin-bottom:5px;"></div>											</div><!-- .entry-content -->
+
+
+					<div class="entry-utility">
+						Posted in <a href="http://www.hiwebgl.com/?cat=17" title="查看 WebGL教程 中的全部文章" rel="category">WebGL教程</a>. Bookmark the <a href="http://www.hiwebgl.com/?p=398" title="Permalink to Lesson 15 高光贴图" rel="bookmark">permalink</a>.											</div><!-- .entry-utility -->
+				</div><!-- #post-## -->
+
+				<div id="nav-below" class="navigation">
+					<div class="nav-previous"><a href="http://www.hiwebgl.com/?p=393" rel="prev"><span class="meta-nav">←</span> Google Chrome AngryBirds电视广告提及WebGL</a></div>
+					<div class="nav-next"><a href="http://www.hiwebgl.com/?p=432" rel="next">Lesson 16 渲染到纹理 <span class="meta-nav">→</span></a></div>
+				</div><!-- #nav-below -->
+
+				
+
+<div id="comments">
+		<h3 id="comments-title"><span>1 trackback</span></h3>
+	<dl id="trackback_list">
+		<dt><a href="http://www.hiwebgl.com/?p=42" rel="external nofollow" class="url">WebGL教程 | WebGL中文教程翻译工程启动！HiWebGL | HiWebGL | 最好的HTML5 WebGL中文资讯站</a></dt>
+		<dd><span>2011 年 12 月 12 日 下午 12:04</span></dd>
+    </dl>
+    <h3 id="comments-title"><span>2 comments</span></h3>
+	<ol class="commentlist">
+    		<li class="comment even thread-even depth-1" id="li-comment-174">
+    	<div id="comment-174">
+            <div class="comment_meta commentmetadata">
+                <span class="avatar"><img alt="" src="./Lesson 15 高光贴图 _ HiWebGL_files/ad516503a11cd5ca435acc9bb6523536.png" class="avatar avatar-40 photo" height="40" width="40"></span>
+                <span class="comment_author vcard fn">force2002</span>
+                <span class="comment_time">2011 年 11 月 1 日 下午 5:12</span>
+            </div>
+            <div class="comment_body">
+                <p></p><p>灰度图的rbg值非0即1吗？从代码看好是是非0即1</p>
+<p></p>
+                <p class="reply"><a class="comment-reply-link" href="http://www.hiwebgl.com/?p=398&amp;replytocom=174#respond" onclick="return addComment.moveForm(&quot;comment-174&quot;, &quot;174&quot;, &quot;respond&quot;, &quot;398&quot;)">回复</a></p>
+            </div>
+		</div>
+        
+        
+    
+<ul class="children">
+	<li class="comment odd alt depth-2" id="li-comment-175">
+    	<div id="comment-175">
+            <div class="comment_meta commentmetadata">
+                <span class="avatar"><img alt="" src="./Lesson 15 高光贴图 _ HiWebGL_files/ad516503a11cd5ca435acc9bb6523536.png" class="avatar avatar-40 photo" height="40" width="40"></span>
+                <span class="comment_author vcard fn">force2002</span>
+                <span class="comment_time">2011 年 11 月 1 日 下午 5:30</span>
+            </div>
+            <div class="comment_body">
+                <p></p><p>所谓灰度色，就是指纯白、纯黑以及两者中的一系列从黑到白的过渡色。我们平常说所的黑白照片、黑白<br>
+电视，实际上都应该称为灰度照片、灰度电视才确切。灰度色中不包含任何色相，即不存在红色、黄色这<br>
+样的颜色。灰度隶属于RGB 色域(色域指色彩范围)。<br>
+我们已经知道，在RGB 模式中三原色光各有256个级别。由于灰度的形成是RGB 数值相等。而RGB 数值<br>
+相等的排列组合是256个，那么灰度的数量就是256级。其中除了纯白和纯黑以外，还有254种中间过渡色。<br>
+纯黑和纯白也属于反转色。<br>
+灰度的通常表示方法是百分比，范围从0％到100％。</p>
+<p></p>
+                <p class="reply"><a class="comment-reply-link" href="http://www.hiwebgl.com/?p=398&amp;replytocom=175#respond" onclick="return addComment.moveForm(&quot;comment-175&quot;, &quot;175&quot;, &quot;respond&quot;, &quot;398&quot;)">回复</a></p>
+            </div>
+		</div>
+        
+        
+    
+</li>
+</ul>
+</li>
+
+    </ol>
+        
+
+								<div id="respond">
+				<h3 id="reply-title">Post a Comment <small><a rel="nofollow" id="cancel-comment-reply-link" href="http://www.hiwebgl.com/?p=398#respond" style="display:none;">点击这里取消回复。</a></small></h3>
+									<form action="http://www.hiwebgl.com/wp-comments-post.php" method="post" id="commentform">
+																			<p class="comment-notes">电子邮件地址不会被公开。 必填项已用 <span class="required">*</span> 标注</p>							<p class="comment-form-author"><label for="author">姓名</label> <span class="required">*</span><input id="author" name="author" type="text" value="" size="30" aria-required="true"></p>
+<p class="comment-form-email"><label for="email">电子邮件</label> <span class="required">*</span><input id="email" name="email" type="text" value="" size="30" aria-required="true"></p>
+<p class="comment-form-url"><label for="url">站点</label><input id="url" name="url" type="text" value="" size="30"></p>
+												<p class="comment-form-comment"><label for="comment">评论</label><textarea id="comment" name="comment" cols="45" rows="8" aria-required="true"></textarea></p>						<p class="form-allowed-tags">您可以使用这些 <abbr title="HyperText Markup Language">HTML</abbr> 标签和属性： <code>&lt;a href="" title=""&gt; &lt;abbr title=""&gt; &lt;acronym title=""&gt; &lt;b&gt; &lt;blockquote cite=""&gt; &lt;cite&gt; &lt;code&gt; &lt;del datetime=""&gt; &lt;em&gt; &lt;i&gt; &lt;q cite=""&gt; &lt;strike&gt; &lt;strong&gt; </code></p>						<p class="form-submit">
+							<input name="submit" type="submit" id="submit" value="发表评论">
+							<input type="hidden" name="comment_post_ID" value="398" id="comment_post_ID">
+<input type="hidden" name="comment_parent" id="comment_parent" value="0">
+						</p>
+						<p style="display: none;"><input type="hidden" id="akismet_comment_nonce" name="akismet_comment_nonce" value="43cb0ef3cd"></p>					</form>
+							</div><!-- #respond -->
+						
+</div><!-- #comments -->
+
+			</div><!-- #content -->
+		</div><!-- #container -->
+
+<div id="sidebar" class="widget-area" role="complementary">
+	<ul class="xoxo">
+    	<li id="search-2" class="widget-container widget_search"><form id="searchform" method="get" action="http://www.hiwebgl.com/"> 
+	<input type="text" name="s" id="s" class="search_term" value="Type in keyword and hit Enter..." onblur="if (this.value == &#39;&#39;) {this.value = &#39;Type in keyword and hit Enter...&#39;;}" onfocus="if (this.value == &#39;Type in keyword and hit Enter...&#39;) {this.value = &#39;&#39;;}">
+</form></li><li id="text-4" class="widget-container widget_text"><h3 class="widget-title">加入我们的QQ群</h3>			<div class="textwidget"><b>HiWebGL技术讨论群</b><br>①群群号174563471（已满）<br>②群群号133703893（已满）<br>③群群号196778533（已满）<br>④群群号217873851（已满）<br>⑤群群号225923498（已满）<br>500人群群号219549633<br>欢迎各位程序员和工程师加入！<br><a target="_blank" href="http://qun.qq.com/#jointhegroup/gid/219549633"><img border="0" src="./Lesson 15 高光贴图 _ HiWebGL_files/gp.png" alt="点击这里加入此群" title="点击这里加入此群"></a>
+<br><br>
+<b>HiWebGL产业讨论群</b><br>①群群号176289597（已满）<br>②群群号216936388<br>欢迎关注Web3D发展的从业者与富有理想与激情的创业者朋友加入！<br><a target="_blank" href="http://qun.qq.com/#jointhegroup/gid/216936388"><img border="0" src="./Lesson 15 高光贴图 _ HiWebGL_files/gp.png" alt="点击这里加入此群" title="点击这里加入此群"></a></div>
+		</li><style type="text/css" media="screen">
+#mwrapper-wm_show-3 .mcontainer {height: 300px; overflow: hidden;}
+</style>
+<li id="wm_show-3" class="widget-container wm_show"><h3 class="widget-title">关注我们的新浪微博！</h3><div class="mwrapper" id="mwrapper-wm_show-3"><div class="head"><img class="headimg" src="./Lesson 15 高光贴图 _ HiWebGL_files/89c570d0jw1e8qgp5bmzyj2050050aa8.jpg"><a class="headlink" href="http://weibo.com/2311418064" rel="external nofollow" target="_blank">HiWebGL</a><div class="onekey"><iframe width="63" height="24" frameborder="0" allowtransparency="true" marginwidth="0" marginheight="0" scrolling="no" border="0" src="./Lesson 15 高光贴图 _ HiWebGL_files/followbutton.html"></iframe></div></div><a class="scroll up" href="javascript:;"><img src="./Lesson 15 高光贴图 _ HiWebGL_files/transparent.gif"></a><div class="mcontainer"><ul class="microblogs"><li class="tweet">[哆啦A梦吃惊]<div class="rt"><a href="http://weibo.com/crazycomputer" rel="external nofollow" target="_blank">尼奥_</a> : 因写了抢猫粮插件被抓的小喵。<div class="pic rt-pic"><a href="http://ww3.sinaimg.cn/large/6588fb91jw1f8a611qywmj20qo0r743g.jpg" rel="external nofollow" target="_blank"><img src="./Lesson 15 高光贴图 _ HiWebGL_files/6588fb91jw1f8a611qywmj20qo0r743g.jpg"></a></div></div><div class="meta"><a href="http://api.t.sina.com.cn/2311418064/statuses/4025014212843692" rel="external nofollow" target="_blank">9月29日 12:00</a> 来自 <a href="http://weibo.com/2311418064" rel="external nofollow" target="_blank">新浪微博</a></div></li><li class="tweet">转发微博<div class="rt"><a href="http://weibo.com/armcn" rel="external nofollow" target="_blank">ARM中国</a> : 在看颜的时代，如何让一款游戏画面更具高bigger？从8位像素画风到1080P/4K，再到ARM的Enlighten全局光照技术，能够分分钟变化出数十种光照效果，再挑的玩家都给它点赞了，不信你就来看看[围观][围观]<a href="http://t.cn/RcNsHsc" rel="external nofollow" target="_blank">http://t.cn/RcNsHsc</a><div class="pic rt-pic"><a href="http://ww3.sinaimg.cn/large/84217b4fgw1f89g6wubugj20j30q6gr3.jpg" rel="external nofollow" target="_blank"><img src="./Lesson 15 高光贴图 _ HiWebGL_files/84217b4fgw1f89g6wubugj20j30q6gr3.jpg"></a></div></div><div class="meta"><a href="http://api.t.sina.com.cn/2311418064/statuses/4025000392991907" rel="external nofollow" target="_blank">9月29日 11:05</a> 来自 <a href="http://weibo.com/2311418064" rel="external nofollow" target="_blank">新浪微博</a></div></li><li class="tweet">转发微博<div class="rt"><a href="http://weibo.com/baidujs" rel="external nofollow" target="_blank">JS小组</a> : 你知道使用 target='_blank' 也会有安全漏洞么？尤其是在各种 UGC 网站中。不过小编早就玩过了，其实一般倒也不会用在钓鱼上，而是用在各种各样的广告点击中。推荐文章《target='_blank' 安全漏洞示例》地址 <a href="http://t.cn/RchBwVu" rel="external nofollow" target="_blank">http://t.cn/RchBwVu</a>  $w<div class="pic rt-pic"><a href="http://ww2.sinaimg.cn/large/aa9d3df6jw1f7fewekmx8j20g30a1aak.jpg" rel="external nofollow" target="_blank"><img src="./Lesson 15 高光贴图 _ HiWebGL_files/aa9d3df6jw1f7fewekmx8j20g30a1aak.jpg"></a></div></div><div class="meta"><a href="http://api.t.sina.com.cn/2311418064/statuses/4016375595329873" rel="external nofollow" target="_blank">9月5日 15:53</a> 来自 <a href="http://weibo.com/2311418064" rel="external nofollow" target="_blank">新浪微博</a></div></li><li class="tweet">不做游戏，帮转<div class="rt"><a href="http://weibo.com/xdarui" rel="external nofollow" target="_blank">阿里子之</a> : 有做WebVR游戏的公司么，求合作。求圈内大神帮忙转发。@寒冬winter @大城小胖 @w3cplus</div><div class="meta"><a href="http://api.t.sina.com.cn/2311418064/statuses/4015348426770066" rel="external nofollow" target="_blank">9月2日 19:52</a> 来自 <a href="http://weibo.com/2311418064" rel="external nofollow" target="_blank">新浪微博</a></div></li><li class="tweet">阿里云OSS是否支持websockets?有人知道吗？<div class="meta"><a href="http://api.t.sina.com.cn/2311418064/statuses/4006622127044001" rel="external nofollow" target="_blank">8月9日 17:56</a> 来自 <a href="http://weibo.com/2311418064" rel="external nofollow" target="_blank">新浪微博</a></div></li></ul></div><a class="scroll down" href="javascript:;"><img src="./Lesson 15 高光贴图 _ HiWebGL_files/transparent.gif"></a></div></li><li id="recent-comments-2" class="widget-container widget_recent_comments"><h3 class="widget-title">近期评论</h3><ul id="recentcomments"><li class="recentcomments"><a href="http://www.d2film.com/" rel="external nofollow" class="url">企业宣传片制作d2film.com影视视频制作公司QQ30998</a> 发表在《<a href="http://www.hiwebgl.com/?p=42#comment-7984">WebGL中文教程翻译工程启动！</a>》</li><li class="recentcomments"><a href="http://www.128sf.cn/" rel="external nofollow" class="url">魔域服务器架设</a> 发表在《<a href="http://www.hiwebgl.com/?p=312#comment-7858">Lesson 9 优化代码结构实现多物体运动</a>》</li><li class="recentcomments"><a href="http://www.39uc.cn/" rel="external nofollow" class="url">天龙八部师傅m161</a> 发表在《<a href="http://www.hiwebgl.com/?p=70#comment-7857">外媒公布Firefox 6性能测试结果</a>》</li><li class="recentcomments"><a href="http://www.233sf.cn/" rel="external nofollow" class="url">最新奇迹私发网</a> 发表在《<a href="http://www.hiwebgl.com/?p=42#comment-7856">WebGL中文教程翻译工程启动！</a>》</li><li class="recentcomments"><a href="http://www.5aivideo.com/" rel="external nofollow" class="url">婚礼跟拍视频5aivideo.com婚礼摄影MV-QQ73595</a> 发表在《<a href="http://www.hiwebgl.com/?p=42#comment-7829">WebGL中文教程翻译工程启动！</a>》</li></ul></li><li id="categories-2" class="widget-container widget_categories"><h3 class="widget-title">分类目录</h3>		<ul>
+	<li class="cat-item cat-item-16"><a href="http://www.hiwebgl.com/?cat=16" title="查看 Demo大赏 下的所有文章">Demo大赏</a>
+</li>
+	<li class="cat-item cat-item-29"><a href="http://www.hiwebgl.com/?cat=29" title="查看 HTML5新闻 下的所有文章">HTML5新闻</a>
+</li>
+	<li class="cat-item cat-item-57"><a href="http://www.hiwebgl.com/?cat=57" title="Oak3D中文教程">Oak3D教程</a>
+</li>
+	<li class="cat-item cat-item-17"><a href="http://www.hiwebgl.com/?cat=17" title="查看 WebGL教程 下的所有文章">WebGL教程</a>
+</li>
+	<li class="cat-item cat-item-3"><a href="http://www.hiwebgl.com/?cat=3" title="WebGL新闻">WebGL新闻</a>
+</li>
+	<li class="cat-item cat-item-10"><a href="http://www.hiwebgl.com/?cat=10" title="查看 博文精选 下的所有文章">博文精选</a>
+</li>
+	<li class="cat-item cat-item-4"><a href="http://www.hiwebgl.com/?cat=4" title="推荐阅读">推荐</a>
+</li>
+	<li class="cat-item cat-item-1"><a href="http://www.hiwebgl.com/?cat=1" title="查看 未分类 下的所有文章">未分类</a>
+</li>
+		</ul>
+</li><li id="archives-2" class="widget-container widget_archive"><h3 class="widget-title">文章归档</h3>		<ul>
+			<li><a href="http://www.hiwebgl.com/?m=201206" title="2012 年六月">2012 年六月</a></li>
+	<li><a href="http://www.hiwebgl.com/?m=201205" title="2012 年五月">2012 年五月</a></li>
+	<li><a href="http://www.hiwebgl.com/?m=201204" title="2012 年四月">2012 年四月</a></li>
+	<li><a href="http://www.hiwebgl.com/?m=201203" title="2012 年三月">2012 年三月</a></li>
+	<li><a href="http://www.hiwebgl.com/?m=201202" title="2012 年二月">2012 年二月</a></li>
+	<li><a href="http://www.hiwebgl.com/?m=201201" title="2012 年一月">2012 年一月</a></li>
+	<li><a href="http://www.hiwebgl.com/?m=201112" title="2011 年十二月">2011 年十二月</a></li>
+	<li><a href="http://www.hiwebgl.com/?m=201111" title="2011 年十一月">2011 年十一月</a></li>
+	<li><a href="http://www.hiwebgl.com/?m=201110" title="2011 年十月">2011 年十月</a></li>
+	<li><a href="http://www.hiwebgl.com/?m=201109" title="2011 年九月">2011 年九月</a></li>
+	<li><a href="http://www.hiwebgl.com/?m=201108" title="2011 年八月">2011 年八月</a></li>
+		</ul>
+</li>    </ul>
+</div><!-- #sidebar .widget-area -->	</div><!-- #main -->
+    <div id="footer" role="contentinfo">
+    	
+    	<div id="colophon">
+            <div id="site-info" class="clearfix">
+                <div id="generator">Powered by <a href="http://wordpress.org/" title="Semantic Personal Publishing Platform" rel="generator">Wordpress</a> and <a href="http://wpcrunchy.com/" title="Free Premium Quality Wordpress Themes">WPCrunchy</a></div>
+                <div id="credits">Designed by <a href="http://www.hostreviewgeeks.com/" title="best web hosting" target="_blank">best web hosting</a>. In collaboration with <a href="http://www.hostv.com/" title="VPS Hosting" target="_blank">VPS Hosting</a>, <a href="http://broadwaytickets.co/" title="Broadway Tickets" target="_blank">Broadway Tickets</a>, <a href="http://wpcorner.com/" title="Free Wordpress Themes" target="_blank">Free Wordpress Themes</a>.</div>
+            </div>
+        </div>
+    </div><!-- #footer -->
+</div><!-- #wrapper -->
+
+<script type="text/javascript">jQuery(document).ready(function() { if(jQuery("ul.accordion li").length > 2) { jQuery("ul.accordion").accordion(); } });</script><script src="./Lesson 15 高光贴图 _ HiWebGL_files/stat.php" language="JavaScript"></script><script src="./Lesson 15 高光贴图 _ HiWebGL_files/core.php" charset="utf-8" type="text/javascript"></script><a href="http://www.cnzz.com/stat/website.php?web_id=3871765" target="_blank" title="站长统计"><img border="0" hspace="0" vspace="0" src="./Lesson 15 高光贴图 _ HiWebGL_files/pic.gif"></a><script src="./Lesson 15 高光贴图 _ HiWebGL_files/stat.js.下载" defer="defer" async="async"></script>
+ </body></html>

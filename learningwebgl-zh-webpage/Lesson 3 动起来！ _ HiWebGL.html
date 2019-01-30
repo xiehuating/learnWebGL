@@ -1,0 +1,769 @@
+<!DOCTYPE html>
+<!-- saved from url=(0029)http://www.hiwebgl.com/?p=154 -->
+<html dir="ltr" lang="zh-CN"><script type="text/javascript">
+    var spector;
+    var captureOnLoad = false;
+    var captureOffScreen = false;
+    window.__SPECTOR_Canvases = [];
+
+    (function() {
+        var __SPECTOR_Origin_EXTENSION_GetContext = HTMLCanvasElement.prototype.getContext;
+        HTMLCanvasElement.prototype.__SPECTOR_Origin_EXTENSION_GetContext = __SPECTOR_Origin_EXTENSION_GetContext;
+
+        HTMLCanvasElement.prototype.getContext = function () {
+            var context = null;
+            if (!arguments.length) {
+                return context;
+            }
+
+            if (arguments.length === 1) {
+                context = this.__SPECTOR_Origin_EXTENSION_GetContext(arguments[0]);
+                if (context === null) {
+                    return context;
+                }
+            }
+            else if (arguments.length === 2) {
+                context = this.__SPECTOR_Origin_EXTENSION_GetContext(arguments[0], arguments[1]);
+                if (context === null) {
+                    return context;
+                }
+            }
+
+            var contextNames = ["webgl", "experimental-webgl", "webgl2", "experimental-webgl2"];
+            if (contextNames.indexOf(arguments[0]) !== -1) {
+                context.canvas.setAttribute("__spector_context_type", arguments[0]);
+                // Notify the page a canvas is available.
+                var myEvent = new CustomEvent("SpectorWebGLCanvasAvailableEvent");
+                document.dispatchEvent(myEvent);
+
+                if (captureOffScreen) {
+                    var found = false;
+                    for (var i = 0; i < window.__SPECTOR_Canvases.length; i++) {
+                        if (window.__SPECTOR_Canvases[i] === this) {
+                            found = true;
+                            break;
+                        }
+                    }
+                    if (!found) {
+                        window.__SPECTOR_Canvases.push(this);
+                    }
+                }
+
+                if (captureOnLoad) {
+                    // Ensures canvas is in the dom to capture the one we are currently tracking.
+                    if (this.parentElement || false) {
+                        spector.captureContext(context, 500, false);
+                        captureOnLoad = false;
+                    }
+                }
+            }
+
+            return context;
+        }
+    })()</script><script>(function main() {
+    // Create enabled event
+    function fireEnabledEvent() {
+        // If gli exists, then we are already present and shouldn't do anything
+        if (!window.gli) {
+            setTimeout(function () {
+                var enabledEvent = document.createEvent("Event");
+                enabledEvent.initEvent("WebGLEnabledEvent", true, true);
+                document.dispatchEvent(enabledEvent);
+            }, 0);
+        } else {
+            //console.log("WebGL Inspector already embedded on the page - disabling extension");
+        }
+    };
+
+    // Grab the path root from the extension
+    document.addEventListener("WebGLInspectorReadyEvent", function (e) {
+        var pathElement = document.getElementById("__webglpathroot");
+        if (window["gliloader"]) {
+            gliloader.pathRoot = pathElement.innerText;
+        } else {
+            // TODO: more?
+            window.gliCssUrl = pathElement.innerText + "gli.all.css";
+        }
+    }, false);
+
+    // Rewrite getContext to snoop for webgl
+    var originalGetContext = HTMLCanvasElement.prototype.getContext;
+    if (!HTMLCanvasElement.prototype.getContextRaw) {
+        HTMLCanvasElement.prototype.getContextRaw = originalGetContext;
+    }
+    HTMLCanvasElement.prototype.getContext = function () {
+        var ignoreCanvas = this.internalInspectorSurface;
+        if (ignoreCanvas) {
+            return originalGetContext.apply(this, arguments);
+        }
+
+        var result = originalGetContext.apply(this, arguments);
+        if (result == null) {
+            return null;
+        }
+
+        var contextNames = ["moz-webgl", "webkit-3d", "experimental-webgl", "webgl", "3d"];
+        var requestingWebGL = contextNames.indexOf(arguments[0]) != -1;
+        if (requestingWebGL) {
+            // Page is requesting a WebGL context!
+            fireEnabledEvent(this);
+
+            // If we are injected, inspect this context
+            if (window.gli) {
+                if (gli.host.inspectContext) {
+                    // TODO: pull options from extension
+                    result = gli.host.inspectContext(this, result);
+                    // NOTE: execute in a timeout so that if the dom is not yet
+                    // loaded this won't error out.
+                    window.setTimeout(function() {
+                        var hostUI = new gli.host.HostUI(result);
+                        result.hostUI = hostUI; // just so we can access it later for debugging
+                    }, 0);
+                }
+            }
+        }
+
+        return result;
+    };
+})();</script><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+
+<title>Lesson 3 动起来！ | HiWebGL</title>
+<link rel="profile" href="http://gmpg.org/xfn/11">
+<link rel="stylesheet" type="text/css" media="all" href="./Lesson 3 动起来！ _ HiWebGL_files/style.css">
+<!--[if IE]>
+<link rel="stylesheet" type="text/css" media="all" href="http://www.hiwebgl.com/wp-content/themes/mnchrome/style-ie.css" />
+<![endif]-->
+<link rel="stylesheet" type="text/css" media="all" href="./Lesson 3 动起来！ _ HiWebGL_files/custom.css"><link rel="pingback" href="http://www.hiwebgl.com/xmlrpc.php">
+<meta name="robots" content="index,follow">
+<link rel="canonical" href="http://www.hiwebgl.com/?p=154">
+<link rel="alternate" type="application/rss+xml" title="HiWebGL » Feed" href="http://www.hiwebgl.com/?feed=rss2">
+<link rel="alternate" type="application/rss+xml" title="HiWebGL » 评论 Feed" href="http://www.hiwebgl.com/?feed=comments-rss2">
+<link rel="alternate" type="application/rss+xml" title="HiWebGL » Lesson 3 动起来！ 评论 Feed" href="http://www.hiwebgl.com/?feed=rss2&amp;p=154">
+<link rel="stylesheet" id="wm-css" href="./Lesson 3 动起来！ _ HiWebGL_files/style(1).css" type="text/css" media="all">
+<link rel="stylesheet" id="toc-screen-css" href="./Lesson 3 动起来！ _ HiWebGL_files/screen.css" type="text/css" media="all">
+<link rel="stylesheet" id="codebox-css" href="./Lesson 3 动起来！ _ HiWebGL_files/codebox.css" type="text/css" media="screen">
+<script type="text/javascript" src="./Lesson 3 动起来！ _ HiWebGL_files/jquery.js.下载"></script>
+<script type="text/javascript" src="./Lesson 3 动起来！ _ HiWebGL_files/front.js.下载"></script>
+<script type="text/javascript" src="./Lesson 3 动起来！ _ HiWebGL_files/widget.js.下载"></script>
+<script type="text/javascript" src="./Lesson 3 动起来！ _ HiWebGL_files/comment-reply.js.下载"></script>
+<script type="text/javascript" src="./Lesson 3 动起来！ _ HiWebGL_files/codebox.js.下载"></script>
+<link rel="EditURI" type="application/rsd+xml" title="RSD" href="http://www.hiwebgl.com/xmlrpc.php?rsd">
+<link rel="wlwmanifest" type="application/wlwmanifest+xml" href="http://www.hiwebgl.com/wp-includes/wlwmanifest.xml"> 
+<link rel="prev" title="Mozilla为Firefox引入游戏手柄控制接口！" href="http://www.hiwebgl.com/?p=146">
+<link rel="next" title="Mozilla拟开发移动操作系统 将火狐押宝Android" href="http://www.hiwebgl.com/?p=161">
+<meta name="generator" content="Monochrome 1.0">
+<link rel="canonical" href="http://www.hiwebgl.com/?p=154">
+<script type="text/javascript" src="./Lesson 3 动起来！ _ HiWebGL_files/jquery.min.js.下载"></script>
+<script type="text/javascript" src="./Lesson 3 动起来！ _ HiWebGL_files/hoverIntent.js.下载"></script>
+<script type="text/javascript" src="./Lesson 3 动起来！ _ HiWebGL_files/superfish.js.下载"></script>
+<script type="text/javascript" src="./Lesson 3 动起来！ _ HiWebGL_files/supersubs.js.下载"></script>
+<script type="text/javascript" src="./Lesson 3 动起来！ _ HiWebGL_files/jquery.accordion.js.下载"></script>
+<script type="text/javascript" src="./Lesson 3 动起来！ _ HiWebGL_files/dropdowns.js.下载"></script>
+<style type="text/css" media="all">
+/* <![CDATA[ */
+@import url("http://www.hiwebgl.com/wp-content/plugins/wp-table-reloaded/css/plugin.css?ver=1.9.3");
+@import url("http://www.hiwebgl.com/wp-content/plugins/wp-table-reloaded/css/datatables.css?ver=1.9.3");
+/* ]]> */
+</style></head>
+<body class="single single-post postid-154 single-format-standard">
+<div id="wrapper" class="hfeed">
+	<div id="header">
+    	<div id="masthead">
+        	<div id="branding" role="banner">
+            	<div id="site-logo">
+                	<a href="http://www.hiwebgl.com/" title="HiWebGL" rel="home">
+                    	                    <img src="./Lesson 3 动起来！ _ HiWebGL_files/logo.png" align="logo">
+                    					</a>
+                </div>
+                <div id="site-description">最好的HTML5 WebGL中文资讯站！</div>
+                            </div><!-- #branding -->
+            <div id="access" role="navigation">
+            		<div class="menu">
+		<ul class="sf-menu sf-js-enabled">
+			<li>
+            	<a href="http://www.hiwebgl.com/" title="HiWebGL" rel="home">
+				<strong>首页</strong><span>Homepage</span>
+			</a></li>
+						<li>
+				<a href="http://www.hiwebgl.com/?p=42">
+				<strong>教程</strong><span>&nbsp;</span></a>
+							</li>
+						<li>
+				<a href="http://www.hiwebgl.com/?cat=16">
+				<strong>Demo</strong><span>&nbsp;</span></a>
+							</li>
+						<li>
+				<a href="http://www.hiwebgl.com/ask">
+				<strong>有问必答</strong><span>&nbsp;</span></a>
+							</li>
+						<li>
+				<a href="http://hiwebgl.com/forum/">
+				<strong>论坛</strong><span>&nbsp;</span></a>
+							</li>
+					</ul>
+	</div>
+            </div><!-- #access -->
+        </div><!-- #masthead -->
+    </div><!-- #header -->
+    
+    <div id="breadcrumbWrap"><div id="breadcrumb">
+<span>You are here: </span><a href="http://www.hiwebgl.com/">Home</a> » <a href="http://www.hiwebgl.com/?cat=17" title="查看 WebGL教程 中的全部文章">WebGL教程</a> » Lesson 3 动起来！</div></div>    
+    <div id="main">
+		<div id="container">
+			<div id="content" role="main">
+
+
+				<div id="post-154" class="post-154 post type-post status-publish format-standard hentry category-webgl tag-webgl tag-webgl-2">
+					<h1 class="entry-title">Lesson 3 动起来！</h1>
+
+					<div class="entry-meta">
+							<span class="meta-author">By admin</span>
+    <span class="meta-date">On 2011 年 8 月 30 日</span>
+    <span class="meta-comment">14 条评论</span>
+						5,208 次浏览					</div><!-- .entry-meta -->
+
+					<div class="entry-content">
+                		<p><span style="color: #808080;"><em>HiWebGL译者声明：因为译者个人方便的原因，我们将原教程中的第三方图形库由glMatrix改为Oak3D实现，这不影响到Demo的最终效果和实现，也不影响到WebGL的讲解和学习。原教程正文中相应的代码和讲解也为做了相应修改！本教程由HiWebGL翻译整理，转载请注明出处！</em></span></p>
+<p><span style="color: #808080;"><em>关于Oak3D：Oak3D是一套简单易用、性能优越的WebGL Javascript Library。您可以在他们的主页找到更多信息。Oak3D主页：<a href="http://www.oak3d.com/" target="_blank"><span style="color: #808080;">http://www.oak3d.com</span></a></em></span></p>
+<p>欢迎来到Lesson 3！在这一课中我们将开始尝试让物体运动起来。本节课的内容是基于NeHe的OpenGL教程的<a href="http://nehe.gamedev.net/data/lessons/lesson.asp?lesson=04" target="_blank">第四课</a>改写的。</p>
+<p>下面的这个视频就是我们这节课要完成的最终效果。</p>
+<p><embed src="http://player.youku.com/player.php/sid/XMjk5NDkyMzI4/v.swf" allowfullscreen="true" quality="high" width="480" height="400" align="middle" allowscriptaccess="always" type="application/x-shockwave-flash"></p>
+<p>点击<a href="http://www.hiwebgl.com/webgl_lessons/lesson03/index.html" target="_blank">这里</a>打开一个独立的WebGL页面，如果你的浏览器不支持WebGL，请点击<a href="http://www.hiwebgl.com/?p=52" target="_blank">这里</a>。</p>
+<p>下面我们来看看它是怎么工作的……</p>
+<p>惯例声明：本系列的教程是针对那些已经具备相应编程知识但没有实际3D图形经验的人的；目标是让学习者创建并运行代码，并且明白代码其中的含义，从而可以快速地创建自己的3D Web页面。如果你还没有阅读第一课，请先阅读第一课的内容吧。因为本课中我只会讲解那些与第一课中不同的新知识。</p>
+<p>另外，我编写这套教程是因为我在独立学习WebGL，所以教程中可能（非常可能）会有错误，所以还请风险自担。尽管如此，我还是会不断的修正bug和改正其中的错误的，所以如果你发现了教程中的错误，请告诉我。</p>
+<p>有两种方法可以获得上面实例的代码：在实例的独立页面中选择“查看源代码”；你也可以点击<a href="http://www.hiwebgl.com/webgl_lessons/lesson03/lesson03.zip">这里</a>，下载我们为您打包好的压缩包。</p>
+<p>在开始讲解代码之前，我需要先说明一件事情：在WebGL中的3D场景里移动物体的原理非常简单——你只需要重复的绘制物体就行了，即在每个时刻绘制不同运动状态下的物体！这对于很多读者来说也许是很小儿科的道理，但是在我刚刚开始学习OpenGL的时候却令我大吃一惊，并且对于其他从WebGL入手、刚刚开始接触3D图形系统的人来说可能也是这样的。因为我原以为应该会有个相对高级的抽象概念，用来告诉3D图形系统“一开始我在X点画了一个方块，然后请把它移动到Y点”。事实上正相反，你需要做的是告诉3D图形系统“我一开始在X点画了一个方块，然后下次绘制方块的时候，方块在Y点，再下次绘制的时候，方块在Z点……”。</p>
+<p>希望上面这一段内容能够让大家对物体运动的原理有一个清晰明了的认识。如果你还是不明白，请留言告诉我；如果这段话反而让你迷惑了，那也请留言告诉我，我会尝试着解释的更清楚些，或者直接删除这一段话。 ：）</p>
+<p>不管怎样，这也就意味着，我们一直用来绘制物体的函数drawScene需要被重复调用，每时每次绘制的内容都有些许不同。让我们先来看看index.html文件代码的底部，从那个搞定一切事情的webGLStart函数开始吧！</p>
+
+<div class="wp_codebox"><table><tbody><tr id="p1541"><td class="line_numbers"><pre>257
+258
+259
+260
+261
+262
+263
+264
+265
+266
+267
+</pre></td><td class="code" id="p154code1"><pre class="javascript" style="font-family:monospace;">    <span style="color: #003366; font-weight: bold;">function</span> webGLStart<span style="color: #009900;">(</span><span style="color: #009900;">)</span> <span style="color: #009900;">{</span>
+        <span style="color: #003366; font-weight: bold;">var</span> canvas <span style="color: #339933;">=</span> document.<span style="color: #660066;">getElementById</span><span style="color: #009900;">(</span><span style="color: #3366CC;">"lesson03-canvas"</span><span style="color: #009900;">)</span><span style="color: #339933;">;</span>
+        initGL<span style="color: #009900;">(</span>canvas<span style="color: #009900;">)</span><span style="color: #339933;">;</span>
+        initShaders<span style="color: #009900;">(</span><span style="color: #009900;">)</span><span style="color: #339933;">;</span>
+        initBuffers<span style="color: #009900;">(</span><span style="color: #009900;">)</span><span style="color: #339933;">;</span>
+&nbsp;
+        gl.<span style="color: #660066;">clearColor</span><span style="color: #009900;">(</span><span style="color: #CC0000;">0.0</span><span style="color: #339933;">,</span> <span style="color: #CC0000;">0.0</span><span style="color: #339933;">,</span> <span style="color: #CC0000;">0.0</span><span style="color: #339933;">,</span> <span style="color: #CC0000;">1.0</span><span style="color: #009900;">)</span><span style="color: #339933;">;</span>
+        gl.<span style="color: #660066;">enable</span><span style="color: #009900;">(</span>gl.<span style="color: #660066;">DEPTH_TEST</span><span style="color: #009900;">)</span><span style="color: #339933;">;</span>
+&nbsp;
+        tick<span style="color: #009900;">(</span><span style="color: #009900;">)</span><span style="color: #339933;">;</span>
+    <span style="color: #009900;">}</span></pre></td></tr></tbody></table></div>
+
+<p>这个函数和之前唯一的改变就是在最后我们需要调用drawScene函数的地方，我们调用了一个新的函数tick。这就是那个需要重复调用的函数，它用于更新场景的运动状态（比如三角形从81度旋转到82度）、绘制场景以及调整好参数为下次调用做准备。下面我们就先来看看这个函数。</p>
+
+<div class="wp_codebox"><table><tbody><tr id="p1542"><td class="line_numbers"><pre>250
+251
+</pre></td><td class="code" id="p154code2"><pre class="javascript" style="font-family:monospace;">    <span style="color: #003366; font-weight: bold;">function</span> tick<span style="color: #009900;">(</span><span style="color: #009900;">)</span> <span style="color: #009900;">{</span>
+        okRequestAnimationFrame<span style="color: #009900;">(</span>tick<span style="color: #009900;">)</span><span style="color: #339933;">;</span></pre></td></tr></tbody></table></div>
+
+<p>第一行的代码是用来安排好在下次重绘时调用tick函数的。okRequestAnimationFrame是一个由<a href="http://www.oak3d.com/" target="_blank">Oak3D</a>提供的函数。这个函数可以兼容所有浏览器，让浏览器在需要重绘WebGL场景时调用，比如说刷新显示。简单的说，就是各个浏览器都对需要循环绘制场景以实现动画效果的任务提供了API支持，但是目前各个浏览器提供的API中函数名称都不一样，比如说在Firefox中，这个函数的名字是mozRequestAnimationFrame，但到了Chrome和Safari中，它又改名叫做webkitRequestAnimationFrame。也许在将来的某个时候这些浏览器厂商会在API函数名称上达成一致，但是现在，我们幸好可以使用Oak3D提供的这个okRequestAnimationFrame函数来实现一次调用，所有浏览器适用。</p>
+<p>使用Javascript去反复调用drawScene函数，你也许可以达到相似的效果——比如使用Javascript内置的setInterval函数————但请不要这样做！虽然在很久很久以前，几乎所有早期的WebGL程序都是这么做的，包括本教程，它们一直运行的很好，但是直到浏览器出现了标签浏览的功能后，一切都改变了。因为不管动画页面是否处于激活的标签页，即用户当前正在浏览的标签页，setInterval函数都会被持续不断的调用，这就意味着每一分每一秒电脑都会持续渲染每一个打开的WebGL页面，而不管这个页面是否正在前台展示或是被隐藏。这显然是一个很可怕的事情，这也正是引入requestAnimationFrame的原因，它可以只在标签页被激活的时候才会被调用。</p>
+<p>然后我们看看tick函数剩下的部分：</p>
+
+<div class="wp_codebox"><table><tbody><tr id="p1543"><td class="line_numbers"><pre>252
+253
+254
+</pre></td><td class="code" id="p154code3"><pre class="javascript" style="font-family:monospace;">        drawScene<span style="color: #009900;">(</span><span style="color: #009900;">)</span><span style="color: #339933;">;</span>
+        animate<span style="color: #009900;">(</span><span style="color: #009900;">)</span><span style="color: #339933;">;</span>
+    <span style="color: #009900;">}</span></pre></td></tr></tbody></table></div>
+
+<p>每当浏览器需要绘制一帧的时候就会调用tick函数，然后进行绘制，最后更新一下相关参数来为下次调用做准备。我们按照顺序来看看drawScene函数和animate函数。</p>
+<p>drawScene函数差不多在index.html文件代码的的三分之二处。首先你会发现在声明函数之前，我们又定义了两个新的全局变量。</p>
+
+<div class="wp_codebox"><table><tbody><tr id="p1544"><td class="line_numbers"><pre>195
+196
+</pre></td><td class="code" id="p154code4"><pre class="javascript" style="font-family:monospace;">    <span style="color: #003366; font-weight: bold;">var</span> rTri <span style="color: #339933;">=</span> <span style="color: #CC0000;">0</span><span style="color: #339933;">;</span>
+    <span style="color: #003366; font-weight: bold;">var</span> rSquare <span style="color: #339933;">=</span> <span style="color: #CC0000;">0</span><span style="color: #339933;">;</span></pre></td></tr></tbody></table></div>
+
+<p>这两个变量是用来追踪三角形和矩形的旋转的，它们都从0度开始，然后变量值根据时间慢慢增加（一会你就会看到是如何“慢慢增加”的），从而让图形不断旋转。（顺便说一下，本课的实例是一个非常简单的Demo，但是如果在复杂的3D程序中这样滥用全局变量将是一件非常糟糕的事情，我在第9课中会为大家介绍一个更轻巧便捷的方法。）</p>
+<p>下一个代码上的变化位于drawScene函数中我们开始绘制三角形的地方。下面我把所有的代码附上，第205行、第207行和第216行就是新增加的代码：</p>
+
+<div class="wp_codebox"><table><tbody><tr id="p1545"><td class="line_numbers"><pre>202
+203
+204
+205
+206
+207
+208
+209
+210
+211
+212
+213
+214
+215
+216
+</pre></td><td class="code" id="p154code5"><pre class="javascript" style="font-family:monospace;">        pMatrix <span style="color: #339933;">=</span> okMat4Proj<span style="color: #009900;">(</span><span style="color: #CC0000;">45</span><span style="color: #339933;">,</span> gl.<span style="color: #660066;">viewportWidth</span> <span style="color: #339933;">/</span> gl.<span style="color: #660066;">viewportHeight</span><span style="color: #339933;">,</span> <span style="color: #CC0000;">0.1</span><span style="color: #339933;">,</span> <span style="color: #CC0000;">100.0</span><span style="color: #009900;">)</span><span style="color: #339933;">;</span>
+        mvMatrix <span style="color: #339933;">=</span> <span style="color: #003366; font-weight: bold;">new</span> okMat4<span style="color: #009900;">(</span><span style="color: #009900;">)</span><span style="color: #339933;">;</span>
+&nbsp;
+        mvPushMatrix<span style="color: #009900;">(</span><span style="color: #009900;">)</span><span style="color: #339933;">;</span>
+        mvMatrix.<span style="color: #660066;">translate</span><span style="color: #009900;">(</span>OAK.<span style="color: #660066;">SPACE_WORLD</span><span style="color: #339933;">,</span> <span style="color: #339933;">-</span><span style="color: #CC0000;">1.5</span><span style="color: #339933;">,</span> <span style="color: #CC0000;">0.0</span><span style="color: #339933;">,</span> <span style="color: #339933;">-</span><span style="color: #CC0000;">7.0</span><span style="color: #339933;">,</span> <span style="color: #003366; font-weight: bold;">true</span><span style="color: #009900;">)</span><span style="color: #339933;">;</span>
+        mvMatrix.<span style="color: #660066;">rotY</span><span style="color: #009900;">(</span>OAK.<span style="color: #660066;">SPACE_LOCAL</span><span style="color: #339933;">,</span> rTri<span style="color: #339933;">,</span> <span style="color: #003366; font-weight: bold;">true</span><span style="color: #009900;">)</span><span style="color: #339933;">;</span>
+        gl.<span style="color: #660066;">bindBuffer</span><span style="color: #009900;">(</span>gl.<span style="color: #660066;">ARRAY_BUFFER</span><span style="color: #339933;">,</span> triangleVertexPositionBuffer<span style="color: #009900;">)</span><span style="color: #339933;">;</span>
+        gl.<span style="color: #660066;">vertexAttribPointer</span><span style="color: #009900;">(</span>shaderProgram.<span style="color: #660066;">vertexPositionAttribute</span><span style="color: #339933;">,</span> triangleVertexPositionBuffer.<span style="color: #660066;">itemSize</span><span style="color: #339933;">,</span> gl.<span style="color: #660066;">FLOAT</span><span style="color: #339933;">,</span> <span style="color: #003366; font-weight: bold;">false</span><span style="color: #339933;">,</span> <span style="color: #CC0000;">0</span><span style="color: #339933;">,</span> <span style="color: #CC0000;">0</span><span style="color: #009900;">)</span><span style="color: #339933;">;</span>
+&nbsp;
+        gl.<span style="color: #660066;">bindBuffer</span><span style="color: #009900;">(</span>gl.<span style="color: #660066;">ARRAY_BUFFER</span><span style="color: #339933;">,</span> triangleVertexColorBuffer<span style="color: #009900;">)</span><span style="color: #339933;">;</span>
+        gl.<span style="color: #660066;">vertexAttribPointer</span><span style="color: #009900;">(</span>shaderProgram.<span style="color: #660066;">vertexColorAttribute</span><span style="color: #339933;">,</span> triangleVertexColorBuffer.<span style="color: #660066;">itemSize</span><span style="color: #339933;">,</span> gl.<span style="color: #660066;">FLOAT</span><span style="color: #339933;">,</span> <span style="color: #003366; font-weight: bold;">false</span><span style="color: #339933;">,</span> <span style="color: #CC0000;">0</span><span style="color: #339933;">,</span> <span style="color: #CC0000;">0</span><span style="color: #009900;">)</span><span style="color: #339933;">;</span>
+&nbsp;
+        setMatrixUniforms<span style="color: #009900;">(</span><span style="color: #009900;">)</span><span style="color: #339933;">;</span>
+        gl.<span style="color: #660066;">drawArrays</span><span style="color: #009900;">(</span>gl.<span style="color: #660066;">TRIANGLES</span><span style="color: #339933;">,</span> <span style="color: #CC0000;">0</span><span style="color: #339933;">,</span> triangleVertexPositionBuffer.<span style="color: #660066;">numItems</span><span style="color: #009900;">)</span><span style="color: #339933;">;</span>
+        mvPopMatrix<span style="color: #009900;">(</span><span style="color: #009900;">)</span><span style="color: #339933;">;</span></pre></td></tr></tbody></table></div>
+
+<p>为了解释上面的代码，让我们先回到第一课，在第一课中我曾经说过：</p>
+<blockquote><p>在OpenGL中，当你想要绘制一个场景的时候，你会告诉OpenGL在当前位置、按照当前旋转角度来绘制每个物体。比如，你说“向前移动20个单位，旋转32度，绘制一个机器人”，这基本上就是一个“位移多少多少，旋转多少多少，画什么什么”的综合过程。这个过程非常实用，因为你可以把“绘制机器人”的代码封装到一个函数中，然后就可以修改函数中位移和旋转的参数来轻松实现机器人的移动。</p></blockquote>
+<p>如果你还记得物体的当前状态都储存在模型视图矩阵中，那么在</p>
+
+<div class="wp_codebox"><table><tbody><tr id="p1546"><td class="line_numbers"><pre>207
+</pre></td><td class="code" id="p154code6"><pre class="javascript" style="font-family:monospace;">        mvMatrix.<span style="color: #660066;">rotY</span><span style="color: #009900;">(</span>OAK.<span style="color: #660066;">SPACE_LOCAL</span><span style="color: #339933;">,</span> rTri<span style="color: #339933;">,</span> <span style="color: #003366; font-weight: bold;">true</span><span style="color: #009900;">)</span><span style="color: #339933;">;</span></pre></td></tr></tbody></table></div>
+
+<p>这条语句中的调用mvMatrix的目的就显而易见了：我们改变了储存在模型视图矩阵中的当前的旋转状态——围绕着垂直轴（由第三个参数指定）旋转rTri度。这意味着当绘制三角形的时候，它会被旋转rTri度。说明一下，在Oak3D中旋转角度都是以角度为单位，而不是弧度，这大大方便了我们，不需要再将相对难以理解的弧度制转换为角度制。（译者注：原文中作者使用了其他第三方库，使用的是弧度制，作者也认为使用角度值比较方便，于是还专门写了一个函数用来将角度值转换为弧度制，但是在本文中这个函数并不需要，所以我们就略去了，有需要的同学可以查看原文教程，找到那个函数，名字是degToRad。）</p>
+<p>那么，调用mvPushMatrix和mvPopMatrix又是怎么回事呢？就和它们的函数名一样，它们也与模型视图矩阵有关。回到我说的关于画机器人的那个例子，比如你要移动到A点，画一个机器人，然后从A点做一个位移，移动到另一个点画一个茶壶。画机器人的代码可能会对模型视图矩阵做出面目全非的改变；它可能是先画身体，先后移下来画腿，最后再移上去画头部，最后画完胳膊结束。问题在于，在这之后，当你试图位移到另外一个点，你以为会以A点为起点进行位移，但实际上却是从你最后画的地方开始的！就是说如果你的机器人抬一抬手臂，那么随后画的那个茶壶也会跟着升天！这太可怕了！</p>
+<p>显然，我们需要在开始绘制之前备份一下模型视图矩阵，然后在绘制完毕之后再恢复它。这就是mvPushMatrix和mvPopMatrix的用处。mvPushMatrix将矩阵放置到堆栈中，然后mvPopMatrix抛弃当前矩阵，再从堆栈顶部取出之前的矩阵，然后将它储存起来。我们使用了堆栈，所以可以嵌套许多层绘制的代码，每一层都与模型视图矩阵相乘，结束时后者再被恢复。所以当我们结束绘制旋转的三角形时，我们用mvPopMatrix来恢复模型视图矩阵，然后：</p>
+
+<div class="wp_codebox"><table><tbody><tr id="p1547"><td class="line_numbers"><pre>219
+</pre></td><td class="code" id="p154code7"><pre class="javascript" style="font-family:monospace;">        mvMatrix.<span style="color: #660066;">translate</span><span style="color: #009900;">(</span>OAK.<span style="color: #660066;">SPACE_WORLD</span><span style="color: #339933;">,</span> <span style="color: #CC0000;">1.5</span><span style="color: #339933;">,</span> <span style="color: #CC0000;">0.0</span><span style="color: #339933;">,</span> <span style="color: #339933;">-</span><span style="color: #CC0000;">7.0</span><span style="color: #339933;">,</span> <span style="color: #003366; font-weight: bold;">true</span><span style="color: #009900;">)</span><span style="color: #339933;">;</span></pre></td></tr></tbody></table></div>
+
+<p>在当前未旋转的帧中移动穿过场景。（如果你还是对上面讲的不太清楚，我建议你移除代码中的push/pop的部分，然后运行一下看看，你马上就会明白了！）</p>
+<p>好了，以上三个代码上的改变让三角形成功的围绕穿过中心的垂直轴旋转起来，并且不会影响到旁边的矩形。下面是相似的代码让矩形围绕穿过中心的水平轴旋转。</p>
+
+<div class="wp_codebox"><table><tbody><tr id="p1548"><td class="line_numbers"><pre>220
+221
+222
+223
+224
+225
+226
+227
+228
+229
+230
+231
+232
+</pre></td><td class="code" id="p154code8"><pre class="javascript" style="font-family:monospace;">        mvMatrix.<span style="color: #660066;">rotX</span><span style="color: #009900;">(</span>OAK.<span style="color: #660066;">SPACE_LOCAL</span><span style="color: #339933;">,</span> rSquare<span style="color: #339933;">,</span> <span style="color: #003366; font-weight: bold;">true</span><span style="color: #009900;">)</span><span style="color: #339933;">;</span>
+&nbsp;
+        gl.<span style="color: #660066;">bindBuffer</span><span style="color: #009900;">(</span>gl.<span style="color: #660066;">ARRAY_BUFFER</span><span style="color: #339933;">,</span> squareVertexPositionBuffer<span style="color: #009900;">)</span><span style="color: #339933;">;</span>
+        gl.<span style="color: #660066;">vertexAttribPointer</span><span style="color: #009900;">(</span>shaderProgram.<span style="color: #660066;">vertexPositionAttribute</span><span style="color: #339933;">,</span> squareVertexPositionBuffer.<span style="color: #660066;">itemSize</span><span style="color: #339933;">,</span> gl.<span style="color: #660066;">FLOAT</span><span style="color: #339933;">,</span> <span style="color: #003366; font-weight: bold;">false</span><span style="color: #339933;">,</span> <span style="color: #CC0000;">0</span><span style="color: #339933;">,</span> <span style="color: #CC0000;">0</span><span style="color: #009900;">)</span><span style="color: #339933;">;</span>
+&nbsp;
+        gl.<span style="color: #660066;">bindBuffer</span><span style="color: #009900;">(</span>gl.<span style="color: #660066;">ARRAY_BUFFER</span><span style="color: #339933;">,</span> squareVertexColorBuffer<span style="color: #009900;">)</span><span style="color: #339933;">;</span>
+        gl.<span style="color: #660066;">vertexAttribPointer</span><span style="color: #009900;">(</span>shaderProgram.<span style="color: #660066;">vertexColorAttribute</span><span style="color: #339933;">,</span> squareVertexColorBuffer.<span style="color: #660066;">itemSize</span><span style="color: #339933;">,</span> gl.<span style="color: #660066;">FLOAT</span><span style="color: #339933;">,</span> <span style="color: #003366; font-weight: bold;">false</span><span style="color: #339933;">,</span> <span style="color: #CC0000;">0</span><span style="color: #339933;">,</span> <span style="color: #CC0000;">0</span><span style="color: #009900;">)</span><span style="color: #339933;">;</span>
+&nbsp;
+        setMatrixUniforms<span style="color: #009900;">(</span><span style="color: #009900;">)</span><span style="color: #339933;">;</span>
+        gl.<span style="color: #660066;">drawArrays</span><span style="color: #009900;">(</span>gl.<span style="color: #660066;">TRIANGLE_STRIP</span><span style="color: #339933;">,</span> <span style="color: #CC0000;">0</span><span style="color: #339933;">,</span> squareVertexPositionBuffer.<span style="color: #660066;">numItems</span><span style="color: #009900;">)</span><span style="color: #339933;">;</span>
+&nbsp;
+        mvPopMatrix<span style="color: #009900;">(</span><span style="color: #009900;">)</span><span style="color: #339933;">;</span>
+    <span style="color: #009900;">}</span></pre></td></tr></tbody></table></div>
+
+<p>以上就是drawScene函数中代码改变的部分。</p>
+<p>显然，我们另外需要做的一件事就是要让我们的场景动起来，这需要根据时间改变rTri和rSquare的值，使得每次绘制场景的时候，都会有些许的不同。这些事情，我们放到了新增加的animate函数中去实现：</p>
+
+<div class="wp_codebox"><table><tbody><tr id="p1549"><td class="line_numbers"><pre>236
+237
+238
+239
+240
+241
+242
+243
+244
+245
+246
+247
+</pre></td><td class="code" id="p154code9"><pre class="javascript" style="font-family:monospace;">    <span style="color: #003366; font-weight: bold;">var</span> lastTime <span style="color: #339933;">=</span> <span style="color: #CC0000;">0</span><span style="color: #339933;">;</span>
+&nbsp;
+    <span style="color: #003366; font-weight: bold;">function</span> animate<span style="color: #009900;">(</span><span style="color: #009900;">)</span> <span style="color: #009900;">{</span>
+        <span style="color: #003366; font-weight: bold;">var</span> timeNow <span style="color: #339933;">=</span> <span style="color: #003366; font-weight: bold;">new</span> Date<span style="color: #009900;">(</span><span style="color: #009900;">)</span>.<span style="color: #660066;">getTime</span><span style="color: #009900;">(</span><span style="color: #009900;">)</span><span style="color: #339933;">;</span>
+        <span style="color: #000066; font-weight: bold;">if</span> <span style="color: #009900;">(</span>lastTime <span style="color: #339933;">!=</span> <span style="color: #CC0000;">0</span><span style="color: #009900;">)</span> <span style="color: #009900;">{</span>
+            <span style="color: #003366; font-weight: bold;">var</span> elapsed <span style="color: #339933;">=</span> timeNow <span style="color: #339933;">-</span> lastTime<span style="color: #339933;">;</span>
+&nbsp;
+            rTri <span style="color: #339933;">+=</span> <span style="color: #009900;">(</span><span style="color: #CC0000;">90</span> <span style="color: #339933;">*</span> elapsed<span style="color: #009900;">)</span> <span style="color: #339933;">/</span> <span style="color: #CC0000;">1000.0</span><span style="color: #339933;">;</span>
+            rSquare <span style="color: #339933;">+=</span> <span style="color: #009900;">(</span><span style="color: #CC0000;">75</span> <span style="color: #339933;">*</span> elapsed<span style="color: #009900;">)</span> <span style="color: #339933;">/</span> <span style="color: #CC0000;">1000.0</span><span style="color: #339933;">;</span>
+        <span style="color: #009900;">}</span>
+        lastTime <span style="color: #339933;">=</span> timeNow<span style="color: #339933;">;</span>
+    <span style="color: #009900;">}</span></pre></td></tr></tbody></table></div>
+
+<p>想要使场景动起来，一个简单的思路就是每当animate函数被调用时，就根据一个固定的值去旋转三角形和矩形（原始的OpenGL教程也正是这么做的），但是这里我用了另一个我个人感觉稍微更好的方式，每次旋转的角度是由从上一次函数被调用到这一次的时间来决定的。另外，我指定三角形每秒旋转90度，矩形每秒旋转75度。这样做的好处是，无论电脑的性能如何，每个人都会看到相同的运动速率；否则电脑比较慢的用户（也就是说比起速度较快的机器，okRequestAnimationFrame被调用的频率不会那么高）将会看到非常坑爹的运行效果。这对于我们这种简单的Demo来说也许不算什么，但是对于大型的程序，比如游戏，就会相当有用。</p>
+<p>以上就是绘制运动场景的代码。下面我们来看看我们额外增加的那些代码，mvPushMatrix和mvPopMatrix。</p>
+
+<div class="wp_codebox"><table><tbody><tr id="p15410"><td class="line_numbers"><pre>117
+118
+119
+120
+121
+122
+123
+124
+125
+126
+127
+128
+129
+130
+131
+132
+</pre></td><td class="code" id="p154code10"><pre class="javascript" style="font-family:monospace;">    <span style="color: #003366; font-weight: bold;">var</span> mvMatrix <span style="color: #339933;">;</span>
+    <span style="color: #003366; font-weight: bold;">var</span> mvMatrixStack <span style="color: #339933;">=</span> <span style="color: #009900;">[</span><span style="color: #009900;">]</span><span style="color: #339933;">;</span>
+    <span style="color: #003366; font-weight: bold;">var</span> pMatrix <span style="color: #339933;">;</span>
+&nbsp;
+    <span style="color: #003366; font-weight: bold;">function</span> mvPushMatrix<span style="color: #009900;">(</span><span style="color: #009900;">)</span> <span style="color: #009900;">{</span>
+        <span style="color: #003366; font-weight: bold;">var</span> copy <span style="color: #339933;">=</span> <span style="color: #003366; font-weight: bold;">new</span> okMat4<span style="color: #009900;">(</span><span style="color: #009900;">)</span><span style="color: #339933;">;</span>
+        mvMatrix.<span style="color: #660066;">clone</span><span style="color: #009900;">(</span>copy<span style="color: #009900;">)</span><span style="color: #339933;">;</span>
+        mvMatrixStack.<span style="color: #660066;">push</span><span style="color: #009900;">(</span>copy<span style="color: #009900;">)</span><span style="color: #339933;">;</span>
+    <span style="color: #009900;">}</span>
+&nbsp;
+    <span style="color: #003366; font-weight: bold;">function</span> mvPopMatrix<span style="color: #009900;">(</span><span style="color: #009900;">)</span> <span style="color: #009900;">{</span>
+        <span style="color: #000066; font-weight: bold;">if</span> <span style="color: #009900;">(</span>mvMatrixStack.<span style="color: #660066;">length</span> <span style="color: #339933;">==</span> <span style="color: #CC0000;">0</span><span style="color: #009900;">)</span> <span style="color: #009900;">{</span>
+            <span style="color: #000066; font-weight: bold;">throw</span> <span style="color: #3366CC;">"Invalid popMatrix!"</span><span style="color: #339933;">;</span>
+        <span style="color: #009900;">}</span>
+        mvMatrix <span style="color: #339933;">=</span> mvMatrixStack.<span style="color: #660066;">pop</span><span style="color: #009900;">(</span><span style="color: #009900;">)</span><span style="color: #339933;">;</span>
+    <span style="color: #009900;">}</span></pre></td></tr></tbody></table></div>
+
+<p>这一部分很好理解，我们建立了一个列表用来储存矩阵堆栈，然后用压栈出栈来备份和恢复模型视图矩阵。</p>
+<p>好了，本节课到此为止。现在你应该明白如何去制作简单的WebGL运动场景了。如果有任何问题、更正和意见，都请留言给我。</p>
+<p>下节课，我们将开始绘制一个真正的3D物体，而不是3D世界中的2D形状。那么，下节课再见！</p>
+<div style="clear:both; margin-top:5px; margin-bottom:5px;"></div><div style="float:left"><!-- JiaThis Button BEGIN -->
+<div id="ckepop">
+	<span class="jiathis_txt">分享到：</span>
+	<a class="jiathis_button_tools_1"></a>
+	<a class="jiathis_button_tools_2"></a>
+	<a class="jiathis_button_tools_3"></a>
+	<a class="jiathis_button_tools_4"></a>
+	<a href="http://www.jiathis.com/share" class="jiathis jiathis_txt jiathis_separator jtico jtico_jiathis" target="_blank">更多</a>
+	<a class="jiathis_counter_style"></a>
+</div>
+<script type="text/javascript" src="./Lesson 3 动起来！ _ HiWebGL_files/jia.js.下载" charset="utf-8"></script>
+<!-- JiaThis Button END --></div><div style="clear:both; margin-top:5px; margin-bottom:5px;"></div>											</div><!-- .entry-content -->
+
+
+					<div class="entry-utility">
+						Posted in <a href="http://www.hiwebgl.com/?cat=17" title="查看 WebGL教程 中的全部文章" rel="category">WebGL教程</a> and tagged <a href="http://www.hiwebgl.com/?tag=webgl%e4%b8%ad%e6%96%87%e6%95%99%e7%a8%8b" rel="tag">webgl中文教程</a>, <a href="http://www.hiwebgl.com/?tag=webgl%e6%95%99%e7%a8%8b-2" rel="tag">webgl教程</a>. Bookmark the <a href="http://www.hiwebgl.com/?p=154" title="Permalink to Lesson 3 动起来！" rel="bookmark">permalink</a>.											</div><!-- .entry-utility -->
+				</div><!-- #post-## -->
+
+				<div id="nav-below" class="navigation">
+					<div class="nav-previous"><a href="http://www.hiwebgl.com/?p=146" rel="prev"><span class="meta-nav">←</span> Mozilla为Firefox引入游戏手柄控制接口！</a></div>
+					<div class="nav-next"><a href="http://www.hiwebgl.com/?p=161" rel="next">Mozilla拟开发移动操作系统 将火狐押宝Android <span class="meta-nav">→</span></a></div>
+				</div><!-- #nav-below -->
+
+				
+
+<div id="comments">
+		<h3 id="comments-title"><span>2 trackbacks</span></h3>
+	<dl id="trackback_list">
+		<dt><a href="http://www.hiwebgl.com/?p=42" rel="external nofollow" class="url">WebGL教程 | WebGL中文教程翻译工程启动！HiWebGL | HiWebGL | 最好的HTML5 WebGL中文资讯站</a></dt>
+		<dd><span>2011 年 9 月 3 日 下午 11:43</span></dd>
+		<dt><a href="http://www.hiwebgl.com/?p=681" rel="external nofollow" class="url">WebGL新闻 | WebGL 教程第三课中文学习笔记HiWebGL | HiWebGL | 最好的HTML5 WebGL中文资讯站</a></dt>
+		<dd><span>2011 年 12 月 2 日 下午 5:40</span></dd>
+    </dl>
+    <h3 id="comments-title"><span>12 comments</span></h3>
+	<ol class="commentlist">
+    		<li class="comment even thread-even depth-1" id="li-comment-24">
+    	<div id="comment-24">
+            <div class="comment_meta commentmetadata">
+                <span class="avatar"><img alt="" src="./Lesson 3 动起来！ _ HiWebGL_files/ad516503a11cd5ca435acc9bb6523536.png" class="avatar avatar-40 photo" height="40" width="40"></span>
+                <span class="comment_author vcard fn">haha98</span>
+                <span class="comment_time">2011 年 8 月 30 日 下午 10:58</span>
+            </div>
+            <div class="comment_body">
+                <p></p><p>非常感谢LZ的翻译教程, 对初学者帮助很大!</p>
+<p></p>
+                <p class="reply"><a class="comment-reply-link" href="http://www.hiwebgl.com/?p=154&amp;replytocom=24#respond" onclick="return addComment.moveForm(&quot;comment-24&quot;, &quot;24&quot;, &quot;respond&quot;, &quot;154&quot;)">回复</a></p>
+            </div>
+		</div>
+        
+        
+    
+</li>
+
+	<li class="comment odd alt thread-odd thread-alt depth-1" id="li-comment-141">
+    	<div id="comment-141">
+            <div class="comment_meta commentmetadata">
+                <span class="avatar"><img alt="" src="./Lesson 3 动起来！ _ HiWebGL_files/ad516503a11cd5ca435acc9bb6523536(1).png" class="avatar avatar-40 photo" height="40" width="40"></span>
+                <span class="comment_author vcard fn">riveplant</span>
+                <span class="comment_time">2011 年 10 月 11 日 下午 3:39</span>
+            </div>
+            <div class="comment_body">
+                <p></p><p>这一刻的代码下载不了吗</p>
+<p></p>
+                <p class="reply"><a class="comment-reply-link" href="http://www.hiwebgl.com/?p=154&amp;replytocom=141#respond" onclick="return addComment.moveForm(&quot;comment-141&quot;, &quot;141&quot;, &quot;respond&quot;, &quot;154&quot;)">回复</a></p>
+            </div>
+		</div>
+        
+        
+    
+<ul class="children">
+	<li class="comment byuser comment-author-admin bypostauthor even depth-2" id="li-comment-143">
+    	<div id="comment-143">
+            <div class="comment_meta commentmetadata">
+                <span class="avatar"><img alt="" src="./Lesson 3 动起来！ _ HiWebGL_files/ad516503a11cd5ca435acc9bb6523536(2).png" class="avatar avatar-40 photo" height="40" width="40"></span>
+                <span class="comment_author vcard fn">admin</span>
+                <span class="comment_time">2011 年 10 月 12 日 上午 1:37</span>
+            </div>
+            <div class="comment_body">
+                <p></p><p>可以下的~</p>
+<p></p>
+                <p class="reply"><a class="comment-reply-link" href="http://www.hiwebgl.com/?p=154&amp;replytocom=143#respond" onclick="return addComment.moveForm(&quot;comment-143&quot;, &quot;143&quot;, &quot;respond&quot;, &quot;154&quot;)">回复</a></p>
+            </div>
+		</div>
+        
+        
+    
+</li>
+</ul>
+</li>
+
+	<li class="comment odd alt thread-even depth-1" id="li-comment-247">
+    	<div id="comment-247">
+            <div class="comment_meta commentmetadata">
+                <span class="avatar"><img alt="" src="./Lesson 3 动起来！ _ HiWebGL_files/f83f05062ee0df03a0d379b3f6824784.jpeg" class="avatar avatar-40 photo" height="40" width="40"></span>
+                <span class="comment_author vcard fn">onejavaer</span>
+                <span class="comment_time">2011 年 12 月 6 日 下午 11:01</span>
+            </div>
+            <div class="comment_body">
+                <p></p><p>这个实例使用Oak3D_v_0_4_9.js运行，会在copy.copyFrom(mvMatrix);这里报错，使用Oak3D_v_0_4_3_beta.js可以正常运行。</p>
+<p></p>
+                <p class="reply"><a class="comment-reply-link" href="http://www.hiwebgl.com/?p=154&amp;replytocom=247#respond" onclick="return addComment.moveForm(&quot;comment-247&quot;, &quot;247&quot;, &quot;respond&quot;, &quot;154&quot;)">回复</a></p>
+            </div>
+		</div>
+        
+        
+    
+<ul class="children">
+	<li class="comment byuser comment-author-admin bypostauthor even depth-2" id="li-comment-254">
+    	<div id="comment-254">
+            <div class="comment_meta commentmetadata">
+                <span class="avatar"><img alt="" src="./Lesson 3 动起来！ _ HiWebGL_files/ad516503a11cd5ca435acc9bb6523536(2).png" class="avatar avatar-40 photo" height="40" width="40"></span>
+                <span class="comment_author vcard fn">admin</span>
+                <span class="comment_time">2011 年 12 月 9 日 上午 9:44</span>
+            </div>
+            <div class="comment_body">
+                <p></p><p>谢谢提醒，我会尽快修改！</p>
+<p></p>
+                <p class="reply"><a class="comment-reply-link" href="http://www.hiwebgl.com/?p=154&amp;replytocom=254#respond" onclick="return addComment.moveForm(&quot;comment-254&quot;, &quot;254&quot;, &quot;respond&quot;, &quot;154&quot;)">回复</a></p>
+            </div>
+		</div>
+        
+        
+    
+</li>
+</ul>
+</li>
+	<li class="comment odd alt thread-odd thread-alt depth-1" id="li-comment-394">
+    	<div id="comment-394">
+            <div class="comment_meta commentmetadata">
+                <span class="avatar"><img alt="" src="./Lesson 3 动起来！ _ HiWebGL_files/ad516503a11cd5ca435acc9bb6523536(3).png" class="avatar avatar-40 photo" height="40" width="40"></span>
+                <span class="comment_author vcard fn">hades</span>
+                <span class="comment_time">2012 年 1 月 18 日 上午 11:12</span>
+            </div>
+            <div class="comment_body">
+                <p></p><p>function webGLStart() {<br>
+        var canvas = document.getElementById(“lesson03-canvas”);<br>
+        initGL(canvas);<br>
+        initShaders()    //这里源代码没有分号<br>
+        initBuffers();</p>
+<p>        gl.clearColor(0.0, 0.0, 0.0, 1.0);<br>
+        gl.enable(gl.DEPTH_TEST);</p>
+<p>        tick();<br>
+    }<br>
+对于上面的这段代码我有个地方不懂，就是代码的260行的initShaders()后面没有分号“；”，我试着加上分号，可以照常运行，删除分号也可以正常运行？怎么会这样呢？</p>
+<p></p>
+                <p class="reply"><a class="comment-reply-link" href="http://www.hiwebgl.com/?p=154&amp;replytocom=394#respond" onclick="return addComment.moveForm(&quot;comment-394&quot;, &quot;394&quot;, &quot;respond&quot;, &quot;154&quot;)">回复</a></p>
+            </div>
+		</div>
+        
+        
+    
+<ul class="children">
+	<li class="comment even depth-2" id="li-comment-396">
+    	<div id="comment-396">
+            <div class="comment_meta commentmetadata">
+                <span class="avatar"><img alt="" src="./Lesson 3 动起来！ _ HiWebGL_files/ad516503a11cd5ca435acc9bb6523536(3).png" class="avatar avatar-40 photo" height="40" width="40"></span>
+                <span class="comment_author vcard fn">hades</span>
+                <span class="comment_time">2012 年 1 月 18 日 上午 11:35</span>
+            </div>
+            <div class="comment_body">
+                <p></p><p>在楼主翻译的文章里“译者注：原文中作者使用了其他第三方库，使用的是弧度制，作者也认为使用角度值比较方便，于是还专门写了一个函数用来将角度值转换为弧度制，但是在本文理这个函数并不需要，所以我们就略去了，有需要的同学可以查看原文教程，找到那个函数，名字是degToRad。”这段话里边的“但是在本文理这个函数并不需要”的“理”字应该是改为“里”，希望楼主能顺便改一下，楼主辛苦了！</p>
+<p></p>
+                <p class="reply"><a class="comment-reply-link" href="http://www.hiwebgl.com/?p=154&amp;replytocom=396#respond" onclick="return addComment.moveForm(&quot;comment-396&quot;, &quot;396&quot;, &quot;respond&quot;, &quot;154&quot;)">回复</a></p>
+            </div>
+		</div>
+        
+        
+    
+</li>
+	<li class="comment byuser comment-author-admin bypostauthor odd alt depth-2" id="li-comment-400">
+    	<div id="comment-400">
+            <div class="comment_meta commentmetadata">
+                <span class="avatar"><img alt="" src="./Lesson 3 动起来！ _ HiWebGL_files/ad516503a11cd5ca435acc9bb6523536(2).png" class="avatar avatar-40 photo" height="40" width="40"></span>
+                <span class="comment_author vcard fn">admin</span>
+                <span class="comment_time">2012 年 1 月 18 日 下午 5:26</span>
+            </div>
+            <div class="comment_body">
+                <p></p><p>已经修改好了，加上了分号。因为JS不要求行尾分号，所以写代码时漏了。谢谢</p>
+<p></p>
+                <p class="reply"><a class="comment-reply-link" href="http://www.hiwebgl.com/?p=154&amp;replytocom=400#respond" onclick="return addComment.moveForm(&quot;comment-400&quot;, &quot;400&quot;, &quot;respond&quot;, &quot;154&quot;)">回复</a></p>
+            </div>
+		</div>
+        
+        
+    
+<ul class="children">
+	<li class="comment even depth-3" id="li-comment-401">
+    	<div id="comment-401">
+            <div class="comment_meta commentmetadata">
+                <span class="avatar"><img alt="" src="./Lesson 3 动起来！ _ HiWebGL_files/ad516503a11cd5ca435acc9bb6523536(3).png" class="avatar avatar-40 photo" height="40" width="40"></span>
+                <span class="comment_author vcard fn">hades</span>
+                <span class="comment_time">2012 年 1 月 18 日 下午 7:58</span>
+            </div>
+            <div class="comment_body">
+                <p></p><p>JS不要求尾行分号？这个我还真没注意到哈</p>
+<p></p>
+                <p class="reply"><a class="comment-reply-link" href="http://www.hiwebgl.com/?p=154&amp;replytocom=401#respond" onclick="return addComment.moveForm(&quot;comment-401&quot;, &quot;401&quot;, &quot;respond&quot;, &quot;154&quot;)">回复</a></p>
+            </div>
+		</div>
+        
+        
+    
+</li>
+</ul>
+</li>
+</ul>
+</li>
+	<li class="comment odd alt thread-even depth-1" id="li-comment-740">
+    	<div id="comment-740">
+            <div class="comment_meta commentmetadata">
+                <span class="avatar"><img alt="" src="./Lesson 3 动起来！ _ HiWebGL_files/ad516503a11cd5ca435acc9bb6523536(4).png" class="avatar avatar-40 photo" height="40" width="40"></span>
+                <span class="comment_author vcard fn">RObin</span>
+                <span class="comment_time">2012 年 4 月 10 日 下午 3:48</span>
+            </div>
+            <div class="comment_body">
+                <p></p><p>谢谢楼主翻译教程，非常受用</p>
+<p></p>
+                <p class="reply"><a class="comment-reply-link" href="http://www.hiwebgl.com/?p=154&amp;replytocom=740#respond" onclick="return addComment.moveForm(&quot;comment-740&quot;, &quot;740&quot;, &quot;respond&quot;, &quot;154&quot;)">回复</a></p>
+            </div>
+		</div>
+        
+        
+    
+</li>
+	<li class="comment even thread-odd thread-alt depth-1" id="li-comment-1044">
+    	<div id="comment-1044">
+            <div class="comment_meta commentmetadata">
+                <span class="avatar"><img alt="" src="./Lesson 3 动起来！ _ HiWebGL_files/ad516503a11cd5ca435acc9bb6523536(5).png" class="avatar avatar-40 photo" height="40" width="40"></span>
+                <span class="comment_author vcard fn">bin381</span>
+                <span class="comment_time">2012 年 5 月 29 日 下午 9:50</span>
+            </div>
+            <div class="comment_body">
+                <p></p><p>如果想让三角形延两个坐标抽怎么做呢？</p>
+<p></p>
+                <p class="reply"><a class="comment-reply-link" href="http://www.hiwebgl.com/?p=154&amp;replytocom=1044#respond" onclick="return addComment.moveForm(&quot;comment-1044&quot;, &quot;1044&quot;, &quot;respond&quot;, &quot;154&quot;)">回复</a></p>
+            </div>
+		</div>
+        
+        
+    
+</li>
+	<li class="comment odd alt thread-even depth-1" id="li-comment-1045">
+    	<div id="comment-1045">
+            <div class="comment_meta commentmetadata">
+                <span class="avatar"><img alt="" src="./Lesson 3 动起来！ _ HiWebGL_files/ad516503a11cd5ca435acc9bb6523536(5).png" class="avatar avatar-40 photo" height="40" width="40"></span>
+                <span class="comment_author vcard fn">bin381</span>
+                <span class="comment_time">2012 年 5 月 29 日 下午 9:51</span>
+            </div>
+            <div class="comment_body">
+                <p></p><p>如果想让三角形延两个坐标抽怎么做呢？</p>
+<p></p>
+                <p class="reply"><a class="comment-reply-link" href="http://www.hiwebgl.com/?p=154&amp;replytocom=1045#respond" onclick="return addComment.moveForm(&quot;comment-1045&quot;, &quot;1045&quot;, &quot;respond&quot;, &quot;154&quot;)">回复</a></p>
+            </div>
+		</div>
+        
+        
+    
+</li>
+    </ol>
+        
+
+								<div id="respond">
+				<h3 id="reply-title">Post a Comment <small><a rel="nofollow" id="cancel-comment-reply-link" href="http://www.hiwebgl.com/?p=154#respond" style="display:none;">点击这里取消回复。</a></small></h3>
+									<form action="http://www.hiwebgl.com/wp-comments-post.php" method="post" id="commentform">
+																			<p class="comment-notes">电子邮件地址不会被公开。 必填项已用 <span class="required">*</span> 标注</p>							<p class="comment-form-author"><label for="author">姓名</label> <span class="required">*</span><input id="author" name="author" type="text" value="" size="30" aria-required="true"></p>
+<p class="comment-form-email"><label for="email">电子邮件</label> <span class="required">*</span><input id="email" name="email" type="text" value="" size="30" aria-required="true"></p>
+<p class="comment-form-url"><label for="url">站点</label><input id="url" name="url" type="text" value="" size="30"></p>
+												<p class="comment-form-comment"><label for="comment">评论</label><textarea id="comment" name="comment" cols="45" rows="8" aria-required="true"></textarea></p>						<p class="form-allowed-tags">您可以使用这些 <abbr title="HyperText Markup Language">HTML</abbr> 标签和属性： <code>&lt;a href="" title=""&gt; &lt;abbr title=""&gt; &lt;acronym title=""&gt; &lt;b&gt; &lt;blockquote cite=""&gt; &lt;cite&gt; &lt;code&gt; &lt;del datetime=""&gt; &lt;em&gt; &lt;i&gt; &lt;q cite=""&gt; &lt;strike&gt; &lt;strong&gt; </code></p>						<p class="form-submit">
+							<input name="submit" type="submit" id="submit" value="发表评论">
+							<input type="hidden" name="comment_post_ID" value="154" id="comment_post_ID">
+<input type="hidden" name="comment_parent" id="comment_parent" value="0">
+						</p>
+						<p style="display: none;"><input type="hidden" id="akismet_comment_nonce" name="akismet_comment_nonce" value="7e6c4ef51c"></p>					</form>
+							</div><!-- #respond -->
+						
+</div><!-- #comments -->
+
+			</div><!-- #content -->
+		</div><!-- #container -->
+
+<div id="sidebar" class="widget-area" role="complementary">
+	<ul class="xoxo">
+    	<li id="search-2" class="widget-container widget_search"><form id="searchform" method="get" action="http://www.hiwebgl.com/"> 
+	<input type="text" name="s" id="s" class="search_term" value="Type in keyword and hit Enter..." onblur="if (this.value == &#39;&#39;) {this.value = &#39;Type in keyword and hit Enter...&#39;;}" onfocus="if (this.value == &#39;Type in keyword and hit Enter...&#39;) {this.value = &#39;&#39;;}">
+</form></li><li id="text-4" class="widget-container widget_text"><h3 class="widget-title">加入我们的QQ群</h3>			<div class="textwidget"><b>HiWebGL技术讨论群</b><br>①群群号174563471（已满）<br>②群群号133703893（已满）<br>③群群号196778533（已满）<br>④群群号217873851（已满）<br>⑤群群号225923498（已满）<br>500人群群号219549633<br>欢迎各位程序员和工程师加入！<br><a target="_blank" href="http://qun.qq.com/#jointhegroup/gid/219549633"><img border="0" src="./Lesson 3 动起来！ _ HiWebGL_files/gp.png" alt="点击这里加入此群" title="点击这里加入此群"></a>
+<br><br>
+<b>HiWebGL产业讨论群</b><br>①群群号176289597（已满）<br>②群群号216936388<br>欢迎关注Web3D发展的从业者与富有理想与激情的创业者朋友加入！<br><a target="_blank" href="http://qun.qq.com/#jointhegroup/gid/216936388"><img border="0" src="./Lesson 3 动起来！ _ HiWebGL_files/gp.png" alt="点击这里加入此群" title="点击这里加入此群"></a></div>
+		</li><style type="text/css" media="screen">
+#mwrapper-wm_show-3 .mcontainer {height: 300px; overflow: hidden;}
+</style>
+<li id="wm_show-3" class="widget-container wm_show"><h3 class="widget-title">关注我们的新浪微博！</h3><div class="mwrapper" id="mwrapper-wm_show-3"><div class="head"><img class="headimg" src="./Lesson 3 动起来！ _ HiWebGL_files/89c570d0jw1e8qgp5bmzyj2050050aa8.jpg"><a class="headlink" href="http://weibo.com/2311418064" rel="external nofollow" target="_blank">HiWebGL</a><div class="onekey"><iframe width="63" height="24" frameborder="0" allowtransparency="true" marginwidth="0" marginheight="0" scrolling="no" border="0" src="./Lesson 3 动起来！ _ HiWebGL_files/followbutton.html"></iframe></div></div><a class="scroll up" href="javascript:;"><img src="./Lesson 3 动起来！ _ HiWebGL_files/transparent.gif"></a><div class="mcontainer"><ul class="microblogs"><li class="tweet">[哆啦A梦吃惊]<div class="rt"><a href="http://weibo.com/crazycomputer" rel="external nofollow" target="_blank">尼奥_</a> : 因写了抢猫粮插件被抓的小喵。<div class="pic rt-pic"><a href="http://ww3.sinaimg.cn/large/6588fb91jw1f8a611qywmj20qo0r743g.jpg" rel="external nofollow" target="_blank"><img src="./Lesson 3 动起来！ _ HiWebGL_files/6588fb91jw1f8a611qywmj20qo0r743g.jpg"></a></div></div><div class="meta"><a href="http://api.t.sina.com.cn/2311418064/statuses/4025014212843692" rel="external nofollow" target="_blank">9月29日 12:00</a> 来自 <a href="http://weibo.com/2311418064" rel="external nofollow" target="_blank">新浪微博</a></div></li><li class="tweet">转发微博<div class="rt"><a href="http://weibo.com/armcn" rel="external nofollow" target="_blank">ARM中国</a> : 在看颜的时代，如何让一款游戏画面更具高bigger？从8位像素画风到1080P/4K，再到ARM的Enlighten全局光照技术，能够分分钟变化出数十种光照效果，再挑的玩家都给它点赞了，不信你就来看看[围观][围观]<a href="http://t.cn/RcNsHsc" rel="external nofollow" target="_blank">http://t.cn/RcNsHsc</a><div class="pic rt-pic"><a href="http://ww3.sinaimg.cn/large/84217b4fgw1f89g6wubugj20j30q6gr3.jpg" rel="external nofollow" target="_blank"><img src="./Lesson 3 动起来！ _ HiWebGL_files/84217b4fgw1f89g6wubugj20j30q6gr3.jpg"></a></div></div><div class="meta"><a href="http://api.t.sina.com.cn/2311418064/statuses/4025000392991907" rel="external nofollow" target="_blank">9月29日 11:05</a> 来自 <a href="http://weibo.com/2311418064" rel="external nofollow" target="_blank">新浪微博</a></div></li><li class="tweet">转发微博<div class="rt"><a href="http://weibo.com/baidujs" rel="external nofollow" target="_blank">JS小组</a> : 你知道使用 target='_blank' 也会有安全漏洞么？尤其是在各种 UGC 网站中。不过小编早就玩过了，其实一般倒也不会用在钓鱼上，而是用在各种各样的广告点击中。推荐文章《target='_blank' 安全漏洞示例》地址 <a href="http://t.cn/RchBwVu" rel="external nofollow" target="_blank">http://t.cn/RchBwVu</a>  $w<div class="pic rt-pic"><a href="http://ww2.sinaimg.cn/large/aa9d3df6jw1f7fewekmx8j20g30a1aak.jpg" rel="external nofollow" target="_blank"><img src="./Lesson 3 动起来！ _ HiWebGL_files/aa9d3df6jw1f7fewekmx8j20g30a1aak.jpg"></a></div></div><div class="meta"><a href="http://api.t.sina.com.cn/2311418064/statuses/4016375595329873" rel="external nofollow" target="_blank">9月5日 15:53</a> 来自 <a href="http://weibo.com/2311418064" rel="external nofollow" target="_blank">新浪微博</a></div></li><li class="tweet">不做游戏，帮转<div class="rt"><a href="http://weibo.com/xdarui" rel="external nofollow" target="_blank">阿里子之</a> : 有做WebVR游戏的公司么，求合作。求圈内大神帮忙转发。@寒冬winter @大城小胖 @w3cplus</div><div class="meta"><a href="http://api.t.sina.com.cn/2311418064/statuses/4015348426770066" rel="external nofollow" target="_blank">9月2日 19:52</a> 来自 <a href="http://weibo.com/2311418064" rel="external nofollow" target="_blank">新浪微博</a></div></li><li class="tweet">阿里云OSS是否支持websockets?有人知道吗？<div class="meta"><a href="http://api.t.sina.com.cn/2311418064/statuses/4006622127044001" rel="external nofollow" target="_blank">8月9日 17:56</a> 来自 <a href="http://weibo.com/2311418064" rel="external nofollow" target="_blank">新浪微博</a></div></li></ul></div><a class="scroll down" href="javascript:;"><img src="./Lesson 3 动起来！ _ HiWebGL_files/transparent.gif"></a></div></li><li id="recent-comments-2" class="widget-container widget_recent_comments"><h3 class="widget-title">近期评论</h3><ul id="recentcomments"><li class="recentcomments"><a href="http://www.d2film.com/" rel="external nofollow" class="url">企业宣传片制作d2film.com影视视频制作公司QQ30998</a> 发表在《<a href="http://www.hiwebgl.com/?p=42#comment-7984">WebGL中文教程翻译工程启动！</a>》</li><li class="recentcomments"><a href="http://www.128sf.cn/" rel="external nofollow" class="url">魔域服务器架设</a> 发表在《<a href="http://www.hiwebgl.com/?p=312#comment-7858">Lesson 9 优化代码结构实现多物体运动</a>》</li><li class="recentcomments"><a href="http://www.39uc.cn/" rel="external nofollow" class="url">天龙八部师傅m161</a> 发表在《<a href="http://www.hiwebgl.com/?p=70#comment-7857">外媒公布Firefox 6性能测试结果</a>》</li><li class="recentcomments"><a href="http://www.233sf.cn/" rel="external nofollow" class="url">最新奇迹私发网</a> 发表在《<a href="http://www.hiwebgl.com/?p=42#comment-7856">WebGL中文教程翻译工程启动！</a>》</li><li class="recentcomments"><a href="http://www.5aivideo.com/" rel="external nofollow" class="url">婚礼跟拍视频5aivideo.com婚礼摄影MV-QQ73595</a> 发表在《<a href="http://www.hiwebgl.com/?p=42#comment-7829">WebGL中文教程翻译工程启动！</a>》</li></ul></li><li id="categories-2" class="widget-container widget_categories"><h3 class="widget-title">分类目录</h3>		<ul>
+	<li class="cat-item cat-item-16"><a href="http://www.hiwebgl.com/?cat=16" title="查看 Demo大赏 下的所有文章">Demo大赏</a>
+</li>
+	<li class="cat-item cat-item-29"><a href="http://www.hiwebgl.com/?cat=29" title="查看 HTML5新闻 下的所有文章">HTML5新闻</a>
+</li>
+	<li class="cat-item cat-item-57"><a href="http://www.hiwebgl.com/?cat=57" title="Oak3D中文教程">Oak3D教程</a>
+</li>
+	<li class="cat-item cat-item-17"><a href="http://www.hiwebgl.com/?cat=17" title="查看 WebGL教程 下的所有文章">WebGL教程</a>
+</li>
+	<li class="cat-item cat-item-3"><a href="http://www.hiwebgl.com/?cat=3" title="WebGL新闻">WebGL新闻</a>
+</li>
+	<li class="cat-item cat-item-10"><a href="http://www.hiwebgl.com/?cat=10" title="查看 博文精选 下的所有文章">博文精选</a>
+</li>
+	<li class="cat-item cat-item-4"><a href="http://www.hiwebgl.com/?cat=4" title="推荐阅读">推荐</a>
+</li>
+	<li class="cat-item cat-item-1"><a href="http://www.hiwebgl.com/?cat=1" title="查看 未分类 下的所有文章">未分类</a>
+</li>
+		</ul>
+</li><li id="archives-2" class="widget-container widget_archive"><h3 class="widget-title">文章归档</h3>		<ul>
+			<li><a href="http://www.hiwebgl.com/?m=201206" title="2012 年六月">2012 年六月</a></li>
+	<li><a href="http://www.hiwebgl.com/?m=201205" title="2012 年五月">2012 年五月</a></li>
+	<li><a href="http://www.hiwebgl.com/?m=201204" title="2012 年四月">2012 年四月</a></li>
+	<li><a href="http://www.hiwebgl.com/?m=201203" title="2012 年三月">2012 年三月</a></li>
+	<li><a href="http://www.hiwebgl.com/?m=201202" title="2012 年二月">2012 年二月</a></li>
+	<li><a href="http://www.hiwebgl.com/?m=201201" title="2012 年一月">2012 年一月</a></li>
+	<li><a href="http://www.hiwebgl.com/?m=201112" title="2011 年十二月">2011 年十二月</a></li>
+	<li><a href="http://www.hiwebgl.com/?m=201111" title="2011 年十一月">2011 年十一月</a></li>
+	<li><a href="http://www.hiwebgl.com/?m=201110" title="2011 年十月">2011 年十月</a></li>
+	<li><a href="http://www.hiwebgl.com/?m=201109" title="2011 年九月">2011 年九月</a></li>
+	<li><a href="http://www.hiwebgl.com/?m=201108" title="2011 年八月">2011 年八月</a></li>
+		</ul>
+</li>    </ul>
+</div><!-- #sidebar .widget-area -->	</div><!-- #main -->
+    <div id="footer" role="contentinfo">
+    	
+    	<div id="colophon">
+            <div id="site-info" class="clearfix">
+                <div id="generator">Powered by <a href="http://wordpress.org/" title="Semantic Personal Publishing Platform" rel="generator">Wordpress</a> and <a href="http://wpcrunchy.com/" title="Free Premium Quality Wordpress Themes">WPCrunchy</a></div>
+                <div id="credits">Designed by <a href="http://www.hostreviewgeeks.com/" title="best web hosting" target="_blank">best web hosting</a>. In collaboration with <a href="http://www.hostv.com/" title="VPS Hosting" target="_blank">VPS Hosting</a>, <a href="http://broadwaytickets.co/" title="Broadway Tickets" target="_blank">Broadway Tickets</a>, <a href="http://wpcorner.com/" title="Free Wordpress Themes" target="_blank">Free Wordpress Themes</a>.</div>
+            </div>
+        </div>
+    </div><!-- #footer -->
+</div><!-- #wrapper -->
+
+<script type="text/javascript">jQuery(document).ready(function() { if(jQuery("ul.accordion li").length > 2) { jQuery("ul.accordion").accordion(); } });</script><script src="./Lesson 3 动起来！ _ HiWebGL_files/stat.php" language="JavaScript"></script><script src="./Lesson 3 动起来！ _ HiWebGL_files/core.php" charset="utf-8" type="text/javascript"></script><a href="http://www.cnzz.com/stat/website.php?web_id=3871765" target="_blank" title="站长统计"><img border="0" hspace="0" vspace="0" src="./Lesson 3 动起来！ _ HiWebGL_files/pic.gif"></a><script src="./Lesson 3 动起来！ _ HiWebGL_files/stat.js.下载" defer="defer" async="async"></script>
+ </body></html>

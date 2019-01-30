@@ -1,0 +1,1063 @@
+<!DOCTYPE html>
+<html lang="en"><head>
+<meta http-equiv="content-type" content="text/html; charset=UTF-8">
+		<meta charset="utf-8">
+		<title>Spherical Environment Mapping (MatCap/LitSphere) and Normal Mapping</title>
+		<meta name="viewport" content="width=device-width, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0">
+		
+		<meta property="og:url" content="http://www.clicktorelease.com/code/spherical-normal-mapping">
+		<meta property="og:title" content="Spherical Environment Mapping (MatCap/LitSphere) and Normal Mapping"> 
+		<meta property="og:description" content="Spherical Mapping (MatCap/LitSphere) with Normal Mapping, using WebGL and GLSL. This is an editor to toy around with different materials, normals and render effects. With subdivision modifier, noise and rim lighting."> 
+		<meta property="og:image" content="http://www.clicktorelease.com/code/spherical-normal-mapping/thumb.jpg"> 
+		<meta name="description" content="Spherical Mapping (MatCap/LitSphere) with Normal Mapping, using WebGL and GLSL. This is an editor to toy around with different materials, normals and render effects. With subdivision modifier, noise and rim lighting.">
+		<meta itemprop="name" content="Spherical Environment Mapping (MatCap/LitSphere) and Normal Mapping">
+		<meta itemprop="description" content="Spherical Mapping (MatCap/LitSphere) with Normal Mapping, using WebGL and GLSL. This is an editor to toy around with different materials, normals and render effects. With subdivision modifier, noise and rim lighting.">
+		<meta itemprop="image" content="http://www.clicktorelease.com/code/spherical-normal-mapping/thumb.jpg">
+
+		<script src="Spherical%20Environment%20Mapping%20(MatCap_LitSphere)%20and%20Normal%20Mapping_files/cbgapi.loaded_1" async=""></script><script src="Spherical%20Environment%20Mapping%20(MatCap_LitSphere)%20and%20Normal%20Mapping_files/cbgapi.loaded_0" async=""></script><script id="twitter-wjs" src="Spherical%20Environment%20Mapping%20(MatCap_LitSphere)%20and%20Normal%20Mapping_files/widgets.js"></script><script id="facebook-jssdk" src="Spherical%20Environment%20Mapping%20(MatCap_LitSphere)%20and%20Normal%20Mapping_files/all.js"></script><script async="" src="Spherical%20Environment%20Mapping%20(MatCap_LitSphere)%20and%20Normal%20Mapping_files/analytics.js"></script><script src="Spherical%20Environment%20Mapping%20(MatCap_LitSphere)%20and%20Normal%20Mapping_files/EQZCnk4gCeNwUQsZ03sLJaa105M.js"></script><style>
+			*{ box-sizing: border-box; -moz-box-sizing: border-box; margin: 0; padding: 0 }
+			body {
+				color: #ffffff;
+				font-family: tahoma, sans-serif;
+				font-size:13px;
+				background-color: #222;
+				margin: 0px;
+				overflow: hidden;
+			}
+			#title{ position: absolute; left: 10px; top: 10px; line-height: 1.4em; margin-right: 380px; }
+			#credits{ position: absolute; left: 10px; bottom: 10px; line-height: 1.4em; margin-right: 380px;}
+			#options{ font-size: 11px; position: absolute; right: 0; top: 0; bottom: 0; background-color: rgba( 0, 0, 0, .4 ); width: 372px; line-height: 1.4em ; -webkit-transform: translateX( 300px ); -webkit-transition: -webkit-transform 250ms ease-out;}
+			#options:hover, #options.pinned{ -webkit-transform: translateX( 0 );}
+			#optionsContent{ position: absolute; left: 52px; top: 0; right: 0; bottom: 0; padding: 20px 20px 20px 20px; overflow: auto;  }
+			#pinBtn{ position: absolute; top: 20px; left: 20px; width: 32px; height: 32px; border: 1px solid white; opacity: .5; border-radius: 4px; background-image: url( settings.png ); background-position: 50% 50%; background-repeat: no-repeat; -webkit-transition: opacity 250ms ease-out; cursor: pointer;}
+			#pinBtn:hover, #pinBtn.pinned{ opacity: 1;}
+			#hover{ opacity: 1 }
+			a{ color: white; text-shadow: 0 1px 0 rgba( 0,0,0,.5 ) }
+			#container canvas{ position: absolute; left: 0; top: 0; width: 100%; height: 100%; bottom: 0;}
+			#loader{ position: absolute; left: 0; top: 0; right: 0; bottom: 0; background-color: rgba( 0, 0, 0, .6 ); opacity: 0; pointer-events: none; -webkit-transition: opacity 250ms ease-out; }
+			#loader.visible{ opacity: 1; pointer-events: auto;}
+			.list li{ float: left; margin-right: 4px; margin-bottom: 4px;}
+			.list li:last-child{ margin-right: 0 ;}
+			.list{ width: 265px; float: left;}
+			#normalList a, #materialList a{ width: 40px; height: 40px; padding: 0; line-height: 40px;}
+			.dropzone{ width: 85px; height: 40px; float: left; border-radius: 4px; border: 1px solid white; text-align: center; line-height: 40px}
+			li{ list-style-type: none}
+			.input{ position: relative;}
+			.input span{ width: 100px; display: block;}
+			.input input{ position: absolute; right: 20px; top: 0;}
+			.block{ margin-bottom: 10px; float:left; width: 280px;}
+			#options h2{ font-size: 11px; margin-bottom: 5px;}
+			#options h1{ margin-bottom: 10px; font-size: 14px;}
+			#credits p{ margin-bottom: 5px ;}
+		</style>
+		<link rel="stylesheet" type="text/css" href="Spherical%20Environment%20Mapping%20(MatCap_LitSphere)%20and%20Normal%20Mapping_files/buttons.css" media="all">
+		<link rel="stylesheet" type="text/css" href="Spherical%20Environment%20Mapping%20(MatCap_LitSphere)%20and%20Normal%20Mapping_files/spinner.css" media="all">
+	<script type="text/javascript" charset="utf-8" async="" src="Spherical%20Environment%20Mapping%20(MatCap_LitSphere)%20and%20Normal%20Mapping_files/button.js"></script><style type="text/css">.fb_hidden{position:absolute;top:-10000px;z-index:10001}.fb_reposition{overflow:hidden;position:relative}.fb_invisible{display:none}.fb_reset{background:none;border:0;border-spacing:0;color:#000;cursor:auto;direction:ltr;font-family:"lucida grande", tahoma, verdana, arial, sans-serif;font-size:11px;font-style:normal;font-variant:normal;font-weight:normal;letter-spacing:normal;line-height:1;margin:0;overflow:visible;padding:0;text-align:left;text-decoration:none;text-indent:0;text-shadow:none;text-transform:none;visibility:visible;white-space:normal;word-spacing:normal}.fb_reset>div{overflow:hidden}.fb_link img{border:none}@keyframes fb_transform{from{opacity:0;transform:scale(.95)}to{opacity:1;transform:scale(1)}}.fb_animate{animation:fb_transform .3s forwards}
+.fb_dialog{background:rgba(82, 82, 82, .7);position:absolute;top:-10000px;z-index:10001}.fb_dialog_advanced{border-radius:8px;padding:10px}.fb_dialog_content{background:#fff;color:#373737}.fb_dialog_close_icon{background:url(https://static.xx.fbcdn.net/rsrc.php/v3/yq/r/IE9JII6Z1Ys.png) no-repeat scroll 0 0 transparent;cursor:pointer;display:block;height:15px;position:absolute;right:18px;top:17px;width:15px}.fb_dialog_mobile .fb_dialog_close_icon{left:5px;right:auto;top:5px}.fb_dialog_padding{background-color:transparent;position:absolute;width:1px;z-index:-1}.fb_dialog_close_icon:hover{background:url(https://static.xx.fbcdn.net/rsrc.php/v3/yq/r/IE9JII6Z1Ys.png) no-repeat scroll 0 -15px transparent}.fb_dialog_close_icon:active{background:url(https://static.xx.fbcdn.net/rsrc.php/v3/yq/r/IE9JII6Z1Ys.png) no-repeat scroll 0 -30px transparent}.fb_dialog_iframe{line-height:0}.fb_dialog_content .dialog_title{background:#6d84b4;border:1px solid #365899;color:#fff;font-size:14px;font-weight:bold;margin:0}.fb_dialog_content .dialog_title>span{background:url(https://static.xx.fbcdn.net/rsrc.php/v3/yd/r/Cou7n-nqK52.gif) no-repeat 5px 50%;float:left;padding:5px 0 7px 26px}body.fb_hidden{height:100%;left:0;margin:0;overflow:visible;position:absolute;top:-10000px;transform:none;width:100%}.fb_dialog.fb_dialog_mobile.loading{background:url(https://static.xx.fbcdn.net/rsrc.php/v3/ya/r/3rhSv5V8j3o.gif) white no-repeat 50% 50%;min-height:100%;min-width:100%;overflow:hidden;position:absolute;top:0;z-index:10001}.fb_dialog.fb_dialog_mobile.loading.centered{background:none;height:auto;min-height:initial;min-width:initial;width:auto}.fb_dialog.fb_dialog_mobile.loading.centered #fb_dialog_loader_spinner{width:100%}.fb_dialog.fb_dialog_mobile.loading.centered .fb_dialog_content{background:none}.loading.centered #fb_dialog_loader_close{clear:both;color:#fff;display:block;font-size:18px;padding-top:20px}#fb-root #fb_dialog_ipad_overlay{background:rgba(0, 0, 0, .4);bottom:0;left:0;min-height:100%;position:absolute;right:0;top:0;width:100%;z-index:10000}#fb-root #fb_dialog_ipad_overlay.hidden{display:none}.fb_dialog.fb_dialog_mobile.loading iframe{visibility:hidden}.fb_dialog_mobile .fb_dialog_iframe{position:sticky;top:0}.fb_dialog_content .dialog_header{background:linear-gradient(from(#738aba), to(#2c4987));border-bottom:1px solid;border-color:#1d3c78;box-shadow:white 0 1px 1px -1px inset;color:#fff;font:bold 14px Helvetica, sans-serif;text-overflow:ellipsis;text-shadow:rgba(0, 30, 84, .296875) 0 -1px 0;vertical-align:middle;white-space:nowrap}.fb_dialog_content .dialog_header table{height:43px;width:100%}.fb_dialog_content .dialog_header td.header_left{font-size:12px;padding-left:5px;vertical-align:middle;width:60px}.fb_dialog_content .dialog_header td.header_right{font-size:12px;padding-right:5px;vertical-align:middle;width:60px}.fb_dialog_content .touchable_button{background:linear-gradient(from(#4267B2), to(#2a4887));background-clip:padding-box;border:1px solid #29487d;border-radius:3px;display:inline-block;line-height:18px;margin-top:3px;max-width:85px;padding:4px 12px;position:relative}.fb_dialog_content .dialog_header .touchable_button input{background:none;border:none;color:#fff;font:bold 12px Helvetica, sans-serif;margin:2px -12px;padding:2px 6px 3px 6px;text-shadow:rgba(0, 30, 84, .296875) 0 -1px 0}.fb_dialog_content .dialog_header .header_center{color:#fff;font-size:16px;font-weight:bold;line-height:18px;text-align:center;vertical-align:middle}.fb_dialog_content .dialog_content{background:url(https://static.xx.fbcdn.net/rsrc.php/v3/y9/r/jKEcVPZFk-2.gif) no-repeat 50% 50%;border:1px solid #4a4a4a;border-bottom:0;border-top:0;height:150px}.fb_dialog_content .dialog_footer{background:#f5f6f7;border:1px solid #4a4a4a;border-top-color:#ccc;height:40px}#fb_dialog_loader_close{float:left}.fb_dialog.fb_dialog_mobile .fb_dialog_close_button{text-shadow:rgba(0, 30, 84, .296875) 0 -1px 0}.fb_dialog.fb_dialog_mobile .fb_dialog_close_icon{visibility:hidden}#fb_dialog_loader_spinner{animation:rotateSpinner 1.2s linear infinite;background-color:transparent;background-image:url(https://static.xx.fbcdn.net/rsrc.php/v3/yD/r/t-wz8gw1xG1.png);background-position:50% 50%;background-repeat:no-repeat;height:24px;width:24px}@keyframes rotateSpinner{0%{transform:rotate(0deg)}100%{transform:rotate(360deg)}}
+.fb_iframe_widget{display:inline-block;position:relative}.fb_iframe_widget span{display:inline-block;position:relative;text-align:justify}.fb_iframe_widget iframe{position:absolute}.fb_iframe_widget_fluid_desktop,.fb_iframe_widget_fluid_desktop span,.fb_iframe_widget_fluid_desktop iframe{max-width:100%}.fb_iframe_widget_fluid_desktop iframe{min-width:220px;position:relative}.fb_iframe_widget_lift{z-index:1}.fb_iframe_widget_fluid{display:inline}.fb_iframe_widget_fluid span{width:100%}
+.fb_customer_chat_bounce_in_v2{animation-duration:300ms;animation-name:fb_bounce_in_v2;transition-timing-function:ease-in}.fb_customer_chat_bounce_out_v2{animation-duration:300ms;animation-name:fb_bounce_out_v2;transition-timing-function:ease-in}.fb_customer_chat_bounce_in_v2_mobile_chat_started{animation-duration:300ms;animation-name:fb_bounce_in_v2_mobile_chat_started;transition-timing-function:ease-in}.fb_customer_chat_bounce_out_v2_mobile_chat_started{animation-duration:300ms;animation-name:fb_bounce_out_v2_mobile_chat_started;transition-timing-function:ease-in}.fb_customer_chat_bubble_pop_in{animation-duration:250ms;animation-name:fb_customer_chat_bubble_bounce_in_animation}.fb_customer_chat_bubble_animated_no_badge{box-shadow:0 3px 12px rgba(0, 0, 0, .15);transition:box-shadow 150ms linear}.fb_customer_chat_bubble_animated_no_badge:hover{box-shadow:0 5px 24px rgba(0, 0, 0, .3)}.fb_customer_chat_bubble_animated_with_badge{box-shadow:-5px 4px 14px rgba(0, 0, 0, .15);transition:box-shadow 150ms linear}.fb_customer_chat_bubble_animated_with_badge:hover{box-shadow:-5px 8px 24px rgba(0, 0, 0, .2)}.fb_invisible_flow{display:inherit;height:0;overflow-x:hidden;width:0}.fb_mobile_overlay_active{background-color:#fff;height:100%;overflow:hidden;position:fixed;visibility:hidden;width:100%}@keyframes fb_bounce_in_v2{0%{opacity:0;transform:scale(0, 0);transform-origin:bottom right}50%{transform:scale(1.03, 1.03);transform-origin:bottom right}100%{opacity:1;transform:scale(1, 1);transform-origin:bottom right}}@keyframes fb_bounce_in_v2_mobile_chat_started{0%{opacity:0;top:20px}100%{opacity:1;top:0}}@keyframes fb_bounce_out_v2{0%{opacity:1;transform:scale(1, 1);transform-origin:bottom right}100%{opacity:0;transform:scale(0, 0);transform-origin:bottom right}}@keyframes fb_bounce_out_v2_mobile_chat_started{0%{opacity:1;top:0}100%{opacity:0;top:20px}}@keyframes fb_customer_chat_bubble_bounce_in_animation{0%{bottom:6pt;opacity:0;transform:scale(0, 0);transform-origin:center}70%{bottom:18pt;opacity:1;transform:scale(1.2, 1.2)}100%{transform:scale(1, 1)}}</style></head>
+	<body>
+
+		<div id="fb-root" class=" fb_reset"><div style="position: absolute; top: -10000px; height: 0px; width: 0px;"><div><iframe name="fb_xdm_frame_https" allowtransparency="true" allowfullscreen="true" scrolling="no" allow="encrypted-media" id="fb_xdm_frame_https" aria-hidden="true" title="Facebook Cross Domain Communication Frame" tabindex="-1" style="border: medium none;" src="Spherical%20Environment%20Mapping%20(MatCap_LitSphere)%20and%20Normal%20Mapping_files/trnHszv6jVd.htm" frameborder="0"></iframe></div></div><div style="position: absolute; top: -10000px; height: 0px; width: 0px;"><div></div></div></div>
+		<script>(function(d, s, id) {
+			var js, fjs = d.getElementsByTagName(s)[0];
+			if (d.getElementById(id)) return;
+			js = d.createElement(s); js.id = id;
+			js.src = "//connect.facebook.net/en_GB/all.js#xfbml=1";
+			fjs.parentNode.insertBefore(js, fjs);
+		}(document, 'script', 'facebook-jssdk'));</script>
+
+		<div id="container"><canvas width="1920" height="966"></canvas></div>
+
+		<div id="title">
+			<p><b>Spherical Environment Mapping (MatCap/LitSphere) and Normal Mapping</b></p>
+			<p>Click and drag to rotate, mouse wheel to zoom.<br>Use the options on the panel on the right!</p>
+		</div>
+
+		<div id="credits">
+			<p>Code by Jaume Sánchez <a href="http://www.twitter.com/thespite" rel="external">@thespite</a><br>
+			Coded using <a href="http://www.threejs.org/" rel="external">three.js</a> (with <a href="http://www.lab4games.net/zz85/blog/2011/10/27/subdivision-surfaces/" rel="external">Subdivision modifier</a> and <a href="https://code.google.com/p/dat-gui/source/browse/docs/improvedNoise.js?r=2729088df8d3edd1249db293c35b6c4a62f4a04b" rel="external">ImprovedNoise</a>), <a href="http://ir-ltd.net/tag/lee-perry-smith/" rel="external">Lee Perry-Smith's head</a>, <a href="http://en.wikipedia.org/wiki/Suzanne_%28Blender_primitive%29" rel="external">Suzanne</a>.<br>
+			Textures and normal maps are owned by their respective owners (LitSphere from polycount.com, Luxology, etc.)
+		</p>
+
+			<iframe id="twitter-widget-0" scrolling="no" allowtransparency="true" class="twitter-share-button twitter-share-button-rendered twitter-tweet-button" style="position: static; visibility: visible; width: 61px; height: 20px;" title="Twitter Tweet Button" src="Spherical%20Environment%20Mapping%20(MatCap_LitSphere)%20and%20Normal%20Mapping_files/tweet_button.htm" frameborder="0"></iframe>
+			<script>!function(d,s,id){var js,fjs=d.getElementsByTagName(s)[0];if(!d.getElementById(id)){js=d.createElement(s);js.id=id;js.src="https://platform.twitter.com/widgets.js";fjs.parentNode.insertBefore(js,fjs);}}(document,"script","twitter-wjs");</script>
+			
+			<script type="text/javascript" src="Spherical%20Environment%20Mapping%20(MatCap_LitSphere)%20and%20Normal%20Mapping_files/plusone.js" gapi_processed="true"></script>
+			<div style="text-indent: 0px; margin: 0px; padding: 0px; background: transparent none repeat scroll 0% 0%; border-style: none; float: none; line-height: normal; font-size: 1px; vertical-align: baseline; display: inline-block; width: 32px; height: 20px;" id="___plusone_0"><iframe ng-non-bindable="" hspace="0" marginheight="0" marginwidth="0" scrolling="no" style="position: static; top: 0px; width: 32px; margin: 0px; border-style: none; left: 0px; visibility: visible; height: 20px;" tabindex="0" vspace="0" id="I0_1539832000115" name="I0_1539832000115" src="Spherical%20Environment%20Mapping%20(MatCap_LitSphere)%20and%20Normal%20Mapping_files/fastbutton.htm" data-gapiattached="true" title="G+" width="100%" frameborder="0"></iframe></div>
+			
+			<div class="fb-like fb_iframe_widget" data-href="http://www.clicktorelease.com/code/spherical-normal-mapping/" data-width="The pixel width of the plugin" data-height="The pixel height of the plugin" data-colorscheme="light" data-layout="button_count" data-action="like" data-show-faces="true" data-send="false" fb-xfbml-state="rendered" fb-iframe-plugin-query="action=like&amp;app_id=&amp;color_scheme=light&amp;container_width=645&amp;href=http%3A%2F%2Fwww.clicktorelease.com%2Fcode%2Fspherical-normal-mapping%2F&amp;layout=button_count&amp;locale=en_GB&amp;sdk=joey&amp;send=false&amp;show_faces=true&amp;width=The%20pixel%20width%20of%20the%20plugin"><span style="vertical-align: top; width: 0px; height: 0px; overflow: hidden;"><iframe name="f1de5ad21ca408e" allowtransparency="true" allowfullscreen="true" scrolling="no" allow="encrypted-media" title="fb:like Facebook Social Plugin" style="border: medium none; visibility: visible; width: 0px; height: 0px;" src="Spherical%20Environment%20Mapping%20(MatCap_LitSphere)%20and%20Normal%20Mapping_files/like.htm" height="1000px" frameborder="0"></iframe></span></div>
+		
+		</div>
+
+		<div id="options">
+			
+			<div id="pinBtn"></div>
+
+			<div id="optionsContent">
+				<h1>What to do</h1>
+				<p>You can press the gear button to pin the panel open. Play around selecting <b>texture</b> maps, <b>normal</b> maps to add bumpiness, and different <b>models</b>. There's lot of additional options to tweak, and you can even take <b>snapshots</b> to share. Enjoy, and don't forget to try it on your Android phone!</p><br>
+				<div class="block">
+					<h2>Material map</h2>
+					<ul class="list" id="materialList">
+					<li><a href="#" title="dark glass" class="button" style="background-image: url(&quot;matcap/944_large_remake2.jpg&quot;); background-size: contain;">&nbsp;</a></li><li><a href="#" title="twilight fisheye" class="button" style="background-image: url(&quot;matcap/TwilightFisheye.jpg&quot;); background-size: contain;">&nbsp;</a></li><li><a href="#" title="jeepster skinmat" class="button" style="background-image: url(&quot;matcap/jeepster_skinmat2.jpg&quot;); background-size: contain;">&nbsp;</a></li><li><a href="#" title="josh shing matcap" class="button" style="background-image: url(&quot;matcap/JoshSingh_matcap.jpg&quot;); background-size: contain;">&nbsp;</a></li><li><a href="#" title="dark grey metal" class="button" style="background-image: url(&quot;matcap/mydarkgreymetal_zbrush_matcap_by_digitalinkrod.jpg&quot;); background-size: contain;">&nbsp;</a></li><li><a href="#" title="green shin metal" class="button" style="background-image: url(&quot;matcap/mygreenshinmetal_zbrush_matcap_by_digitalinkrod.jpg&quot;); background-size: contain;">&nbsp;</a></li><li><a href="#" title="red metal" class="button" style="background-image: url(&quot;matcap/myredmetal_zbrush_matcap_by_digitalinkrod.jpg&quot;); background-size: contain;">&nbsp;</a></li><li><a href="#" title="gooch" class="button" style="background-image: url(&quot;matcap/gooch.jpg&quot;); background-size: contain;">&nbsp;</a></li><li><a href="#" title="smooth" class="button" style="background-image: url(&quot;matcap/smoothmat.jpg&quot;); background-size: contain;">&nbsp;</a></li><li><a href="#" title="LitSphere" class="button" style="background-image: url(&quot;matcap/LitSphere_example_4.jpg&quot;); background-size: contain;">&nbsp;</a></li><li><a href="#" title="green" class="button" style="background-image: url(&quot;matcap/5cad3098d01a8d232b753acad6f39972.jpg&quot;); background-size: contain;">&nbsp;</a></li><li><a href="#" title="bluew2" class="button" style="background-image: url(&quot;matcap/bluew2.jpg&quot;); background-size: contain;">&nbsp;</a></li><li><a href="#" title="bluew" class="button" style="background-image: url(&quot;matcap/bluew.jpg&quot;); background-size: contain;">&nbsp;</a></li><li><a href="#" title="blue green" class="button" style="background-image: url(&quot;matcap/blu_green_litsphere_by_jujikabane.jpg&quot;); background-size: contain;">&nbsp;</a></li><li><a href="#" title="daphz3" class="button" style="background-image: url(&quot;matcap/daphz3.jpg&quot;); background-size: contain;">&nbsp;</a></li><li><a href="#" title="daphz2" class="button" style="background-image: url(&quot;matcap/daphz2.jpg&quot;); background-size: contain;">&nbsp;</a></li><li><a href="#" title="daphz1" class="button" style="background-image: url(&quot;matcap/daphz1.jpg&quot;); background-size: contain;">&nbsp;</a></li><li><a href="#" title="scooby skin" class="button" style="background-image: url(&quot;matcap/scooby_skin_mix.jpg&quot;); background-size: contain;">&nbsp;</a></li><li><a href="#" title="litsphere" class="button" style="background-image: url(&quot;matcap/LitSphere_test_05.jpg&quot;); background-size: contain;">&nbsp;</a></li><li><a href="#" title="litsphere2" class="button" style="background-image: url(&quot;matcap/LitSphere_test_04.jpg&quot;); background-size: contain;">&nbsp;</a></li><li><a href="#" title="litsphere3" class="button" style="background-image: url(&quot;matcap/LitSphere_test_03.jpg&quot;); background-size: contain;">&nbsp;</a></li><li><a href="#" title="litsphere3" class="button" style="background-image: url(&quot;matcap/LitSphere_test_02.jpg&quot;); background-size: contain;">&nbsp;</a></li><li><a href="#" title="litsphere3" class="button" style="background-image: url(&quot;matcap/LitSphere_example_5.jpg&quot;); background-size: contain;">&nbsp;</a></li><li><a href="#" title="litsphere3" class="button" style="background-image: url(&quot;matcap/LitSphere_example_3.jpg&quot;); background-size: contain;">&nbsp;</a></li><li><a href="#" title="litsphere3" class="button" style="background-image: url(&quot;matcap/LitSphere_example_2.jpg&quot;); background-size: contain;">&nbsp;</a></li><li><a href="#" title="litsphere3" class="button" style="background-image: url(&quot;matcap/matball07.jpg&quot;); background-size: contain;">&nbsp;</a></li><li><a href="#" title="litsphere3" class="button" style="background-image: url(&quot;matcap/matball04.jpg&quot;); background-size: contain;">&nbsp;</a></li><li><a href="#" title="litsphere3" class="button" style="background-image: url(&quot;matcap/matball06.jpg&quot;); background-size: contain;">&nbsp;</a></li><li><a href="#" title="litsphere3" class="button" style="background-image: url(&quot;matcap/matball05.jpg&quot;); background-size: contain;">&nbsp;</a></li><li><a href="#" title="litsphere3" class="button" style="background-image: url(&quot;matcap/matball03.jpg&quot;); background-size: contain;">&nbsp;</a></li><li><a href="#" title="litsphere3" class="button" style="background-image: url(&quot;matcap/matball02.jpg&quot;); background-size: contain;">&nbsp;</a></li><li><a href="#" title="litsphere3" class="button" style="background-image: url(&quot;matcap/matball01.jpg&quot;); background-size: contain;">&nbsp;</a></li><li><a href="#" title="red sphere" class="button" style="background-image: url(&quot;matcap/redsphere.jpg&quot;); background-size: contain;">&nbsp;</a></li><li><a href="#" title="pink" class="button" style="background-image: url(&quot;matcap/93e1bbcf77ece0c0f7fc79ecb8ff0d00.jpg&quot;); background-size: contain;">&nbsp;</a></li><div class="dropzone">Drop</div></ul>
+				</div>
+				<div class="block">
+					<h2>Normal map</h2>
+					<ul class="list" id="normalList">
+					<li><a href="#" title="243" class="button" style="background-image: url(&quot;normal/243-normal.jpg&quot;); background-size: contain;">&nbsp;</a></li><li><a href="#" title="243" class="button" style="background-image: url(&quot;normal/wrinkle-normal.jpg&quot;); background-size: contain;">&nbsp;</a></li><li><a href="#" title="243" class="button" style="background-image: url(&quot;normal/295-normal.jpg&quot;); background-size: contain;">&nbsp;</a></li><li><a href="#" title="243" class="button" style="background-image: url(&quot;normal/879-normal.jpg&quot;); background-size: contain;">&nbsp;</a></li><li><a href="#" title="243" class="button" style="background-image: url(&quot;normal/2563-normal.jpg&quot;); background-size: contain;">&nbsp;</a></li><li><a href="#" title="243" class="button" style="background-image: url(&quot;normal/brick-normal.jpg&quot;); background-size: contain;">&nbsp;</a></li><li><a href="#" title="243" class="button" style="background-image: url(&quot;normal/floor2_ddn.jpg&quot;); background-size: contain;">&nbsp;</a></li><li><a href="#" title="243" class="button" style="background-image: url(&quot;normal/forestfloornrmii7.jpg&quot;); background-size: contain;">&nbsp;</a></li><li><a href="#" title="243" class="button" style="background-image: url(&quot;normal/normal.jpg&quot;); background-size: contain;">&nbsp;</a></li><li><a href="#" title="243" class="button" style="background-image: url(&quot;normal/normalmap_tile_even.jpg&quot;); background-size: contain;">&nbsp;</a></li><li><a href="#" title="243" class="button" style="background-image: url(&quot;normal/normalmap1.jpg&quot;); background-size: contain;">&nbsp;</a></li><li><a href="#" title="243" class="button" style="background-image: url(&quot;normal/stage7.jpg&quot;); background-size: contain;">&nbsp;</a></li><li><a href="#" title="243" class="button" style="background-image: url(&quot;normal/Worn%20Temple%20Wall.jpg&quot;); background-size: contain;">&nbsp;</a></li><li><a href="#" title="243" class="button" style="background-image: url(&quot;normal/fig29.png&quot;); background-size: contain;">&nbsp;</a></li><li><a href="#" title="243" class="button" style="background-image: url(&quot;normal/Wall3_normalmap.jpg&quot;); background-size: contain;">&nbsp;</a></li><li><a href="#" title="243" class="button" style="background-image: url(&quot;normal/metal1_normalmap.jpg&quot;); background-size: contain;">&nbsp;</a></li><li><a href="#" title="243" class="button" style="background-image: url(&quot;normal/99232450425c8132b17dbccf65da365a.jpg&quot;); background-size: contain;">&nbsp;</a></li><li><a href="#" title="243" class="button" style="background-image: url(&quot;normal/4918-normal.jpg&quot;); background-size: contain;">&nbsp;</a></li><li><a href="#" title="243" class="button" style="background-image: url(&quot;normal/cr_wallpaper1_NRM.jpg&quot;); background-size: contain;">&nbsp;</a></li><li><a href="#" title="243" class="button" style="background-image: url(&quot;normal/stone_wall_normal_map.jpg&quot;); background-size: contain;">&nbsp;</a></li><li><a href="#" title="243" class="button" style="background-image: url(&quot;normal/02.jpg&quot;); background-size: contain;">&nbsp;</a></li><li><a href="#" title="243" class="button" style="background-image: url(&quot;normal/242-normal.jpg&quot;); background-size: contain;">&nbsp;</a></li><li><a href="#" title="243" class="button" style="background-image: url(&quot;normal/7146-normal.jpg&quot;); background-size: contain;">&nbsp;</a></li><li><a href="#" title="243" class="button" style="background-image: url(&quot;normal/1324-normal.jpg&quot;); background-size: contain;">&nbsp;</a></li><li><a href="#" title="243" class="button" style="background-image: url(&quot;normal/Rock_01_local.jpg&quot;); background-size: contain;">&nbsp;</a></li><li><a href="#" title="243" class="button" style="background-image: url(&quot;normal/6624-normal.jpg&quot;); background-size: contain;">&nbsp;</a></li><li><a href="#" title="243" class="button" style="width: 85px; text-align: center; background-size: contain;">None</a></li><div class="dropzone">Drop</div></ul>
+				</div>
+				<div class="block">
+					<h2>Normal scale</h2>
+					<p class="input"><span>Intensity:</span> <input type="range" min="0" max="200" value="50" id="normalValueInput"></p>		
+					<p class="input"><span>Repeat:</span> <input type="range" min="1" max="10" value="1" id="normalRepeatInput"></p>
+				</div>
+				<div class="block">
+					<h2>Model</h2>
+					<ul class="list" id="geometryList">
+						<li><a href="#" class="button active" data-value="cube">Cube</a></li>
+						<li><a href="#" class="button" data-value="blob">Blob</a></li>
+						<li><a href="#" class="button" data-value="torusKnot">Torus Knot</a></li>
+						<li><a href="#" class="button" data-value="leePerry">Lee Perry</a></li>
+						<li><a href="#" class="button" data-value="suzanne">Suzanne</a></li>
+					</ul>
+				</div>
+				<div class="block">
+					<h2>Rim lighting</h2>
+					<p class="input"><span>Intensity:</span> <input type="range" min="0" max="100" value="0" id="rimValueInput"></p>		
+					<p class="input"><span>Power:</span> <input type="range" min="0" max="100" value="40" id="rimPowerValueInput"></p>	
+				</div>
+				<div class="block">
+					<h2>Render options</h2>
+					<p><a href="#" id="screenBlendingBtn" class="button">Screen Blending</a> <a href="#" id="antialiasingButton" class="button">Antialiasing</a></p>
+				</div>
+				<div class="block">	
+					<h2>Actions</h2>	
+					<p><a href="#" id="fullscreenBtn" class="button">Fullscreen</a> <a href="#" id="snapshotBtn" class="button">Snapshot</a></p>
+				</div>
+			</div>
+		</div>
+
+		<div id="loader" class="">
+			<div id="mainLoader">
+			  <div id="cube">
+			    <div></div>
+			    <div></div>
+			    <div></div>
+			    <div></div>
+			  </div>
+			  <div id="disc2"></div>
+			</div>
+		</div>
+
+<script src="Spherical%20Environment%20Mapping%20(MatCap_LitSphere)%20and%20Normal%20Mapping_files/Three_002.js"></script>
+<script src="Spherical%20Environment%20Mapping%20(MatCap_LitSphere)%20and%20Normal%20Mapping_files/Three.js"></script>
+<script src="Spherical%20Environment%20Mapping%20(MatCap_LitSphere)%20and%20Normal%20Mapping_files/Detector.js"></script>
+<script src="Spherical%20Environment%20Mapping%20(MatCap_LitSphere)%20and%20Normal%20Mapping_files/Stats.js"></script>
+<script src="Spherical%20Environment%20Mapping%20(MatCap_LitSphere)%20and%20Normal%20Mapping_files/ImprovedNoise.js"></script>
+<script src="Spherical%20Environment%20Mapping%20(MatCap_LitSphere)%20and%20Normal%20Mapping_files/canvas-toBlob.js"></script>
+
+<script src="Spherical%20Environment%20Mapping%20(MatCap_LitSphere)%20and%20Normal%20Mapping_files/suzanne-raw.js"></script>
+
+<script type="x-shader/x-vertex" id="sphere-vs">
+
+void main() {
+	gl_Position = projectionMatrix * modelViewMatrix * vec4( position, 1.0 );
+}
+
+</script>
+
+<script type="x-shader/x-vertex" id="sphere-fs">
+
+uniform vec2 resolution;
+uniform float noise;
+
+#define VIG_REDUCTION_POWER 5.5
+#define VIG_BOOST 4.1
+
+float random(vec3 scale,float seed){return fract(sin(dot(gl_FragCoord.xyz+seed,scale))*43758.5453+seed);}
+
+void main() {
+
+	vec3 color = vec3( 34. / 255. );
+	vec2 center = resolution * 0.5;
+	float vignette = distance( center, gl_FragCoord.xy ) / resolution.x;
+	vignette = VIG_BOOST - vignette * VIG_REDUCTION_POWER;
+
+	float n = noise * ( .5 - random( vec3( 1. ), length( gl_FragCoord ) ) );
+
+	gl_FragColor = vec4( color * vec3( vignette ) + vec3( n ), 1. );
+
+}
+
+</script>
+
+<script type="x-shader/x-vertex" id="vertexShader">
+
+	attribute vec4 tangent;
+
+	uniform float time;
+	uniform vec2 repeat;
+	uniform float useNormal;
+	uniform float useRim;
+
+	varying vec2 vUv;
+	varying vec3 vTangent;
+	varying vec3 vBinormal;
+	varying vec3 vNormal;
+	varying vec3 vEye;
+	varying vec3 vU;
+	varying vec2 vN;
+
+	void main() {
+
+		vU = normalize( vec3( modelViewMatrix * vec4( position, 1.0 ) ) );
+
+		if( useNormal == 0. ) {
+			vec3 n = normalize( normalMatrix * normal );
+			vec3 r = reflect( vU, n );
+			float m = 2.0 * sqrt( r.x * r.x + r.y * r.y + ( r.z + 1.0 ) * ( r.z+1.0 ) );
+			vN = vec2( r.x / m + 0.5,  r.y / m + 0.5 );
+		} else {
+			vN = vec2( 0. );
+		}
+
+		vUv = repeat * uv;
+		gl_Position = projectionMatrix * modelViewMatrix * vec4( position, 1.0 );
+
+		vNormal = normalize( normalMatrix * normal );
+		if( useNormal == 1. ) {
+			vTangent = normalize( normalMatrix * tangent.xyz );
+			vBinormal = normalize( cross( vNormal, vTangent ) * tangent.w );
+		} else {
+			vTangent = vec3( 0. );
+			vBinormal = vec3( 0. );
+		}
+
+		if( useRim > 0. ) {
+			vEye = ( modelViewMatrix * vec4( position, 1.0 ) ).xyz;
+		} else {
+			vEye = vec3( 0. );
+		}
+
+	}
+
+	</script>
+	
+	<script type="x-shader/x-vertex" id="fragmentShader">
+	
+	uniform float time;
+	uniform float bump;
+	uniform sampler2D tNormal;
+	uniform sampler2D tMatCap;
+	uniform float noise;
+	uniform float useNormal;
+	uniform float useRim;
+	uniform float rimPower;
+	uniform float useScreen;
+	uniform float normalScale;
+	uniform float normalRepeat;
+
+	varying vec2 vUv;
+	varying vec3 vTangent;
+	varying vec3 vBinormal;
+	varying vec3 vNormal;
+	varying vec3 vEye;
+	varying vec3 vU;
+	varying vec2 vN;
+
+	float random(vec3 scale,float seed){return fract(sin(dot(gl_FragCoord.xyz+seed,scale))*43758.5453+seed);}
+
+	void main() {
+		
+		vec3 finalNormal = vNormal;
+		vec2 calculatedNormal = vN;
+
+		if( useNormal == 1. ) {
+			vec3 normalTex = texture2D( tNormal, vUv * normalRepeat ).xyz * 2.0 - 1.0;
+			normalTex.xy *= normalScale;
+			normalTex.y *= -1.;
+			normalTex = normalize( normalTex );
+			mat3 tsb = mat3( normalize( vTangent ), normalize( vBinormal ), normalize( vNormal ) );
+			finalNormal = tsb * normalTex;
+
+			vec3 r = reflect( vU, normalize( finalNormal ) );
+			float m = 2.0 * sqrt( r.x * r.x + r.y * r.y + ( r.z + 1.0 ) * ( r.z+1.0 ) );
+			calculatedNormal = vec2( r.x / m + 0.5,  r.y / m + 0.5 );
+		}
+
+		vec3 base = texture2D( tMatCap, calculatedNormal ).rgb;
+		
+		// rim lighting
+
+		if( useRim > 0. ) {
+			float f = rimPower * abs( dot( vNormal, normalize( vEye ) ) );
+			f = useRim * ( 1. - smoothstep( 0.0, 1., f ) );
+	        base += vec3( f );
+	    }
+
+	    // screen blending
+
+        if( useScreen == 1. ) {
+			base = vec3( 1. ) - ( vec3( 1. ) - base ) * ( vec3( 1. ) - base );
+		}
+
+        // noise 
+
+        base += noise * ( .5 - random( vec3( 1. ), length( gl_FragCoord ) ) );
+
+		gl_FragColor = vec4( base, 1. );
+
+	}
+	
+	</script>
+	
+<script>
+
+'use strict'
+
+var loader = document.getElementById( 'loader' );
+showLoader( true );
+
+var presets = [
+
+];
+
+var materials = [
+	{ name: 'dark glass', diffuse: '944_large_remake2.jpg' },
+	{ name: 'twilight fisheye', diffuse: 'TwilightFisheye.jpg' },
+	{ name: 'jeepster skinmat', diffuse: 'jeepster_skinmat2.jpg' },
+	{ name: 'josh shing matcap', diffuse: 'JoshSingh_matcap.jpg' },
+	{ name: 'dark grey metal', diffuse: 'mydarkgreymetal_zbrush_matcap_by_digitalinkrod.jpg' },
+	{ name: 'green shin metal', diffuse: 'mygreenshinmetal_zbrush_matcap_by_digitalinkrod.jpg' },
+	{ name: 'red metal', diffuse: 'myredmetal_zbrush_matcap_by_digitalinkrod.jpg' },
+	{ name: 'gooch', diffuse: 'gooch.jpg' },
+	{ name: 'smooth', diffuse: 'smoothmat.jpg' },
+	{ name: 'LitSphere', diffuse: 'LitSphere_example_4.jpg' },
+	{ name: 'green', diffuse: '5cad3098d01a8d232b753acad6f39972.jpg' },
+	{ name: 'bluew2', diffuse: 'bluew2.jpg' },
+	{ name: 'bluew', diffuse: 'bluew.jpg' },
+	{ name: 'blue green', diffuse: 'blu_green_litsphere_by_jujikabane.jpg' },
+	{ name: 'daphz3', diffuse: 'daphz3.jpg' },
+	{ name: 'daphz2', diffuse: 'daphz2.jpg' },
+	{ name: 'daphz1', diffuse: 'daphz1.jpg' },
+	{ name: 'scooby skin', diffuse: 'scooby_skin_mix.jpg' },
+	{ name: 'litsphere', diffuse: 'LitSphere_test_05.jpg' },
+	{ name: 'litsphere2', diffuse: 'LitSphere_test_04.jpg' },
+	{ name: 'litsphere3', diffuse: 'LitSphere_test_03.jpg' },
+	{ name: 'litsphere3', diffuse: 'LitSphere_test_02.jpg' },
+	{ name: 'litsphere3', diffuse: 'LitSphere_example_5.jpg' },
+	{ name: 'litsphere3', diffuse: 'LitSphere_example_3.jpg' },
+	{ name: 'litsphere3', diffuse: 'LitSphere_example_2.jpg' },
+	{ name: 'litsphere3', diffuse: 'matball07.jpg' },
+	{ name: 'litsphere3', diffuse: 'matball04.jpg' },
+	{ name: 'litsphere3', diffuse: 'matball06.jpg' },
+	{ name: 'litsphere3', diffuse: 'matball05.jpg' },
+	{ name: 'litsphere3', diffuse: 'matball03.jpg' },
+	{ name: 'litsphere3', diffuse: 'matball02.jpg' },
+	{ name: 'litsphere3', diffuse: 'matball01.jpg' },
+	{ name: 'red sphere', diffuse: 'redsphere.jpg' },
+	{ name: 'pink', diffuse: '93e1bbcf77ece0c0f7fc79ecb8ff0d00.jpg' }
+];
+
+var normals = [
+
+	{ name: '243', map: '243-normal.jpg' },
+	{ name: '243', map: 'wrinkle-normal.jpg' },
+	{ name: '243', map: '295-normal.jpg' },
+	{ name: '243', map: '879-normal.jpg' },
+	{ name: '243', map: '2563-normal.jpg' },
+	{ name: '243', map: 'brick-normal.jpg' },
+	{ name: '243', map: 'floor2_ddn.jpg' },
+	{ name: '243', map: 'forestfloornrmii7.jpg' },
+	{ name: '243', map: 'normal.jpg' },
+	{ name: '243', map: 'normalmap_tile_even.jpg' },
+	{ name: '243', map: 'normalmap1.jpg' },
+	{ name: '243', map: 'stage7.jpg' },
+	{ name: '243', map: 'Worn Temple Wall.jpg' },
+
+	{ name: '243', map: 'fig29.png' },
+	{ name: '243', map: 'Wall3_normalmap.jpg' },
+	{ name: '243', map: 'metal1_normalmap.jpg' },
+	{ name: '243', map: '99232450425c8132b17dbccf65da365a.jpg' },
+	{ name: '243', map: '4918-normal.jpg' },
+	{ name: '243', map: 'cr_wallpaper1_NRM.jpg' },
+	{ name: '243', map: 'stone_wall_normal_map.jpg' },
+	{ name: '243', map: '02.jpg' },
+	{ name: '243', map: '242-normal.jpg' },
+	{ name: '243', map: '7146-normal.jpg' },
+	{ name: '243', map: '1324-normal.jpg' },
+	{ name: '243', map: 'Rock_01_local.jpg' },
+	{ name: '243', map: '6624-normal.jpg' }
+
+]
+
+var materialList = document.getElementById( 'materialList' );
+for( var j in materials ) {
+	var li = document.createElement( 'li' );
+	var a = document.createElement( 'a' );
+	a.setAttribute( 'href', '#' );
+	a.setAttribute( 'title', materials[ j ].name );
+	a.innerHTML = '&nbsp;';
+	a.className = 'button';
+	( function( f ) { a.addEventListener( 'click', function( e ) {
+		material.uniforms.tMatCap.value = THREE.ImageUtils.loadTexture( 'matcap/' + f );
+		e.preventDefault();
+	} ); } )( materials[ j ].diffuse );
+	a.style.backgroundImage = 'url(matcap/' + encodeURIComponent( materials[ j ].diffuse ) + ')';
+	a.style.backgroundSize = 'contain';
+	li.appendChild( a );
+	materialList.appendChild( li );
+}
+materialList.appendChild( createDropZone( function() {
+	material.uniforms.tMatCap.value = new THREE.Texture( this );
+	material.uniforms.tMatCap .value.needsUpdate = true;
+} ) );
+
+function isPowerOfTwo(x) {
+    return (x & (x - 1)) == 0;
+}
+
+function nextHighestPowerOfTwo(x) {
+    --x;
+    for (var i = 1; i < 32; i <<= 1) {
+        x = x | x >> i;
+    }
+    return x + 1;
+}
+
+function createNormalButton( map ) {
+
+	var li = document.createElement( 'li' );
+	var a = document.createElement( 'a' );
+	a.setAttribute( 'href', '#' );
+	a.setAttribute( 'title', normals[ j ].name );
+	a.innerHTML = '&nbsp;';
+	a.className = 'button';
+	if( map == null ) {
+		a.addEventListener( 'click', function( e ) {
+			material.uniforms.useNormal.value = 0.;
+			e.preventDefault();
+		} );
+		a.textContent = 'None';
+		a.style.width = '85px';
+		a.style.textAlign = 'center';
+	} else {
+		a.addEventListener( 'click', function( e ) {
+
+			var img = new Image();
+			img.addEventListener( 'load', function( e ) {
+
+				adjustNormalMap( img );
+				
+			} );
+			img.src = 'normal/' + map;
+
+			e.preventDefault();
+		} );
+		a.style.backgroundImage = 'url(normal/' + encodeURIComponent( map ) + ')';
+	}
+	a.style.backgroundSize = 'contain';
+	li.appendChild( a );
+
+	return li;
+}
+
+function createDropZone( imgCallback ) {
+
+	var dropzone = document.createElement( 'div' );
+	dropzone.className = 'dropzone';
+	dropzone.textContent = 'Drop';
+				
+	dropzone.addEventListener('dragenter', function(event){
+		this.style.backgroundColor = 'rgba( 255,255,255,.2 )';
+	}, true );
+
+	dropzone.addEventListener('dragleave', function(event){
+		this.style.backgroundColor = 'transparent';
+	}, true );
+
+	dropzone.addEventListener('dragover', function(event) {
+		this.style.backgroundColor = 'rgba( 255,255,255,.2 )';
+		event.preventDefault();
+	}, true);
+
+	dropzone.addEventListener('drop', function(event) {
+		
+		showLoader( true );
+
+		this.style.backgroundColor = 'transparent';
+		event.preventDefault();
+		var allTheFiles = event.dataTransfer.files;
+		var reader = new FileReader();
+		reader.onload = function(e) {
+			try {
+				
+				var img = new Image();
+		        img.onload = imgCallback;
+		        img.src = e.currentTarget.result;
+
+				showLoader( false );
+			} catch( e ) {
+				alert( 'Couldn\'t read that file. Make sure it\'s an mp3 or ogg file (Chrome) or ogg file (Firefox).' );
+			}
+		};
+		reader.readAsDataURL( allTheFiles[ 0 ] );
+	}, true);
+
+	return dropzone;
+
+}
+
+var normalList = document.getElementById( 'normalList' );
+for( var j in normals ) {
+	normalList.appendChild( createNormalButton( normals[ j ].map ) );
+}
+normalList.appendChild( createNormalButton( null ) );
+normalList.appendChild( createDropZone( function() {
+	adjustNormalMap( this );
+} ) );
+
+function adjustNormalMap( img ) {
+
+	if (!isPowerOfTwo( img.width) || !isPowerOfTwo( img.height ) ) {
+		var canvas = document.createElement("canvas");
+		canvas.width = nextHighestPowerOfTwo(img.width);
+		canvas.height = nextHighestPowerOfTwo(img.height);
+		var ctx = canvas.getContext("2d");
+		ctx.drawImage( img, 0, 0, canvas.width, canvas.height );
+		img = canvas;
+	}
+	material.uniforms.tNormal.value = new THREE.Texture( img );
+	material.uniforms.tNormal.value.needsUpdate = true;
+	material.uniforms.tNormal.value.wrapS = material.uniforms.tNormal.value.wrapT = THREE.RepeatWrapping;
+	material.uniforms.useNormal.value = 1.;
+
+}
+
+document.getElementById( 'pinBtn' ).addEventListener( 'click', function( e ) {
+	optionsPinned = !optionsPinned;
+	this.classList.toggle( 'pinned', optionsPinned );
+	optionsPanel.classList.toggle( 'pinned', optionsPinned );
+	e.preventDefault();
+} );
+
+var container = document.getElementById( 'container' );
+
+document.getElementById( 'screenBlendingBtn' ).addEventListener( 'click', function( e ) {
+	material.uniforms.useScreen.value = 1 - material.uniforms.useScreen.value;
+	this.classList.toggle( 'active', material.uniforms.useScreen.value === 1 );
+	e.preventDefault();
+} );
+
+document.getElementById( 'normalValueInput' ).addEventListener( 'change', function( e ) {
+	material.uniforms.normalScale.value = this.value / 100;
+	e.preventDefault();
+} );
+
+document.getElementById( 'normalRepeatInput' ).addEventListener( 'change', function( e ) {
+	material.uniforms.normalRepeat.value = this.value;
+	e.preventDefault();
+} );
+
+document.getElementById( 'rimValueInput' ).addEventListener( 'change', function( e ) {
+	material.uniforms.useRim.value = this.value / 100;
+	e.preventDefault();
+} );
+
+document.getElementById( 'rimPowerValueInput' ).addEventListener( 'change', function( e ) {
+	material.uniforms.rimPower.value = this.value / 20;
+	e.preventDefault();
+} );
+
+[].slice.call( document.querySelectorAll( 'a[rel=external]' ), 0 ).forEach( function( a ) {
+	a.addEventListener( 'click', function( e ) {
+		window.open( this.href, '_blank' );
+		e.preventDefault();
+	}, false );
+} );
+
+var noise = new ImprovedNoise();
+
+var isSafari = /Safari/.test(navigator.userAgent) && /Apple Computer/.test(navigator.vendor );
+
+var renderer, scene, camera, mesh, fov = 120, nfov = 45,
+sphereMaterial, material, start = Date.now(),
+onMouseDownMouseX = 0, onMouseDownMouseY = 0,
+lon = 90, nlon = 110, onMouseDownLon = 0,
+lat = 0, nlat = 17, onMouseDownLat = 0,
+phi = 0, theta = 0,
+renderNoise = .04, nRenderNoise = .04, CSSAntialias = false, useScreenBlend = false,
+lat = 15, isUserInteracting = false,
+onPointerDownPointerX, onPointerDownPointerY, onPointerDownLon, onPointerDownLat,
+optionsPinned = false;
+var optionsPanel = document.getElementById( 'options' );
+
+var modelButtons = [].slice.call( document.querySelectorAll( '#geometryList li a' ), 0 );
+
+modelButtons.forEach( function( el ) {
+	el.addEventListener( 'click', function( ev ) {
+		showLoader( true );
+		var f = null;
+		modelButtons.forEach( function( i ) { i.classList.remove( 'active' ) } );
+		switch( el.getAttribute( 'data-value' ) ){
+			case 'cube': f = loadCube; break;
+			case 'blob': f = loadBlob; break;
+			case 'torusKnot': f = loadTorusKnot; break;
+			case 'leePerry': f = loadLeePerrySmith; break;
+			case 'suzanne': f = loadSuzanne; break;
+		}
+		if( f ) {
+			el.classList.add( 'active' );
+			setTimeout( function() { 
+				f( function( g ) {
+					clearMesh();
+					addGeometry( g ); 
+		    	} );
+		    }, 250 );
+		}
+	} );
+} );
+
+document.getElementById( 'snapshotBtn' ).addEventListener( 'click', function( e ) {
+
+	var name = 'clicktorelease.com-litSphere-' + Date.now() + '.png';
+
+	var canvas = document.createElement( 'canvas' );
+	canvas.width = renderer.domElement.width / ( CSSAntialias?2:1 );
+	canvas.height = renderer.domElement.height / ( CSSAntialias?2:1 );
+	var ctx = canvas.getContext( '2d' );
+	var src = renderer.domElement;
+
+	ctx.drawImage( src, 0, 0, renderer.domElement.width, renderer.domElement.height, 0, 0, canvas.width, canvas.height );
+
+	var a = this;
+
+	if( isSafari ) {
+		var data = canvas.toDataURL( 'image/png' );
+		window.open( data, name );
+		return false;
+	} else {
+	
+		canvas.toBlob( function( blob ) {
+			var url;
+			if( window.webkitURL ) {
+				url = window.webkitURL.createObjectURL( blob );
+			} else {
+				url = URL.createObjectURL( blob );
+			}
+			a.setAttribute( 'download', name );
+			a.setAttribute( 'href', url );
+		} );
+	}
+
+} );
+
+window.addEventListener( 'load', init );
+
+function showLoader( show ) {
+
+	if( show ) loader.classList.add( 'visible' );
+	else loader.classList.remove( 'visible' );
+}
+
+function loadCube( callback ) {
+
+	var geometry = new THREE.CubeGeometry( 30, 30, 30, 10, 10, 10 );
+	var modifier = new THREE.SubdivisionModifier( 2 );
+	modifier.modify( geometry );
+	material.uniforms.repeat.value.set( 1, 1 );
+	callback( geometry );
+
+}
+
+function loadBlob( callback ) {
+
+	function turbulence( x, y, z ) {
+        var t = -.5;
+        for( var f = 1 ; f <= 100/12 ; f *= 2) {
+            t += Math.abs( noise.noise( f * x, f * y, f * z ) / f );
+        }
+        return t;
+    }
+
+	var geometry = new THREE.CubeGeometry( 30, 30, 30, 30, 30, 30 );
+    for( var j = 0; j < geometry.vertices.length; j++ ) {
+        var v = geometry.vertices[ j ];
+        var n = v.clone();
+        n.normalize();
+        v.copy( n );
+        v.multiplyScalar( 30 );
+        var f = .05;
+        //var d = - 10 * turbulence( f * v.x, f * v.y, f * v.z );
+        var d = 10 * noise.noise( f * v.x, f * v.y, f * v.z );
+        v.add( n.multiplyScalar( d ) );
+    }
+
+    material.uniforms.repeat.value.set( 1, 1 );
+
+	callback( geometry );
+
+}
+
+function loadTorusKnot( callback ) {
+
+    material.uniforms.repeat.value.set( 8, 1 );
+
+	callback( new THREE.TorusKnotGeometry( 20, 6, 200, 100, 1, 3 ) );
+
+}
+
+function loadLeePerrySmith( callback ) {
+
+	var loader = new THREE.JSONLoader();
+
+    loader.load( 'LeePerrySmith.js', function( geometry ) {
+    	
+    	var m = new THREE.Matrix4();
+    	var s = 10;
+    	m.scale( new THREE.Vector3( s, s, s) );
+
+    	THREE.GeometryUtils.center( geometry );
+    	geometry.vertices.forEach( function( v ) {
+    		v.applyMatrix4( m );
+    	} );
+
+    	geometry.verticesNeedUpdate = true;
+	    geometry.normalsNeedUpdate = true;
+	   	geometry.uvsNeedUpdate = true;
+	   	geometry.computeCentroids();
+	    geometry.computeFaceNormals();
+	    geometry.computeVertexNormals();
+	    geometry.computeMorphNormals();
+	    geometry.computeTangents();
+
+    	var modifier = new THREE.SubdivisionModifier( 1 );
+		modifier.modify( geometry );
+
+    	material.uniforms.repeat.value.set( 4, 4 );
+
+		callback( geometry );
+
+    } );
+
+}
+
+function loadSuzanne( callback ) {
+
+	var geometry = new THREE.Geometry();
+	for( var j = 0; j < suzanne.vertices.length; j++ ) {
+		var v = new THREE.Vector3( suzanne.vertices[ j ][ 0 ], suzanne.vertices[ j ][ 1 ], suzanne.vertices[ j ][ 2 ] );
+		v.multiplyScalar( 30 );
+		geometry.vertices.push( v );
+	}
+	for( var j = 0; j < suzanne.faces.length; j++ ) {
+		var f = new THREE.Face4( suzanne.faces[ j ][ 0 ], suzanne.faces[ j ][ 1 ], suzanne.faces[ j ][ 2 ], suzanne.faces[ j ][ 3 ] );
+		geometry.faces.push( f );
+		var uvs = [];
+		var ids = [ 'a', 'b', 'c', 'd' ];
+		for( var i = 0; i < ids.length; i++ ) {
+			var vertex = geometry.vertices[ f[ ids[ i ] ] ].clone();
+
+			var n = vertex.normalize();
+			var yaw = .5 - Math.atan( n.z, - n.x ) / ( 2.0 * Math.PI );
+			var pitch = .5 - Math.asin( n.y ) / Math.PI;
+
+			var u = yaw,
+				v = pitch;
+			uvs.push( new THREE.Vector2( u, v ) );
+		}
+		geometry.faceVertexUvs[ 0 ].push( uvs );
+	}
+
+	geometry.verticesNeedUpdate = true;
+    geometry.normalsNeedUpdate = true;
+   	geometry.uvsNeedUpdate = true;
+   	geometry.computeCentroids();
+    geometry.computeFaceNormals();
+    geometry.computeVertexNormals();
+    geometry.computeMorphNormals();
+    geometry.computeTangents();
+
+	var modifier = new THREE.SubdivisionModifier( 2 );
+	modifier.modify( geometry );
+
+   	material.uniforms.repeat.value.set( 4, 4 );
+
+    callback( geometry );
+
+}
+
+function clearMesh() {
+	if( mesh ) {
+		scene.remove( mesh );
+		mesh = null;
+	}
+}
+
+function addGeometry( geometry ) {
+
+	geometry.verticesNeedUpdate = true;
+    geometry.normalsNeedUpdate = true;
+   	geometry.uvsNeedUpdate = true;
+   	geometry.computeCentroids();
+    geometry.computeFaceNormals();
+    geometry.computeVertexNormals();
+    geometry.computeMorphNormals();
+    geometry.computeTangents();
+
+	mesh = new THREE.Mesh( geometry, material );
+	mesh.useQuaternion = true;
+	scene.add( mesh );
+
+	showLoader( false );
+
+}
+
+function setNoise( n ) {
+	material.uniforms.noise.value = sphereMaterial.uniforms.noise.value = n;
+}
+
+document.getElementById( 'antialiasingButton' ).addEventListener( 'click', function( e ) {
+
+	CSSAntialias = !CSSAntialias;
+	this.classList.toggle( 'active', CSSAntialias );
+	onWindowResize();
+
+	e.preventDefault();
+
+} );
+
+function init() {
+	
+	scene = new THREE.Scene();
+
+	camera = new THREE.PerspectiveCamera( fov, window.innerWidth / window.innerHeight, 10, 1000 );
+	camera.position.z = 100;
+	camera.target = new THREE.Vector3( 0, 0, 0 );
+
+	scene.add( camera );
+
+	material = new THREE.ShaderMaterial( {
+
+		uniforms: { 
+			tNormal: { type: 't', value: THREE.ImageUtils.loadTexture( 'normal/243-normal.jpg' ) },
+			tMatCap: { type: 't', value: THREE.ImageUtils.loadTexture( 'matcap/jeepster_skinmat2.jpg' ) },
+			time: { type: 'f', value: 0 },
+			bump: { type: 'f', value: 0 },
+			noise: { type: 'f', value: .04 },
+			repeat: { type: 'v2', value: new THREE.Vector2( 1, 1 ) },
+			useNormal: { type: 'f', value: 0 },
+			useRim: { type: 'f', value: 0 },
+			rimPower: { type: 'f', value: 2 },
+			useScreen: { type: 'f', value: 0 },
+			normalScale: { type: 'f', value: .5 },
+			normalRepeat: { type: 'f', value: 1 }
+		},
+		vertexShader: document.getElementById( 'vertexShader' ).textContent,
+		fragmentShader: document.getElementById( 'fragmentShader' ).textContent,
+		wrapping: THREE.ClampToEdgeWrapping,
+		shading: THREE.SmoothShading,
+		side: THREE.DoubleSide
+		
+	} );
+
+	material.uniforms.tMatCap.value.wrapS = material.uniforms.tMatCap.value.wrapT = 
+	THREE.ClampToEdgeWrapping;
+
+	material.uniforms.tNormal.value.wrapS = material.uniforms.tNormal.value.wrapT = 
+	THREE.RepeatWrapping;
+
+	sphereMaterial = new THREE.ShaderMaterial( {
+
+		uniforms: { 
+			resolution: { type: 'v2', value: new THREE.Vector2( 0, 0 ) },
+			noise: { type: 'f', value: .04 }
+		},
+		vertexShader: document.getElementById( 'sphere-vs' ).textContent,
+		fragmentShader: document.getElementById( 'sphere-fs' ).textContent,
+		side: THREE.BackSide
+		
+	} );
+
+	var sphere = new THREE.Mesh( new THREE.IcosahedronGeometry( 100, 1 ), sphereMaterial );
+	scene.add( sphere );
+
+	//material = new THREE.MeshLambertMaterial( { color: 0xff00ff });
+	//material = new THREE.MeshNormalMaterial();
+
+	renderer = new THREE.WebGLRenderer( { antialias: true, preserveDrawingBuffer: true });
+	renderer.setSize( window.innerWidth, window.innerHeight );
+
+	container.appendChild( renderer.domElement );
+
+	container.addEventListener( 'mousedown', onMouseDown, false );
+	container.addEventListener( 'mousemove', onMouseMove, false );
+	container.addEventListener( 'mouseup', onMouseUp, false );
+	container.addEventListener( 'mousewheel', onMouseWheel, false );
+	container.addEventListener( 'DOMMouseScroll', onMouseWheel, false);
+	container.addEventListener( 'touchstart', onTouchStart, false );
+	container.addEventListener( 'touchmove', onTouchMove, false );
+	container.addEventListener( 'touchend', onTouchEnd, false );
+	container.addEventListener( 'touchcancel', onTouchEnd, false );
+
+	window.addEventListener( 'resize', onWindowResize, false );
+
+	onWindowResize();
+	
+	clearMesh();
+	loadCube( addGeometry );
+
+	render();
+	
+}
+
+var el = document.getElementById( 'fullscreenBtn' );
+if( el ) {
+	var c = document.body;
+	el.addEventListener( 'click', function( e ) {
+		c.onwebkitfullscreenchange = function(e) {
+			c.onwebkitfullscreenchange = function() {
+			};
+		};
+		c.onmozfullscreenchange = function(e) {
+			c.onmozfullscreenchange = function() {
+			};
+		};
+		if( c.webkitRequestFullScreen ) c.webkitRequestFullScreen();
+		if( c.mozRequestFullScreen ) c.mozRequestFullScreen();
+		e.preventDefault();
+	}, false );
+}
+
+function onWindowResize() {
+	var s = CSSAntialias?2:1;
+	renderer.setSize( s * window.innerWidth, s * window.innerHeight );
+	camera.projectionMatrix.makePerspective( fov, window.innerWidth / window.innerHeight, camera.near, camera.far );
+	sphereMaterial.uniforms.resolution.value.set( s * window.innerWidth, s * window.innerHeight );
+}
+
+function onMouseWheel( event ) {
+
+	// WebKit
+
+	if ( event.wheelDeltaY ) {
+
+		nfov -= event.wheelDeltaY * 0.01;
+
+	// Opera / Explorer 9
+
+	} else if ( event.wheelDelta ) {
+
+		nfov -= event.wheelDelta * 0.05;
+
+	// Firefox
+
+	} else if ( event.detail ) {
+
+		nfov += event.detail * 1.0;
+
+	}
+	
+}
+
+function onMouseDown( event ) {
+
+	event.preventDefault();
+
+	isUserInteracting = true;
+
+	onPointerDownPointerX = event.clientX;
+	onPointerDownPointerY = event.clientY;
+
+	onPointerDownLon = lon;
+	onPointerDownLat = lat;
+	
+}
+
+function onMouseMove( event ) {
+
+	if ( isUserInteracting ) {
+	
+		nlon = ( event.clientX - onPointerDownPointerX ) * 0.1 + onPointerDownLon;
+		nlat = ( event.clientY - onPointerDownPointerY ) * 0.1 + onPointerDownLat;
+		
+	}
+
+}
+
+function onMouseUp( event ) {
+	
+	isUserInteracting = false;
+	
+}
+
+function onTouchStart( event ) {
+
+	event.preventDefault();
+
+	var t = event.touches[ 0 ];
+	isUserInteracting = true;
+	container.classList.add('dragging')
+
+	onPointerDownPointerX = t.clientX;
+	onPointerDownPointerY = t.clientY;
+
+	onPointerDownLon = lon;
+	onPointerDownLat = lat;
+	
+}
+
+function onTouchMove( event ) {
+
+	var t = event.touches[ 0 ];
+	nlon = ( t.clientX - onPointerDownPointerX ) * 0.1 + onPointerDownLon;
+	nlat = ( t.clientY - onPointerDownPointerY ) * 0.1 + onPointerDownLat;
+	
+}
+
+function onTouchEnd( event ) {
+
+	isUserInteracting = false;
+	
+}
+
+function render() {
+
+	//material.uniforms.time.value = .0001 * ( Date.now() - start );
+
+	lon += ( nlon - lon ) * .2;
+	lat += ( nlat - lat ) * .2;
+	fov += ( nfov - fov ) * .2;
+	renderNoise += ( nRenderNoise - renderNoise ) * .2;
+
+	setNoise( renderNoise );
+	camera.projectionMatrix.makePerspective( fov, window.innerWidth / window.innerHeight, camera.near, camera.far );
+	
+	lat = Math.max( - 85, Math.min( 85, lat ) );
+	phi = ( 90 - lat ) * Math.PI / 180;
+	theta = lon * Math.PI / 180;
+
+	camera.position.x = 100 * Math.sin( phi ) * Math.cos( theta );
+	camera.position.y = 100 * Math.cos( phi );
+	camera.position.z = 100 * Math.sin( phi ) * Math.sin( theta );
+
+	camera.lookAt( camera.target );
+	
+	if( mesh ) {
+		//mesh.rotation.x = phi;
+		//mesh.rotation.y = -theta;
+	}
+
+	camera.lookAt( scene.position );
+	
+	renderer.render( scene, camera );
+	requestAnimationFrame( render );
+	
+}
+
+</script>
+
+	
+
+<iframe scrolling="no" allowtransparency="true" src="Spherical%20Environment%20Mapping%20(MatCap_LitSphere)%20and%20Normal%20Mapping_files/widget_iframe.htm" title="Twitter settings iframe" style="display: none;" frameborder="0"></iframe><iframe name="oauth2relay2003299245" id="oauth2relay2003299245" src="Spherical%20Environment%20Mapping%20(MatCap_LitSphere)%20and%20Normal%20Mapping_files/postmessageRelay.htm" style="width: 1px; height: 1px; position: absolute; top: -100px;" tabindex="-1" aria-hidden="true"></iframe><iframe id="rufous-sandbox" scrolling="no" allowtransparency="true" allowfullscreen="true" style="position: absolute; visibility: hidden; display: none; width: 0px; height: 0px; padding: 0px; border: medium none;" title="Twitter analytics iframe" frameborder="0"></iframe></body></html>

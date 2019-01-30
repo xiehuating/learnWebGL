@@ -1,0 +1,1146 @@
+<!DOCTYPE html>
+<!-- saved from url=(0029)http://www.hiwebgl.com/?p=201 -->
+<html dir="ltr" lang="zh-CN"><script type="text/javascript">
+    var spector;
+    var captureOnLoad = false;
+    var captureOffScreen = false;
+    window.__SPECTOR_Canvases = [];
+
+    (function() {
+        var __SPECTOR_Origin_EXTENSION_GetContext = HTMLCanvasElement.prototype.getContext;
+        HTMLCanvasElement.prototype.__SPECTOR_Origin_EXTENSION_GetContext = __SPECTOR_Origin_EXTENSION_GetContext;
+
+        HTMLCanvasElement.prototype.getContext = function () {
+            var context = null;
+            if (!arguments.length) {
+                return context;
+            }
+
+            if (arguments.length === 1) {
+                context = this.__SPECTOR_Origin_EXTENSION_GetContext(arguments[0]);
+                if (context === null) {
+                    return context;
+                }
+            }
+            else if (arguments.length === 2) {
+                context = this.__SPECTOR_Origin_EXTENSION_GetContext(arguments[0], arguments[1]);
+                if (context === null) {
+                    return context;
+                }
+            }
+
+            var contextNames = ["webgl", "experimental-webgl", "webgl2", "experimental-webgl2"];
+            if (contextNames.indexOf(arguments[0]) !== -1) {
+                context.canvas.setAttribute("__spector_context_type", arguments[0]);
+                // Notify the page a canvas is available.
+                var myEvent = new CustomEvent("SpectorWebGLCanvasAvailableEvent");
+                document.dispatchEvent(myEvent);
+
+                if (captureOffScreen) {
+                    var found = false;
+                    for (var i = 0; i < window.__SPECTOR_Canvases.length; i++) {
+                        if (window.__SPECTOR_Canvases[i] === this) {
+                            found = true;
+                            break;
+                        }
+                    }
+                    if (!found) {
+                        window.__SPECTOR_Canvases.push(this);
+                    }
+                }
+
+                if (captureOnLoad) {
+                    // Ensures canvas is in the dom to capture the one we are currently tracking.
+                    if (this.parentElement || false) {
+                        spector.captureContext(context, 500, false);
+                        captureOnLoad = false;
+                    }
+                }
+            }
+
+            return context;
+        }
+    })()</script><script>(function main() {
+    // Create enabled event
+    function fireEnabledEvent() {
+        // If gli exists, then we are already present and shouldn't do anything
+        if (!window.gli) {
+            setTimeout(function () {
+                var enabledEvent = document.createEvent("Event");
+                enabledEvent.initEvent("WebGLEnabledEvent", true, true);
+                document.dispatchEvent(enabledEvent);
+            }, 0);
+        } else {
+            //console.log("WebGL Inspector already embedded on the page - disabling extension");
+        }
+    };
+
+    // Grab the path root from the extension
+    document.addEventListener("WebGLInspectorReadyEvent", function (e) {
+        var pathElement = document.getElementById("__webglpathroot");
+        if (window["gliloader"]) {
+            gliloader.pathRoot = pathElement.innerText;
+        } else {
+            // TODO: more?
+            window.gliCssUrl = pathElement.innerText + "gli.all.css";
+        }
+    }, false);
+
+    // Rewrite getContext to snoop for webgl
+    var originalGetContext = HTMLCanvasElement.prototype.getContext;
+    if (!HTMLCanvasElement.prototype.getContextRaw) {
+        HTMLCanvasElement.prototype.getContextRaw = originalGetContext;
+    }
+    HTMLCanvasElement.prototype.getContext = function () {
+        var ignoreCanvas = this.internalInspectorSurface;
+        if (ignoreCanvas) {
+            return originalGetContext.apply(this, arguments);
+        }
+
+        var result = originalGetContext.apply(this, arguments);
+        if (result == null) {
+            return null;
+        }
+
+        var contextNames = ["moz-webgl", "webkit-3d", "experimental-webgl", "webgl", "3d"];
+        var requestingWebGL = contextNames.indexOf(arguments[0]) != -1;
+        if (requestingWebGL) {
+            // Page is requesting a WebGL context!
+            fireEnabledEvent(this);
+
+            // If we are injected, inspect this context
+            if (window.gli) {
+                if (gli.host.inspectContext) {
+                    // TODO: pull options from extension
+                    result = gli.host.inspectContext(this, result);
+                    // NOTE: execute in a timeout so that if the dom is not yet
+                    // loaded this won't error out.
+                    window.setTimeout(function() {
+                        var hostUI = new gli.host.HostUI(result);
+                        result.hostUI = hostUI; // just so we can access it later for debugging
+                    }, 0);
+                }
+            }
+        }
+
+        return result;
+    };
+})();</script><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+
+<title>Lesson 5 引入纹理贴图 | HiWebGL</title>
+<link rel="profile" href="http://gmpg.org/xfn/11">
+<link rel="stylesheet" type="text/css" media="all" href="./Lesson 5 引入纹理贴图 _ HiWebGL_files/style.css">
+<!--[if IE]>
+<link rel="stylesheet" type="text/css" media="all" href="http://www.hiwebgl.com/wp-content/themes/mnchrome/style-ie.css" />
+<![endif]-->
+<link rel="stylesheet" type="text/css" media="all" href="./Lesson 5 引入纹理贴图 _ HiWebGL_files/custom.css"><link rel="pingback" href="http://www.hiwebgl.com/xmlrpc.php">
+<meta name="robots" content="index,follow">
+<link rel="canonical" href="http://www.hiwebgl.com/?p=201">
+<link rel="alternate" type="application/rss+xml" title="HiWebGL » Feed" href="http://www.hiwebgl.com/?feed=rss2">
+<link rel="alternate" type="application/rss+xml" title="HiWebGL » 评论 Feed" href="http://www.hiwebgl.com/?feed=comments-rss2">
+<link rel="alternate" type="application/rss+xml" title="HiWebGL » Lesson 5 引入纹理贴图 评论 Feed" href="http://www.hiwebgl.com/?feed=rss2&amp;p=201">
+<link rel="stylesheet" id="wm-css" href="./Lesson 5 引入纹理贴图 _ HiWebGL_files/style(1).css" type="text/css" media="all">
+<link rel="stylesheet" id="toc-screen-css" href="./Lesson 5 引入纹理贴图 _ HiWebGL_files/screen.css" type="text/css" media="all">
+<link rel="stylesheet" id="codebox-css" href="./Lesson 5 引入纹理贴图 _ HiWebGL_files/codebox.css" type="text/css" media="screen">
+<script type="text/javascript" src="./Lesson 5 引入纹理贴图 _ HiWebGL_files/jquery.js.下载"></script>
+<script type="text/javascript" src="./Lesson 5 引入纹理贴图 _ HiWebGL_files/front.js.下载"></script>
+<script type="text/javascript" src="./Lesson 5 引入纹理贴图 _ HiWebGL_files/widget.js.下载"></script>
+<script type="text/javascript" src="./Lesson 5 引入纹理贴图 _ HiWebGL_files/comment-reply.js.下载"></script>
+<script type="text/javascript" src="./Lesson 5 引入纹理贴图 _ HiWebGL_files/codebox.js.下载"></script>
+<link rel="EditURI" type="application/rsd+xml" title="RSD" href="http://www.hiwebgl.com/xmlrpc.php?rsd">
+<link rel="wlwmanifest" type="application/wlwmanifest+xml" href="http://www.hiwebgl.com/wp-includes/wlwmanifest.xml"> 
+<link rel="prev" title="Lesson 4 真正的3D物体" href="http://www.hiwebgl.com/?p=186">
+<link rel="next" title="2011 Mozilla Demoparty赏析" href="http://www.hiwebgl.com/?p=221">
+<meta name="generator" content="Monochrome 1.0">
+<link rel="canonical" href="http://www.hiwebgl.com/?p=201">
+<script type="text/javascript" src="./Lesson 5 引入纹理贴图 _ HiWebGL_files/jquery.min.js.下载"></script>
+<script type="text/javascript" src="./Lesson 5 引入纹理贴图 _ HiWebGL_files/hoverIntent.js.下载"></script>
+<script type="text/javascript" src="./Lesson 5 引入纹理贴图 _ HiWebGL_files/superfish.js.下载"></script>
+<script type="text/javascript" src="./Lesson 5 引入纹理贴图 _ HiWebGL_files/supersubs.js.下载"></script>
+<script type="text/javascript" src="./Lesson 5 引入纹理贴图 _ HiWebGL_files/jquery.accordion.js.下载"></script>
+<script type="text/javascript" src="./Lesson 5 引入纹理贴图 _ HiWebGL_files/dropdowns.js.下载"></script>
+<style type="text/css" media="all">
+/* <![CDATA[ */
+@import url("http://www.hiwebgl.com/wp-content/plugins/wp-table-reloaded/css/plugin.css?ver=1.9.3");
+@import url("http://www.hiwebgl.com/wp-content/plugins/wp-table-reloaded/css/datatables.css?ver=1.9.3");
+/* ]]> */
+</style></head>
+<body class="single single-post postid-201 single-format-standard">
+<div id="wrapper" class="hfeed">
+	<div id="header">
+    	<div id="masthead">
+        	<div id="branding" role="banner">
+            	<div id="site-logo">
+                	<a href="http://www.hiwebgl.com/" title="HiWebGL" rel="home">
+                    	                    <img src="./Lesson 5 引入纹理贴图 _ HiWebGL_files/logo.png" align="logo">
+                    					</a>
+                </div>
+                <div id="site-description">最好的HTML5 WebGL中文资讯站！</div>
+                            </div><!-- #branding -->
+            <div id="access" role="navigation">
+            		<div class="menu">
+		<ul class="sf-menu sf-js-enabled">
+			<li>
+            	<a href="http://www.hiwebgl.com/" title="HiWebGL" rel="home">
+				<strong>首页</strong><span>Homepage</span>
+			</a></li>
+						<li>
+				<a href="http://www.hiwebgl.com/?p=42">
+				<strong>教程</strong><span>&nbsp;</span></a>
+							</li>
+						<li>
+				<a href="http://www.hiwebgl.com/?cat=16">
+				<strong>Demo</strong><span>&nbsp;</span></a>
+							</li>
+						<li>
+				<a href="http://www.hiwebgl.com/ask">
+				<strong>有问必答</strong><span>&nbsp;</span></a>
+							</li>
+						<li>
+				<a href="http://hiwebgl.com/forum/">
+				<strong>论坛</strong><span>&nbsp;</span></a>
+							</li>
+					</ul>
+	</div>
+            </div><!-- #access -->
+        </div><!-- #masthead -->
+    </div><!-- #header -->
+    
+    <div id="breadcrumbWrap"><div id="breadcrumb">
+<span>You are here: </span><a href="http://www.hiwebgl.com/">Home</a> » <a href="http://www.hiwebgl.com/?cat=17" title="查看 WebGL教程 中的全部文章">WebGL教程</a> » Lesson 5 引入纹理贴图</div></div>    
+    <div id="main">
+		<div id="container">
+			<div id="content" role="main">
+
+
+				<div id="post-201" class="post-201 post type-post status-publish format-standard hentry category-webgl category-popular tag-webgl-2 tag-48">
+					<h1 class="entry-title">Lesson 5 引入纹理贴图</h1>
+
+					<div class="entry-meta">
+							<span class="meta-author">By admin</span>
+    <span class="meta-date">On 2011 年 9 月 9 日</span>
+    <span class="meta-comment">29 条评论</span>
+						6,817 次浏览					</div><!-- .entry-meta -->
+
+					<div class="entry-content">
+                		<p><span style="color: #808080;"><em>HiWebGL译者声明：因为译者个人方便的原因，我们将原教程中的第三方图形库由glMatrix改为Oak3D实现，这不影响到Demo的最终效果和实现，也不影响到WebGL的讲解和学习。原教程正文中相应的代码和讲解也为做了相应修改！本教程由HiWebGL翻译整理，转载请注明出处！</em></span></p>
+<p><span style="color: #808080;"><em>关于Oak3D：Oak3D是一套简单易用、性能优越的WebGL Javascript Library。您可以在他们的主页找到更多信息。Oak3D主页：<a href="http://www.oak3d.com/" target="_blank"><span style="color: #808080;">http://www.oak3d.com</span></a></em></span></p>
+<p>欢迎来到Lesson 5，本节课是基于NeHe的OpenGL教程的<a href="http://nehe.gamedev.net/data/lessons/lesson.asp?lesson=06" target="_blank">第六课</a>改编的。这节课，我们将会给3D物体加入纹理贴图——也就是说我们会载入一个独立的图片文件来覆盖3D物体。这对于增加3D场景的细节非常有用，你不必绘制非常非常复杂的单个物体。比如说在一个迷宫游戏中有一栋石头墙，你不必为每个石块都制作单独的模型，而只需要将整栋墙体都做成一个模型，然后用一张石头的图片来覆盖到墙上就可以了。</p>
+<p>下面的视频就是我们这节课将会完成的最终效果。</p>
+<p><object width="480" height="400" classid="clsid:d27cdb6e-ae6d-11cf-96b8-444553540000" codebase="http://download.macromedia.com/pub/shockwave/cabs/flash/swflash.cab#version=6,0,40,0"><param name="src" value="http://player.youku.com/player.php/sid/XMjk5NTAwNTc2/v.swf"><param name="allowfullscreen" value="true"><param name="quality" value="high"><param name="allowscriptaccess" value="always"><embed width="480" height="400" type="application/x-shockwave-flash" src="http://player.youku.com/player.php/sid/XMjk5NTAwNTc2/v.swf" allowfullscreen="true" quality="high" allowscriptaccess="always"></object></p>
+<p>点击<a href="http://www.hiwebgl.com/webgl_lessons/lesson05/index.html">这里</a>打开一个独立的WebGL页面，如果你的浏览器不支持WebGL，请点击<a href="http://www.hiwebgl.com/?p=52" target="_blank">这里</a>。</p>
+<p>下面我们来看看它是怎么工作的……</p>
+<p>惯例声明：本系列的教程是针对那些已经具备相应编程知识但没有实际3D图形经验的人的；目标是让学习者创建并运行代码，并且明白代码其中的含义，从而可以快速地创建自己的3D Web页面。如果你还没有阅读前一课，请先阅读前一课的内容吧。因为本课中我只会讲解那些与前一课中不同的新知识。</p>
+<p>另外，我编写这套教程是因为我在独立学习WebGL，所以教程中可能（非常可能）会有错误，所以还请风险自担。尽管如此，我还是会不断的修正bug和改正其中的错误的，所以如果你发现了教程中的错误，请告诉我。</p>
+<p>有两种方法可以获得上面实例的代码：在实例的独立页面中选择“查看源代码”；或者点击<a href="http://www.hiwebgl.com/webgl_lessons/lesson05/lesson05.zip">这里</a>下载我们为您准备好的压缩包。</p>
+<blockquote><p>译者注：因为从本节课开始要载入本地资源（纹理），所以请使用Chrome浏览器的读者为Chrome增加如下命令行：“–allow-file-access-from-files”;请使用Firefox的读者打开about:config配置页面，找到“security.fileuri.strict_origin_policy”项，并将其设置为“false”。除此之外，你也可以安装一个web服务器，然后通过服务器加载电脑上的资源。具体的设置办法可以看<a href="http://www.hiwebgl.com/?p=628#WebGL-2" target="_blank">首页的大按钮</a>。</p></blockquote>
+<p>简单来说，纹理贴图的原理就是用特殊的方法来设置3D物体中某个点的颜色。你应该会记得在第二课中，我们讲过颜色是由片元着色器指定的，所以我们需要载入图片然后将它输送到片元着色器。另外，片元着色器也需要知道当前片元应当使用纹理的哪一部分，所以我们也需要把纹理的使用位置信息， 也就是纹理坐标， 传给片元着色器。</p>
+<p>让我们先从载入纹理的代码开始看起，首先是从页面一被载入就立即执行的webGLStart函数，第336行就是新增加的代码：</p>
+
+<div class="wp_codebox"><table><tbody><tr id="p2011"><td class="line_numbers"><pre>327
+328
+329
+330
+331
+332
+333
+334
+</pre></td><td class="code" id="p201code1"><pre class="javascript" style="font-family:monospace;">    <span style="color: #003366; font-weight: bold;">function</span> webGLStart<span style="color: #009900;">(</span><span style="color: #009900;">)</span> <span style="color: #009900;">{</span>
+        <span style="color: #003366; font-weight: bold;">var</span> canvas <span style="color: #339933;">=</span> document.<span style="color: #660066;">getElementById</span><span style="color: #009900;">(</span><span style="color: #3366CC;">"lesson05-canvas"</span><span style="color: #009900;">)</span><span style="color: #339933;">;</span>
+        initGL<span style="color: #009900;">(</span>canvas<span style="color: #009900;">)</span><span style="color: #339933;">;</span>
+        initShaders<span style="color: #009900;">(</span><span style="color: #009900;">)</span><span style="color: #339933;">;</span>
+        initBuffers<span style="color: #009900;">(</span><span style="color: #009900;">)</span><span style="color: #339933;">;</span>
+        initTexture<span style="color: #009900;">(</span><span style="color: #009900;">)</span><span style="color: #339933;">;</span>
+&nbsp;
+        gl.<span style="color: #660066;">clearColor</span><span style="color: #009900;">(</span><span style="color: #CC0000;">0.0</span><span style="color: #339933;">,</span> <span style="color: #CC0000;">0.0</span><span style="color: #339933;">,</span> <span style="color: #CC0000;">0.0</span><span style="color: #339933;">,</span> <span style="color: #CC0000;">1.0</span><span style="color: #009900;">)</span><span style="color: #339933;">;</span></pre></td></tr></tbody></table></div>
+
+<p>于是让我们看看initTexture函数，大约在页面代码的三分之一的位置，这是一个全新的函数：</p>
+
+<div class="wp_codebox"><table><tbody><tr id="p2012"><td class="line_numbers"><pre>129
+130
+131
+132
+133
+134
+135
+136
+137
+138
+139
+</pre></td><td class="code" id="p201code2"><pre class="javascript" style="font-family:monospace;">    <span style="color: #003366; font-weight: bold;">var</span> neheTexture<span style="color: #339933;">;</span>
+&nbsp;
+    <span style="color: #003366; font-weight: bold;">function</span> initTexture<span style="color: #009900;">(</span><span style="color: #009900;">)</span> <span style="color: #009900;">{</span>
+        neheTexture <span style="color: #339933;">=</span> gl.<span style="color: #660066;">createTexture</span><span style="color: #009900;">(</span><span style="color: #009900;">)</span><span style="color: #339933;">;</span>
+        neheTexture.<span style="color: #660066;">image</span> <span style="color: #339933;">=</span> <span style="color: #003366; font-weight: bold;">new</span> Image<span style="color: #009900;">(</span><span style="color: #009900;">)</span><span style="color: #339933;">;</span>
+        neheTexture.<span style="color: #660066;">image</span>.<span style="color: #000066;">onload</span> <span style="color: #339933;">=</span> <span style="color: #003366; font-weight: bold;">function</span> <span style="color: #009900;">(</span><span style="color: #009900;">)</span> <span style="color: #009900;">{</span>
+            handleLoadedTexture<span style="color: #009900;">(</span>neheTexture<span style="color: #009900;">)</span>
+        <span style="color: #009900;">}</span>
+&nbsp;
+        neheTexture.<span style="color: #660066;">image</span>.<span style="color: #660066;">src</span> <span style="color: #339933;">=</span> <span style="color: #3366CC;">"nehe.gif"</span><span style="color: #339933;">;</span>
+    <span style="color: #009900;">}</span></pre></td></tr></tbody></table></div>
+
+<p>我们建立了一个全局变量用来储存纹理，显然在真正的应用中会有很多纹理，所以不应该使用全局变量，但在这里我们是为了讲解更加清楚。我们使用gl.createTexture来建立了一个纹理对象，并赋值给全局变量；然后我们建立了一个Javasript图片对象（Javascript Image Object），并把它放到我们给纹理对象添加的一个新属性中，这里我们又用到了Javasript的那个优点，就是可以给任何对象添加任何属性——纹理对象本身默认并不含有一个图片属性，但是显然我们需要这样一个属性，所以我们就手动为它增加这样一个属性。下一步就应该将图片文件载入到图片对象中了，但是在这之前我们加入了一个回调函数，它在图片被完全载入后将被调用，所以我们最好先设置好。最后，我们设置好图片的src属性。完成后，图片将被异步加载——也就是说，设置图片src属性的代码将会立即执行并返回，而一个后台线程将会从服务器上将图片载入。</p>
+
+<div class="wp_codebox"><table><tbody><tr id="p2013"><td class="line_numbers"><pre>119
+120
+121
+122
+123
+124
+125
+126
+</pre></td><td class="code" id="p201code3"><pre class="javascript" style="font-family:monospace;">    <span style="color: #003366; font-weight: bold;">function</span> handleLoadedTexture<span style="color: #009900;">(</span>texture<span style="color: #009900;">)</span> <span style="color: #009900;">{</span>
+        gl.<span style="color: #660066;">bindTexture</span><span style="color: #009900;">(</span>gl.<span style="color: #660066;">TEXTURE_2D</span><span style="color: #339933;">,</span> texture<span style="color: #009900;">)</span><span style="color: #339933;">;</span>
+        gl.<span style="color: #660066;">pixelStorei</span><span style="color: #009900;">(</span>gl.<span style="color: #660066;">UNPACK_FLIP_Y_WEBGL</span><span style="color: #339933;">,</span> <span style="color: #003366; font-weight: bold;">true</span><span style="color: #009900;">)</span><span style="color: #339933;">;</span>
+        gl.<span style="color: #660066;">texImage2D</span><span style="color: #009900;">(</span>gl.<span style="color: #660066;">TEXTURE_2D</span><span style="color: #339933;">,</span> <span style="color: #CC0000;">0</span><span style="color: #339933;">,</span> gl.<span style="color: #660066;">RGBA</span><span style="color: #339933;">,</span> gl.<span style="color: #660066;">RGBA</span><span style="color: #339933;">,</span> gl.<span style="color: #660066;">UNSIGNED_BYTE</span><span style="color: #339933;">,</span> texture.<span style="color: #660066;">image</span><span style="color: #009900;">)</span><span style="color: #339933;">;</span>
+        gl.<span style="color: #660066;">texParameteri</span><span style="color: #009900;">(</span>gl.<span style="color: #660066;">TEXTURE_2D</span><span style="color: #339933;">,</span> gl.<span style="color: #660066;">TEXTURE_MAG_FILTER</span><span style="color: #339933;">,</span> gl.<span style="color: #660066;">NEAREST</span><span style="color: #009900;">)</span><span style="color: #339933;">;</span>
+        gl.<span style="color: #660066;">texParameteri</span><span style="color: #009900;">(</span>gl.<span style="color: #660066;">TEXTURE_2D</span><span style="color: #339933;">,</span> gl.<span style="color: #660066;">TEXTURE_MIN_FILTER</span><span style="color: #339933;">,</span> gl.<span style="color: #660066;">NEAREST</span><span style="color: #009900;">)</span><span style="color: #339933;">;</span>
+        gl.<span style="color: #660066;">bindTexture</span><span style="color: #009900;">(</span>gl.<span style="color: #660066;">TEXTURE_2D</span><span style="color: #339933;">,</span> <span style="color: #003366; font-weight: bold;">null</span><span style="color: #009900;">)</span><span style="color: #339933;">;</span>
+    <span style="color: #009900;">}</span></pre></td></tr></tbody></table></div>
+
+<p>首先我们必须告诉WebGL我们的纹理是“当前纹理”。和之前我们见过的bindBuffer一样，需要用bindTexture将纹理与WebGL上下文绑定，设置其为当前纹理，而不能直接作为参数使用某个纹理。</p>
+<p>然后，我们告诉WebGL所有被载入纹理的图片都需要做一个垂直翻转。为什么要进行垂直翻转呢？这都是坐标闯的祸。对于我们的纹理坐标，我们使用的坐标系和你平常在数学课上用到的是相同的，即在垂直坐标轴上，越往上坐标值越大；这与我们一直用来指定顶点位置的X、Y、Z轴的坐标系统也是一致的。但是，在其他大多数计算机图形系统中情况正好相反，在垂直坐标轴上，越往下坐标值反而越大，就比如我们用来储存纹理的GIF格式图片。这种垂直坐标轴上的差异意味着在WebGL的透视中，我们使用的GIF图片实际上已经被翻转过了，所以我们需要翻转回来，或许可以称之为“逆翻转”。</p>
+<p>下一步我们就要使用texImage2D方法，将刚刚被载入还冒着热气的新出炉的图片上传到显卡端的纹理空间中。函数的参数按顺序分别是，图片类型、细节层次（我们以后的课程中会详细讲解）、图片各通道的大小（也就是用于储存R、G、B值的数据类型）、最后是图片本身。</p>
+<p>紧接着的下面两行的代码是用于指定纹理的特殊缩放参数的。第一行代码告诉WebGL当纹理被填充到一个相对于图片尺寸较大的屏幕空间时应当怎么做，换句话说，就是告诉WebGL如何放大纹理。同样，第二行代码则告诉WebGL如何缩小纹理。有很多种缩放方式供你选择，而NEAREST是其中最不酷的一种，它用来指定说无论如何都只使用原始图片，也就是说原始图片什么样，纹理就什么样，所以当你近距离观看时，将会看到非常斑驳的纹理。然而，这也有它的好处，那就是执行速度非常快，即使在非常慢的电脑上。在下一节课中，我们会使用到其他的缩放方式，到时你将体会到它们在效果和性能上的不同。</p>
+<p>完成之后，我们将当前纹理设置为null，严格来讲这不是必须的，但这样的一个清理工作却是一个好的编程习惯。</p>
+<p>以上就是载入纹理所需的所有代码。下面，我们把注意力转移到initBuffers上。首先显而易见的是，我们把在第四课中用到的所有与锥形有关的代码都移除掉了；另外，我们用一个新的数组——纹理坐标数组——替换了立方体的顶点颜色数组。</p>
+
+<div class="wp_codebox"><table><tbody><tr id="p2014"><td class="line_numbers"><pre>215
+216
+217
+218
+219
+220
+221
+222
+223
+224
+225
+226
+227
+228
+229
+230
+231
+232
+233
+234
+235
+236
+237
+238
+239
+240
+241
+242
+243
+244
+245
+246
+247
+248
+249
+250
+251
+252
+253
+254
+255
+256
+</pre></td><td class="code" id="p201code4"><pre class="javascript" style="font-family:monospace;">        cubeVertexTextureCoordBuffer <span style="color: #339933;">=</span> gl.<span style="color: #660066;">createBuffer</span><span style="color: #009900;">(</span><span style="color: #009900;">)</span><span style="color: #339933;">;</span>
+        gl.<span style="color: #660066;">bindBuffer</span><span style="color: #009900;">(</span>gl.<span style="color: #660066;">ARRAY_BUFFER</span><span style="color: #339933;">,</span> cubeVertexTextureCoordBuffer<span style="color: #009900;">)</span><span style="color: #339933;">;</span>
+        <span style="color: #003366; font-weight: bold;">var</span> textureCoords <span style="color: #339933;">=</span> <span style="color: #009900;">[</span>
+          <span style="color: #006600; font-style: italic;">// Front face</span>
+          <span style="color: #CC0000;">0.0</span><span style="color: #339933;">,</span> <span style="color: #CC0000;">0.0</span><span style="color: #339933;">,</span>
+          <span style="color: #CC0000;">1.0</span><span style="color: #339933;">,</span> <span style="color: #CC0000;">0.0</span><span style="color: #339933;">,</span>
+          <span style="color: #CC0000;">1.0</span><span style="color: #339933;">,</span> <span style="color: #CC0000;">1.0</span><span style="color: #339933;">,</span>
+          <span style="color: #CC0000;">0.0</span><span style="color: #339933;">,</span> <span style="color: #CC0000;">1.0</span><span style="color: #339933;">,</span>
+&nbsp;
+          <span style="color: #006600; font-style: italic;">// Back face</span>
+          <span style="color: #CC0000;">1.0</span><span style="color: #339933;">,</span> <span style="color: #CC0000;">0.0</span><span style="color: #339933;">,</span>
+          <span style="color: #CC0000;">1.0</span><span style="color: #339933;">,</span> <span style="color: #CC0000;">1.0</span><span style="color: #339933;">,</span>
+          <span style="color: #CC0000;">0.0</span><span style="color: #339933;">,</span> <span style="color: #CC0000;">1.0</span><span style="color: #339933;">,</span>
+          <span style="color: #CC0000;">0.0</span><span style="color: #339933;">,</span> <span style="color: #CC0000;">0.0</span><span style="color: #339933;">,</span>
+&nbsp;
+          <span style="color: #006600; font-style: italic;">// Top face</span>
+          <span style="color: #CC0000;">0.0</span><span style="color: #339933;">,</span> <span style="color: #CC0000;">1.0</span><span style="color: #339933;">,</span>
+          <span style="color: #CC0000;">0.0</span><span style="color: #339933;">,</span> <span style="color: #CC0000;">0.0</span><span style="color: #339933;">,</span>
+          <span style="color: #CC0000;">1.0</span><span style="color: #339933;">,</span> <span style="color: #CC0000;">0.0</span><span style="color: #339933;">,</span>
+          <span style="color: #CC0000;">1.0</span><span style="color: #339933;">,</span> <span style="color: #CC0000;">1.0</span><span style="color: #339933;">,</span>
+&nbsp;
+          <span style="color: #006600; font-style: italic;">// Bottom face</span>
+          <span style="color: #CC0000;">1.0</span><span style="color: #339933;">,</span> <span style="color: #CC0000;">1.0</span><span style="color: #339933;">,</span>
+          <span style="color: #CC0000;">0.0</span><span style="color: #339933;">,</span> <span style="color: #CC0000;">1.0</span><span style="color: #339933;">,</span>
+          <span style="color: #CC0000;">0.0</span><span style="color: #339933;">,</span> <span style="color: #CC0000;">0.0</span><span style="color: #339933;">,</span>
+          <span style="color: #CC0000;">1.0</span><span style="color: #339933;">,</span> <span style="color: #CC0000;">0.0</span><span style="color: #339933;">,</span>
+&nbsp;
+          <span style="color: #006600; font-style: italic;">// Right face</span>
+          <span style="color: #CC0000;">1.0</span><span style="color: #339933;">,</span> <span style="color: #CC0000;">0.0</span><span style="color: #339933;">,</span>
+          <span style="color: #CC0000;">1.0</span><span style="color: #339933;">,</span> <span style="color: #CC0000;">1.0</span><span style="color: #339933;">,</span>
+          <span style="color: #CC0000;">0.0</span><span style="color: #339933;">,</span> <span style="color: #CC0000;">1.0</span><span style="color: #339933;">,</span>
+          <span style="color: #CC0000;">0.0</span><span style="color: #339933;">,</span> <span style="color: #CC0000;">0.0</span><span style="color: #339933;">,</span>
+&nbsp;
+          <span style="color: #006600; font-style: italic;">// Left face</span>
+          <span style="color: #CC0000;">0.0</span><span style="color: #339933;">,</span> <span style="color: #CC0000;">0.0</span><span style="color: #339933;">,</span>
+          <span style="color: #CC0000;">1.0</span><span style="color: #339933;">,</span> <span style="color: #CC0000;">0.0</span><span style="color: #339933;">,</span>
+          <span style="color: #CC0000;">1.0</span><span style="color: #339933;">,</span> <span style="color: #CC0000;">1.0</span><span style="color: #339933;">,</span>
+          <span style="color: #CC0000;">0.0</span><span style="color: #339933;">,</span> <span style="color: #CC0000;">1.0</span><span style="color: #339933;">,</span>
+        <span style="color: #009900;">]</span><span style="color: #339933;">;</span>
+        gl.<span style="color: #660066;">bufferData</span><span style="color: #009900;">(</span>gl.<span style="color: #660066;">ARRAY_BUFFER</span><span style="color: #339933;">,</span> <span style="color: #003366; font-weight: bold;">new</span> Float32Array<span style="color: #009900;">(</span>textureCoords<span style="color: #009900;">)</span><span style="color: #339933;">,</span> gl.<span style="color: #660066;">STATIC_DRAW</span><span style="color: #009900;">)</span><span style="color: #339933;">;</span>
+        cubeVertexTextureCoordBuffer.<span style="color: #660066;">itemSize</span> <span style="color: #339933;">=</span> <span style="color: #CC0000;">2</span><span style="color: #339933;">;</span>
+        cubeVertexTextureCoordBuffer.<span style="color: #660066;">numItems</span> <span style="color: #339933;">=</span> <span style="color: #CC0000;">24</span><span style="color: #339933;">;</span></pre></td></tr></tbody></table></div>
+
+<p>现在再来看这样的代码，你应该感到非常轻松了。我们所做的就是在每个数组对象中增加了一个新的顶点属性，每个顶点上这个属性有两个值。纹理坐标指定的是在笛卡尔x,y坐标系中顶点位于纹理中的位置。为了实现纹理坐标，我们把纹理的宽和高都看成1.0，这样（0,0）就是左下角，（1,1）就是右上角。而从这样的假想转换到纹理图片的真实分辨率的工作，都是由WebGL来完成的。</p>
+<p>以上就是initBuffers函数中的变化，下面我们来看看drawScene函数。不言自明，函数最大的变化就是加入了使用纹理的代码。在这之前我们先来处理一下那些琐碎的小变动，例如我们移除了和锥形有关的代码，另外立方体旋转的方向也发生了变化。想必你已经可以轻松理解这些代码了，所以我也不再花时间详细讲解了。</p>
+
+<div class="wp_codebox"><table><tbody><tr id="p2015"><td class="line_numbers"><pre>274
+275
+276
+277
+278
+279
+280
+281
+282
+283
+284
+285
+286
+287
+288
+289
+290
+</pre></td><td class="code" id="p201code5"><pre class="javascript" style="font-family:monospace;">    <span style="color: #003366; font-weight: bold;">var</span> xRot <span style="color: #339933;">=</span> <span style="color: #CC0000;">0</span><span style="color: #339933;">;</span>
+    <span style="color: #003366; font-weight: bold;">var</span> yRot <span style="color: #339933;">=</span> <span style="color: #CC0000;">0</span><span style="color: #339933;">;</span>
+    <span style="color: #003366; font-weight: bold;">var</span> zRot <span style="color: #339933;">=</span> <span style="color: #CC0000;">0</span><span style="color: #339933;">;</span>
+&nbsp;
+    <span style="color: #003366; font-weight: bold;">function</span> drawScene<span style="color: #009900;">(</span><span style="color: #009900;">)</span> <span style="color: #009900;">{</span>
+        gl.<span style="color: #660066;">viewport</span><span style="color: #009900;">(</span><span style="color: #CC0000;">0</span><span style="color: #339933;">,</span> <span style="color: #CC0000;">0</span><span style="color: #339933;">,</span> gl.<span style="color: #660066;">viewportWidth</span><span style="color: #339933;">,</span> gl.<span style="color: #660066;">viewportHeight</span><span style="color: #009900;">)</span><span style="color: #339933;">;</span>
+        gl.<span style="color: #660066;">clear</span><span style="color: #009900;">(</span>gl.<span style="color: #660066;">COLOR_BUFFER_BIT</span> <span style="color: #339933;">|</span> gl.<span style="color: #660066;">DEPTH_BUFFER_BIT</span><span style="color: #009900;">)</span><span style="color: #339933;">;</span>
+&nbsp;
+        pMatrix <span style="color: #339933;">=</span> okMat4Proj<span style="color: #009900;">(</span><span style="color: #CC0000;">45</span><span style="color: #339933;">,</span> gl.<span style="color: #660066;">viewportWidth</span> <span style="color: #339933;">/</span> gl.<span style="color: #660066;">viewportHeight</span><span style="color: #339933;">,</span> <span style="color: #CC0000;">0.1</span><span style="color: #339933;">,</span> <span style="color: #CC0000;">100.0</span><span style="color: #009900;">)</span><span style="color: #339933;">;</span>
+&nbsp;
+        mvMatrix <span style="color: #339933;">=</span> okMat4Trans<span style="color: #009900;">(</span><span style="color: #CC0000;">0.0</span><span style="color: #339933;">,</span> <span style="color: #CC0000;">0.0</span><span style="color: #339933;">,</span> <span style="color: #339933;">-</span><span style="color: #CC0000;">5.0</span><span style="color: #009900;">)</span><span style="color: #339933;">;</span>        
+        mvMatrix.<span style="color: #660066;">rotX</span><span style="color: #009900;">(</span>OAK.<span style="color: #660066;">SPACE_LOCAL</span><span style="color: #339933;">,</span> xRot<span style="color: #339933;">,</span> <span style="color: #003366; font-weight: bold;">true</span><span style="color: #009900;">)</span><span style="color: #339933;">;</span>
+        mvMatrix.<span style="color: #660066;">rotY</span><span style="color: #009900;">(</span>OAK.<span style="color: #660066;">SPACE_LOCAL</span><span style="color: #339933;">,</span> yRot<span style="color: #339933;">,</span> <span style="color: #003366; font-weight: bold;">true</span><span style="color: #009900;">)</span><span style="color: #339933;">;</span>
+        mvMatrix.<span style="color: #660066;">rotZ</span><span style="color: #009900;">(</span>OAK.<span style="color: #660066;">SPACE_LOCAL</span><span style="color: #339933;">,</span> zRot<span style="color: #339933;">,</span> <span style="color: #003366; font-weight: bold;">true</span><span style="color: #009900;">)</span><span style="color: #339933;">;</span>
+&nbsp;
+        gl.<span style="color: #660066;">bindBuffer</span><span style="color: #009900;">(</span>gl.<span style="color: #660066;">ARRAY_BUFFER</span><span style="color: #339933;">,</span> cubeVertexPositionBuffer<span style="color: #009900;">)</span><span style="color: #339933;">;</span>
+        gl.<span style="color: #660066;">vertexAttribPointer</span><span style="color: #009900;">(</span>shaderProgram.<span style="color: #660066;">vertexPositionAttribute</span><span style="color: #339933;">,</span> cubeVertexPositionBuffer.<span style="color: #660066;">itemSize</span><span style="color: #339933;">,</span> gl.<span style="color: #660066;">FLOAT</span><span style="color: #339933;">,</span> <span style="color: #003366; font-weight: bold;">false</span><span style="color: #339933;">,</span> <span style="color: #CC0000;">0</span><span style="color: #339933;">,</span> <span style="color: #CC0000;">0</span><span style="color: #009900;">)</span><span style="color: #339933;">;</span></pre></td></tr></tbody></table></div>
+
+<p>另外在animate函数中也有相应的修改用来配合xRot、yRot和zRot，这我也不会多讲。</p>
+<p>好了，终于是时候来看看纹理相关的代码了。在initBuffers函数中我们建立了包含纹理坐标的数组对象，现在我们需要将它绑定到合适的属性中，以便着色器可以调用它。</p>
+
+<div class="wp_codebox"><table><tbody><tr id="p2016"><td class="line_numbers"><pre>292
+293
+</pre></td><td class="code" id="p201code6"><pre class="javascript" style="font-family:monospace;">        gl.<span style="color: #660066;">bindBuffer</span><span style="color: #009900;">(</span>gl.<span style="color: #660066;">ARRAY_BUFFER</span><span style="color: #339933;">,</span> cubeVertexTextureCoordBuffer<span style="color: #009900;">)</span><span style="color: #339933;">;</span>
+        gl.<span style="color: #660066;">vertexAttribPointer</span><span style="color: #009900;">(</span>shaderProgram.<span style="color: #660066;">textureCoordAttribute</span><span style="color: #339933;">,</span> cubeVertexTextureCoordBuffer.<span style="color: #660066;">itemSize</span><span style="color: #339933;">,</span> gl.<span style="color: #660066;">FLOAT</span><span style="color: #339933;">,</span> <span style="color: #003366; font-weight: bold;">false</span><span style="color: #339933;">,</span> <span style="color: #CC0000;">0</span><span style="color: #339933;">,</span> <span style="color: #CC0000;">0</span><span style="color: #009900;">)</span><span style="color: #339933;">;</span></pre></td></tr></tbody></table></div>
+
+<p>那么，现在WebGL已经知道各个顶点该使用纹理的哪个点了，下面我们需要告诉WebGL使用我们之前载入的纹理来绘制立方体。</p>
+
+<div class="wp_codebox"><table><tbody><tr id="p2017"><td class="line_numbers"><pre>295
+296
+297
+298
+299
+300
+301
+</pre></td><td class="code" id="p201code7"><pre class="javascript" style="font-family:monospace;">        gl.<span style="color: #660066;">activeTexture</span><span style="color: #009900;">(</span>gl.<span style="color: #660066;">TEXTURE0</span><span style="color: #009900;">)</span><span style="color: #339933;">;</span>
+        gl.<span style="color: #660066;">bindTexture</span><span style="color: #009900;">(</span>gl.<span style="color: #660066;">TEXTURE_2D</span><span style="color: #339933;">,</span> neheTexture<span style="color: #009900;">)</span><span style="color: #339933;">;</span>
+        gl.<span style="color: #660066;">uniform1i</span><span style="color: #009900;">(</span>shaderProgram.<span style="color: #660066;">samplerUniform</span><span style="color: #339933;">,</span> <span style="color: #CC0000;">0</span><span style="color: #009900;">)</span><span style="color: #339933;">;</span>
+&nbsp;
+        gl.<span style="color: #660066;">bindBuffer</span><span style="color: #009900;">(</span>gl.<span style="color: #660066;">ELEMENT_ARRAY_BUFFER</span><span style="color: #339933;">,</span> cubeVertexIndexBuffer<span style="color: #009900;">)</span><span style="color: #339933;">;</span>
+        setMatrixUniforms<span style="color: #009900;">(</span><span style="color: #009900;">)</span><span style="color: #339933;">;</span>
+        gl.<span style="color: #660066;">drawElements</span><span style="color: #009900;">(</span>gl.<span style="color: #660066;">TRIANGLES</span><span style="color: #339933;">,</span> cubeVertexIndexBuffer.<span style="color: #660066;">numItems</span><span style="color: #339933;">,</span> gl.<span style="color: #660066;">UNSIGNED_SHORT</span><span style="color: #339933;">,</span> <span style="color: #CC0000;">0</span><span style="color: #009900;">)</span><span style="color: #339933;">;</span></pre></td></tr></tbody></table></div>
+
+<p>这段代码有点复杂。WebGL可以在调用像gl.drawElements这种函数中处理最多32个纹理对象，从TEXTURE0到TEXTURE31，这些纹理被一一标记。前两行代码所做的就是将我们刚刚载入的纹理指定为0号纹理，在第三行代码中我们将0这个值推送到着色器的uniform变量中（和其他我们用于处理矩阵的uniform变量一样，都是从initShaders函数中的着色器program对象中提取出来的），告诉着色器我们要使用0号纹理。</p>
+<p>不管怎样，现在我们已经可以说是蓄势待发了。我们用相同的代码来绘制一堆三角形最后组成一个立方体。</p>
+<p>最后剩下一件事，就是要解释一下着色器的变化。让我们先来看看顶点着色器。</p>
+
+<div class="wp_codebox"><table><tbody><tr id="p2018"><td class="line_numbers"><pre>21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+</pre></td><td class="code" id="p201code8"><pre class="glsl" style="font-family:monospace;">    <span style="color: #333399; font-weight: bold;">attribute</span> <span style="color: #000066; font-weight: bold;">vec3</span> aVertexPosition<span style="color: #000066;">;</span>
+    <span style="color: #333399; font-weight: bold;">attribute</span> <span style="color: #000066; font-weight: bold;">vec2</span> aTextureCoord<span style="color: #000066;">;</span>
+&nbsp;
+    <span style="color: #333399; font-weight: bold;">uniform</span> <span style="color: #000066; font-weight: bold;">mat4</span> uMVMatrix<span style="color: #000066;">;</span>
+    <span style="color: #333399; font-weight: bold;">uniform</span> <span style="color: #000066; font-weight: bold;">mat4</span> uPMatrix<span style="color: #000066;">;</span>
+&nbsp;
+    <span style="color: #333399; font-weight: bold;">varying</span> <span style="color: #000066; font-weight: bold;">vec2</span> vTextureCoord<span style="color: #000066;">;</span>
+&nbsp;
+&nbsp;
+    <span style="color: #000066; font-weight: bold;">void</span> main<span style="color: #000066;">(</span><span style="color: #000066; font-weight: bold;">void</span><span style="color: #000066;">)</span> <span style="color: #000066;">{</span>
+        <span style="color: #551111;">gl_Position</span> <span style="color: #000066;">=</span> uPMatrix <span style="color: #000066;">*</span> uMVMatrix <span style="color: #000066;">*</span> <span style="color: #000066; font-weight: bold;">vec4</span><span style="color: #000066;">(</span>aVertexPosition<span style="color: #000066;">,</span> <span style="color: #0000ff;">1.0</span><span style="color: #000066;">)</span><span style="color: #000066;">;</span>
+        vTextureCoord <span style="color: #000066;">=</span> aTextureCoord<span style="color: #000066;">;</span>
+    <span style="color: #000066;">}</span></pre></td></tr></tbody></table></div>
+
+<p>这和我们在第二课中给顶点着色器填充一些与颜色相关的东西非常相似，我们所做的就是将纹理坐标设置为顶点属性，然后以Varying变量的形式直接从顶点着色器中传出。</p>
+<p>当每个顶点都设置完毕后，WebGL都会将顶点与顶点之间的片元（基本上可以理解为像素）进行线性插值，就像第二课中处理颜色一样。所以，在纹理坐标为（1,0）和（0,0）中间的片元会得到一个（0.5,0）的纹理坐标，在纹理坐标为（0,0）和（1,1）之间的片元会得到一个（0.5,0.5）的纹理坐标。然后在片元着色器中：</p>
+
+<div class="wp_codebox"><table><tbody><tr id="p2019"><td class="line_numbers"><pre>7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+</pre></td><td class="code" id="p201code9"><pre class="glsl" style="font-family:monospace;">&nbsp;
+    <span style="color: #000066; font-weight: bold;">precision</span> <span style="color: #000066; font-weight: bold;">mediump</span> <span style="color: #000066; font-weight: bold;">float</span><span style="color: #000066;">;</span>
+&nbsp;
+&nbsp;
+    <span style="color: #333399; font-weight: bold;">varying</span> <span style="color: #000066; font-weight: bold;">vec2</span> vTextureCoord<span style="color: #000066;">;</span>
+&nbsp;
+    <span style="color: #333399; font-weight: bold;">uniform</span> <span style="color: #000066; font-weight: bold;">sampler2D</span> uSampler<span style="color: #000066;">;</span>
+&nbsp;
+    <span style="color: #000066; font-weight: bold;">void</span> main<span style="color: #000066;">(</span><span style="color: #000066; font-weight: bold;">void</span><span style="color: #000066;">)</span> <span style="color: #000066;">{</span>
+        <span style="color: #551111;">gl_FragColor</span> <span style="color: #000066;">=</span> <span style="color: #993333; font-weight: bold;">texture2D</span><span style="color: #000066;">(</span>uSampler<span style="color: #000066;">,</span> <span style="color: #000066; font-weight: bold;">vec2</span><span style="color: #000066;">(</span>vTextureCoord<span style="color: #000066;">.</span><span style="color: #006600;">s</span><span style="color: #000066;">,</span> vTextureCoord<span style="color: #000066;">.</span><span style="color: #006600;">t</span><span style="color: #000066;">)</span><span style="color: #000066;">)</span><span style="color: #000066;">;</span>
+    <span style="color: #000066;">}</span></pre></td></tr></tbody></table></div>
+
+<p>我们获取到了线性插值后的纹理坐标，并且以sampler类型的形式储存在变量中，它在着色器中代表纹理。在drawScene函数中，我们的纹理与gl.TEXTURE0绑定在一起，而uniform变量uSampler的值是0，所以这个sampler变量代表的正是我们的纹理。着色器所做的就是调用texture2D，并根据坐标从纹理中获得相对应的颜色。另外，纹理坐标通常使用s和t来表示，而不是x和y；不过别担心，着色器语言支持别名，所以我们可以依然可以方便的使用vTextureCoord.x和 vTextureCoord.y。</p>
+<p>在片元获得颜色之后，我们就成功地在屏幕上绘制出了一个带纹理贴图的物体。</p>
+<p>好了，在这节课中你学到了如何在WebGL中为3D物体增加纹理，如何载入图片并作为纹理来使用它，如何为物体赋予纹理坐标，以及在着色器中使用纹理和纹理坐标。</p>
+<p>如果你有任何的问题、评论或是纠正，都请留言给我。</p>
+<p>在下一课中，我们将会用Javascript为你的3D场景增加基本的键盘输入，以便制作出可以与人互动的网页。我们将会允许观看者改变立方体的旋转、缩放以及调整WebGL缩放纹理的方式。</p>
+<div style="clear:both; margin-top:5px; margin-bottom:5px;"></div><div style="float:left"><!-- JiaThis Button BEGIN -->
+<div id="ckepop">
+	<span class="jiathis_txt">分享到：</span>
+	<a class="jiathis_button_tools_1"></a>
+	<a class="jiathis_button_tools_2"></a>
+	<a class="jiathis_button_tools_3"></a>
+	<a class="jiathis_button_tools_4"></a>
+	<a href="http://www.jiathis.com/share" class="jiathis jiathis_txt jiathis_separator jtico jtico_jiathis" target="_blank">更多</a>
+	<a class="jiathis_counter_style"></a>
+</div>
+<script type="text/javascript" src="./Lesson 5 引入纹理贴图 _ HiWebGL_files/jia.js.下载" charset="utf-8"></script>
+<!-- JiaThis Button END --></div><div style="clear:both; margin-top:5px; margin-bottom:5px;"></div>											</div><!-- .entry-content -->
+
+
+					<div class="entry-utility">
+						Posted in <a href="http://www.hiwebgl.com/?cat=17" title="查看 WebGL教程 中的全部文章" rel="category">WebGL教程</a>, <a href="http://www.hiwebgl.com/?cat=4" title="查看 推荐 中的全部文章" rel="category">推荐</a> and tagged <a href="http://www.hiwebgl.com/?tag=webgl%e6%95%99%e7%a8%8b-2" rel="tag">webgl教程</a>, <a href="http://www.hiwebgl.com/?tag=%e7%ba%b9%e7%90%86" rel="tag">纹理</a>. Bookmark the <a href="http://www.hiwebgl.com/?p=201" title="Permalink to Lesson 5 引入纹理贴图" rel="bookmark">permalink</a>.											</div><!-- .entry-utility -->
+				</div><!-- #post-## -->
+
+				<div id="nav-below" class="navigation">
+					<div class="nav-previous"><a href="http://www.hiwebgl.com/?p=186" rel="prev"><span class="meta-nav">←</span> Lesson 4 真正的3D物体</a></div>
+					<div class="nav-next"><a href="http://www.hiwebgl.com/?p=221" rel="next">2011 Mozilla Demoparty赏析 <span class="meta-nav">→</span></a></div>
+				</div><!-- #nav-below -->
+
+				
+
+<div id="comments">
+		<h3 id="comments-title"><span>1 trackback</span></h3>
+	<dl id="trackback_list">
+		<dt><a href="http://www.hiwebgl.com/?p=42" rel="external nofollow" class="url">WebGL教程 | WebGL中文教程翻译工程启动！HiWebGL | HiWebGL | 最好的HTML5 WebGL中文资讯站</a></dt>
+		<dd><span>2011 年 9 月 9 日 下午 4:31</span></dd>
+    </dl>
+    <h3 id="comments-title"><span>28 comments</span></h3>
+	<ol class="commentlist">
+    	
+	<li class="comment even thread-even depth-1" id="li-comment-154">
+    	<div id="comment-154">
+            <div class="comment_meta commentmetadata">
+                <span class="avatar"><img alt="" src="./Lesson 5 引入纹理贴图 _ HiWebGL_files/ad516503a11cd5ca435acc9bb6523536.png" class="avatar avatar-40 photo" height="40" width="40"></span>
+                <span class="comment_author vcard fn">EVSoga</span>
+                <span class="comment_time">2011 年 10 月 19 日 下午 3:24</span>
+            </div>
+            <div class="comment_body">
+                <p></p><p>WEBGL只支持GIF格式的纹理吗？</p>
+<p></p>
+                <p class="reply"><a class="comment-reply-link" href="http://www.hiwebgl.com/?p=201&amp;replytocom=154#respond" onclick="return addComment.moveForm(&quot;comment-154&quot;, &quot;154&quot;, &quot;respond&quot;, &quot;201&quot;)">回复</a></p>
+            </div>
+		</div>
+        
+        
+    
+<ul class="children">
+	<li class="comment byuser comment-author-admin bypostauthor odd alt depth-2" id="li-comment-156">
+    	<div id="comment-156">
+            <div class="comment_meta commentmetadata">
+                <span class="avatar"><img alt="" src="./Lesson 5 引入纹理贴图 _ HiWebGL_files/ad516503a11cd5ca435acc9bb6523536(1).png" class="avatar avatar-40 photo" height="40" width="40"></span>
+                <span class="comment_author vcard fn">admin</span>
+                <span class="comment_time">2011 年 10 月 20 日 上午 12:30</span>
+            </div>
+            <div class="comment_body">
+                <p></p><p>不是，WEBGL支持很多的图片格式的纹理</p>
+<p></p>
+                <p class="reply"><a class="comment-reply-link" href="http://www.hiwebgl.com/?p=201&amp;replytocom=156#respond" onclick="return addComment.moveForm(&quot;comment-156&quot;, &quot;156&quot;, &quot;respond&quot;, &quot;201&quot;)">回复</a></p>
+            </div>
+		</div>
+        
+        
+    
+<ul class="children">
+	<li class="comment even depth-3" id="li-comment-593">
+    	<div id="comment-593">
+            <div class="comment_meta commentmetadata">
+                <span class="avatar"><img alt="" src="./Lesson 5 引入纹理贴图 _ HiWebGL_files/ad516503a11cd5ca435acc9bb6523536(2).png" class="avatar avatar-40 photo" height="40" width="40"></span>
+                <span class="comment_author vcard fn">王云龙</span>
+                <span class="comment_time">2012 年 2 月 25 日 下午 8:11</span>
+            </div>
+            <div class="comment_body">
+                <p></p><p>那对图片都有哪些要求，我换了个JPG格式的图片，显示不出来</p>
+<p></p>
+                <p class="reply"><a class="comment-reply-link" href="http://www.hiwebgl.com/?p=201&amp;replytocom=593#respond" onclick="return addComment.moveForm(&quot;comment-593&quot;, &quot;593&quot;, &quot;respond&quot;, &quot;201&quot;)">回复</a></p>
+            </div>
+		</div>
+        
+        
+    
+</li>
+</ul>
+</li>
+</ul>
+</li>
+	<li class="comment odd alt thread-odd thread-alt depth-1" id="li-comment-201">
+    	<div id="comment-201">
+            <div class="comment_meta commentmetadata">
+                <span class="avatar"><img alt="" src="./Lesson 5 引入纹理贴图 _ HiWebGL_files/ad516503a11cd5ca435acc9bb6523536(3).png" class="avatar avatar-40 photo" height="40" width="40"></span>
+                <span class="comment_author vcard fn">Nayukey</span>
+                <span class="comment_time">2011 年 11 月 8 日 下午 8:17</span>
+            </div>
+            <div class="comment_body">
+                <p></p><p>按照这个写的代码，反复对比了，没错误，不过不会有显示，我已经开启了firefox对texture的限制，不知道为什么还是看不到效果。。写这个有什么注意的吗？贴纹理的时候，有什么需要注意的，还有为什么three.js那个库可以不需要打开限制，也是可以加载纹理的？</p>
+<p></p>
+                <p class="reply"><a class="comment-reply-link" href="http://www.hiwebgl.com/?p=201&amp;replytocom=201#respond" onclick="return addComment.moveForm(&quot;comment-201&quot;, &quot;201&quot;, &quot;respond&quot;, &quot;201&quot;)">回复</a></p>
+            </div>
+		</div>
+        
+        
+    
+</li>
+	<li class="comment even thread-even depth-1" id="li-comment-206">
+    	<div id="comment-206">
+            <div class="comment_meta commentmetadata">
+                <span class="avatar"><img alt="" src="./Lesson 5 引入纹理贴图 _ HiWebGL_files/ad516503a11cd5ca435acc9bb6523536(4).png" class="avatar avatar-40 photo" height="40" width="40"></span>
+                <span class="comment_author vcard fn">jin</span>
+                <span class="comment_time">2011 年 11 月 10 日 下午 3:17</span>
+            </div>
+            <div class="comment_body">
+                <p></p><p>好像少了  cubeVertexIndexBuffer  组数定义说明；</p>
+<p></p>
+                <p class="reply"><a class="comment-reply-link" href="http://www.hiwebgl.com/?p=201&amp;replytocom=206#respond" onclick="return addComment.moveForm(&quot;comment-206&quot;, &quot;206&quot;, &quot;respond&quot;, &quot;201&quot;)">回复</a></p>
+            </div>
+		</div>
+        
+        
+    
+</li>
+	<li class="comment odd alt thread-odd thread-alt depth-1" id="li-comment-230">
+    	<div id="comment-230">
+            <div class="comment_meta commentmetadata">
+                <span class="avatar"><img alt="" src="./Lesson 5 引入纹理贴图 _ HiWebGL_files/ad516503a11cd5ca435acc9bb6523536(5).png" class="avatar avatar-40 photo" height="40" width="40"></span>
+                <span class="comment_author vcard fn">Bnr</span>
+                <span class="comment_time">2011 年 11 月 30 日 下午 3:58</span>
+            </div>
+            <div class="comment_body">
+                <p></p><p>作者安排代码的风格真的很让人抓狂<br>
+此教程很多关键部分该重点讲解的却一带而过<br>
+不该重点的地方却会大篇幅介绍，缺少图解，概念抽象，笼统。没学过OPENGL的初学者看此教程很吃力的<br>
+但是还是感谢作者制作了这个教程  反反复复在网上找到的教程其实都是这个教程的翻版<br>
+所以还是看下来了  总而言之  有待于改善，但是还是十分感谢！</p>
+<p></p>
+                <p class="reply"><a class="comment-reply-link" href="http://www.hiwebgl.com/?p=201&amp;replytocom=230#respond" onclick="return addComment.moveForm(&quot;comment-230&quot;, &quot;230&quot;, &quot;respond&quot;, &quot;201&quot;)">回复</a></p>
+            </div>
+		</div>
+        
+        
+    
+<ul class="children">
+	<li class="comment even depth-2" id="li-comment-303">
+    	<div id="comment-303">
+            <div class="comment_meta commentmetadata">
+                <span class="avatar"><img alt="" src="./Lesson 5 引入纹理贴图 _ HiWebGL_files/ad516503a11cd5ca435acc9bb6523536(6).png" class="avatar avatar-40 photo" height="40" width="40"></span>
+                <span class="comment_author vcard fn">牛群</span>
+                <span class="comment_time">2011 年 12 月 31 日 下午 2:27</span>
+            </div>
+            <div class="comment_body">
+                <p></p><p>，，，，图形的基本知识了解之后再学这个比较好，，，很多讲解通俗易懂，，但是只有有一些gl基础的人才会有这个感觉，，，，，</p>
+<p></p>
+                <p class="reply"><a class="comment-reply-link" href="http://www.hiwebgl.com/?p=201&amp;replytocom=303#respond" onclick="return addComment.moveForm(&quot;comment-303&quot;, &quot;303&quot;, &quot;respond&quot;, &quot;201&quot;)">回复</a></p>
+            </div>
+		</div>
+        
+        
+    
+</li>
+</ul>
+</li>
+	<li class="comment odd alt thread-even depth-1" id="li-comment-249">
+    	<div id="comment-249">
+            <div class="comment_meta commentmetadata">
+                <span class="avatar"><img alt="" src="./Lesson 5 引入纹理贴图 _ HiWebGL_files/ad516503a11cd5ca435acc9bb6523536(7).png" class="avatar avatar-40 photo" height="40" width="40"></span>
+                <span class="comment_author vcard fn">mislay</span>
+                <span class="comment_time">2011 年 12 月 7 日 上午 12:37</span>
+            </div>
+            <div class="comment_body">
+                <p></p><p>确实有点抓狂</p>
+<p></p>
+                <p class="reply"><a class="comment-reply-link" href="http://www.hiwebgl.com/?p=201&amp;replytocom=249#respond" onclick="return addComment.moveForm(&quot;comment-249&quot;, &quot;249&quot;, &quot;respond&quot;, &quot;201&quot;)">回复</a></p>
+            </div>
+		</div>
+        
+        
+    
+</li>
+	<li class="comment even thread-odd thread-alt depth-1" id="li-comment-288">
+    	<div id="comment-288">
+            <div class="comment_meta commentmetadata">
+                <span class="avatar"><img alt="" src="./Lesson 5 引入纹理贴图 _ HiWebGL_files/ad516503a11cd5ca435acc9bb6523536(8).png" class="avatar avatar-40 photo" height="40" width="40"></span>
+                <span class="comment_author vcard fn">amer</span>
+                <span class="comment_time">2011 年 12 月 27 日 下午 5:39</span>
+            </div>
+            <div class="comment_body">
+                <p></p><p>下载了源码，在firefor中有效果，在chrome中是黑色的，纹理没有加载上，handleLoadedTexture函数中gl.texImage2D这里抛出异常: Uncaught Error: SECURITY_ERR: DOM Exception 18 ,请问这是怎么回事，请使用邮件联系我。非常感谢！</p>
+<p></p>
+                <p class="reply"><a class="comment-reply-link" href="http://www.hiwebgl.com/?p=201&amp;replytocom=288#respond" onclick="return addComment.moveForm(&quot;comment-288&quot;, &quot;288&quot;, &quot;respond&quot;, &quot;201&quot;)">回复</a></p>
+            </div>
+		</div>
+        
+        
+    
+<ul class="children">
+	<li class="comment byuser comment-author-admin bypostauthor odd alt depth-2" id="li-comment-297">
+    	<div id="comment-297">
+            <div class="comment_meta commentmetadata">
+                <span class="avatar"><img alt="" src="./Lesson 5 引入纹理贴图 _ HiWebGL_files/ad516503a11cd5ca435acc9bb6523536(1).png" class="avatar avatar-40 photo" height="40" width="40"></span>
+                <span class="comment_author vcard fn">admin</span>
+                <span class="comment_time">2011 年 12 月 30 日 下午 5:34</span>
+            </div>
+            <div class="comment_body">
+                <p></p><p>看一下首页大按钮里设置Firefox那一段，允许载入本地资源的</p>
+<p></p>
+                <p class="reply"><a class="comment-reply-link" href="http://www.hiwebgl.com/?p=201&amp;replytocom=297#respond" onclick="return addComment.moveForm(&quot;comment-297&quot;, &quot;297&quot;, &quot;respond&quot;, &quot;201&quot;)">回复</a></p>
+            </div>
+		</div>
+        
+        
+    
+</li>
+</ul>
+</li>
+	<li class="comment even thread-even depth-1" id="li-comment-295">
+    	<div id="comment-295">
+            <div class="comment_meta commentmetadata">
+                <span class="avatar"><img alt="" src="./Lesson 5 引入纹理贴图 _ HiWebGL_files/ad516503a11cd5ca435acc9bb6523536(9).png" class="avatar avatar-40 photo" height="40" width="40"></span>
+                <span class="comment_author vcard fn">南木</span>
+                <span class="comment_time">2011 年 12 月 30 日 下午 4:11</span>
+            </div>
+            <div class="comment_body">
+                <p></p><p>handleLoadedTexture函数中gl.texImage2D这里抛出异常: Uncaught Error: SECURITY_ERR: DOM Exception 18 ,请问这是怎么回事，请使用邮件联系我。非常感谢！</p>
+<p></p>
+                <p class="reply"><a class="comment-reply-link" href="http://www.hiwebgl.com/?p=201&amp;replytocom=295#respond" onclick="return addComment.moveForm(&quot;comment-295&quot;, &quot;295&quot;, &quot;respond&quot;, &quot;201&quot;)">回复</a></p>
+            </div>
+		</div>
+        
+        
+    
+<ul class="children">
+	<li class="comment byuser comment-author-admin bypostauthor odd alt depth-2" id="li-comment-299">
+    	<div id="comment-299">
+            <div class="comment_meta commentmetadata">
+                <span class="avatar"><img alt="" src="./Lesson 5 引入纹理贴图 _ HiWebGL_files/ad516503a11cd5ca435acc9bb6523536(1).png" class="avatar avatar-40 photo" height="40" width="40"></span>
+                <span class="comment_author vcard fn">admin</span>
+                <span class="comment_time">2011 年 12 月 30 日 下午 5:35</span>
+            </div>
+            <div class="comment_body">
+                <p></p><p>看一下首页大按钮里设置FIREFOX那一段，允许载入本地资源的那个设置</p>
+<p></p>
+                <p class="reply"><a class="comment-reply-link" href="http://www.hiwebgl.com/?p=201&amp;replytocom=299#respond" onclick="return addComment.moveForm(&quot;comment-299&quot;, &quot;299&quot;, &quot;respond&quot;, &quot;201&quot;)">回复</a></p>
+            </div>
+		</div>
+        
+        
+    
+</li>
+</ul>
+</li>
+	<li class="comment even thread-odd thread-alt depth-1" id="li-comment-309">
+    	<div id="comment-309">
+            <div class="comment_meta commentmetadata">
+                <span class="avatar"><img alt="" src="./Lesson 5 引入纹理贴图 _ HiWebGL_files/fe5f6887c2a874170b0c106431ad0c0c.jpeg" class="avatar avatar-40 photo" height="40" width="40"></span>
+                <span class="comment_author vcard fn">YANDONG</span>
+                <span class="comment_time">2012 年 1 月 2 日 下午 9:31</span>
+            </div>
+            <div class="comment_body">
+                <p></p><p>国内关于WEBGL的书似乎还没有，我拿了些OPENGL的书，试着插入学习，效果不错，推荐大家把这当成进入WEBGL的权宜之计</p>
+<p></p>
+                <p class="reply"><a class="comment-reply-link" href="http://www.hiwebgl.com/?p=201&amp;replytocom=309#respond" onclick="return addComment.moveForm(&quot;comment-309&quot;, &quot;309&quot;, &quot;respond&quot;, &quot;201&quot;)">回复</a></p>
+            </div>
+		</div>
+        
+        
+    
+<ul class="children">
+	<li class="comment odd alt depth-2" id="li-comment-314">
+    	<div id="comment-314">
+            <div class="comment_meta commentmetadata">
+                <span class="avatar"><img alt="" src="./Lesson 5 引入纹理贴图 _ HiWebGL_files/ad516503a11cd5ca435acc9bb6523536(10).png" class="avatar avatar-40 photo" height="40" width="40"></span>
+                <span class="comment_author vcard fn">王跃军</span>
+                <span class="comment_time">2012 年 1 月 4 日 上午 10:17</span>
+            </div>
+            <div class="comment_body">
+                <p></p><p>能给我推荐一下么。可以发我邮箱或者加我QQ！！！不胜感激</p>
+<p></p>
+                <p class="reply"><a class="comment-reply-link" href="http://www.hiwebgl.com/?p=201&amp;replytocom=314#respond" onclick="return addComment.moveForm(&quot;comment-314&quot;, &quot;314&quot;, &quot;respond&quot;, &quot;201&quot;)">回复</a></p>
+            </div>
+		</div>
+        
+        
+    
+</li>
+</ul>
+</li>
+	<li class="comment even thread-even depth-1" id="li-comment-315">
+    	<div id="comment-315">
+            <div class="comment_meta commentmetadata">
+                <span class="avatar"><img alt="" src="./Lesson 5 引入纹理贴图 _ HiWebGL_files/ad516503a11cd5ca435acc9bb6523536(10).png" class="avatar avatar-40 photo" height="40" width="40"></span>
+                <span class="comment_author vcard fn">王跃军</span>
+                <span class="comment_time">2012 年 1 月 4 日 下午 1:51</span>
+            </div>
+            <div class="comment_body">
+                <p></p><p>我QQ：739330605，谢谢</p>
+<p></p>
+                <p class="reply"><a class="comment-reply-link" href="http://www.hiwebgl.com/?p=201&amp;replytocom=315#respond" onclick="return addComment.moveForm(&quot;comment-315&quot;, &quot;315&quot;, &quot;respond&quot;, &quot;201&quot;)">回复</a></p>
+            </div>
+		</div>
+        
+        
+    
+</li>
+	<li class="comment odd alt thread-odd thread-alt depth-1" id="li-comment-428">
+    	<div id="comment-428">
+            <div class="comment_meta commentmetadata">
+                <span class="avatar"><img alt="" src="./Lesson 5 引入纹理贴图 _ HiWebGL_files/ad516503a11cd5ca435acc9bb6523536(11).png" class="avatar avatar-40 photo" height="40" width="40"></span>
+                <span class="comment_author vcard fn">玄</span>
+                <span class="comment_time">2012 年 1 月 26 日 下午 4:58</span>
+            </div>
+            <div class="comment_body">
+                <p></p><p>想问，六个面贴不同的图要怎么做呢？<br>
+我现在用的方法是把图放一张图片上，然后改取纹理顶点的平面坐标点。<br>
+还有把图片缩小到256像素以下，纹理贴图就显示不出来了。不知道是不是缩放的方式决定的。<br>
+谢谢LZ的翻译讲解~后面的还没看，目前为止让我这样一点3d知识都没有的人，有了一点感觉~</p>
+<p></p>
+                <p class="reply"><a class="comment-reply-link" href="http://www.hiwebgl.com/?p=201&amp;replytocom=428#respond" onclick="return addComment.moveForm(&quot;comment-428&quot;, &quot;428&quot;, &quot;respond&quot;, &quot;201&quot;)">回复</a></p>
+            </div>
+		</div>
+        
+        
+    
+<ul class="children">
+	<li class="comment even depth-2" id="li-comment-473">
+    	<div id="comment-473">
+            <div class="comment_meta commentmetadata">
+                <span class="avatar"><img alt="" src="./Lesson 5 引入纹理贴图 _ HiWebGL_files/ad516503a11cd5ca435acc9bb6523536(9).png" class="avatar avatar-40 photo" height="40" width="40"></span>
+                <span class="comment_author vcard fn">南木</span>
+                <span class="comment_time">2012 年 2 月 1 日 下午 2:28</span>
+            </div>
+            <div class="comment_body">
+                <p></p><p>texImage2d方法中的第一个参数可以是<br>
+         GL_TEXTURE_2D<br>
+         GL_TEXTURE_CUBE_MAP_POSITIVE_X<br>
+         GL_TEXTURE_CUBE_MAP_NEGATIVE_X<br>
+         GL_TEXTURE_CUBE_MAP_POSITIVE_Y<br>
+         GL_TEXTURE_CUBE_MAP_NEGATIVE_Y<br>
+         GL_TEXTURE_CUBE_MAP_POSITIVE_Z<br>
+         GL_TEXTURE_CUBE_MAP_NEGATIVE_Z<br>
+中的一个，所以可以分别设置不同的图片</p>
+<p></p>
+                <p class="reply"><a class="comment-reply-link" href="http://www.hiwebgl.com/?p=201&amp;replytocom=473#respond" onclick="return addComment.moveForm(&quot;comment-473&quot;, &quot;473&quot;, &quot;respond&quot;, &quot;201&quot;)">回复</a></p>
+            </div>
+		</div>
+        
+        
+    
+</li>
+</ul>
+</li>
+	<li class="comment odd alt thread-even depth-1" id="li-comment-467">
+    	<div id="comment-467">
+            <div class="comment_meta commentmetadata">
+                <span class="avatar"><img alt="" src="./Lesson 5 引入纹理贴图 _ HiWebGL_files/ad516503a11cd5ca435acc9bb6523536(12).png" class="avatar avatar-40 photo" height="40" width="40"></span>
+                <span class="comment_author vcard fn">pengwar</span>
+                <span class="comment_time">2012 年 2 月 1 日 上午 9:16</span>
+            </div>
+            <div class="comment_body">
+                <p></p><p>似乎对图形的大小和比例都有限制，不知道是在哪段代码限制了，没学过3D图形压力很大</p>
+<p></p>
+                <p class="reply"><a class="comment-reply-link" href="http://www.hiwebgl.com/?p=201&amp;replytocom=467#respond" onclick="return addComment.moveForm(&quot;comment-467&quot;, &quot;467&quot;, &quot;respond&quot;, &quot;201&quot;)">回复</a></p>
+            </div>
+		</div>
+        
+        
+    
+</li>
+	<li class="comment even thread-odd thread-alt depth-1" id="li-comment-552">
+    	<div id="comment-552">
+            <div class="comment_meta commentmetadata">
+                <span class="avatar"><img alt="" src="./Lesson 5 引入纹理贴图 _ HiWebGL_files/ad516503a11cd5ca435acc9bb6523536(13).png" class="avatar avatar-40 photo" height="40" width="40"></span>
+                <span class="comment_author vcard fn">xkey</span>
+                <span class="comment_time">2012 年 2 月 15 日 下午 1:34</span>
+            </div>
+            <div class="comment_body">
+                <p></p><p>为什么换成别的图片就不可以了呢？难道代码里面对图片的大小有限制，请教作者如何修改？</p>
+<p></p>
+                <p class="reply"><a class="comment-reply-link" href="http://www.hiwebgl.com/?p=201&amp;replytocom=552#respond" onclick="return addComment.moveForm(&quot;comment-552&quot;, &quot;552&quot;, &quot;respond&quot;, &quot;201&quot;)">回复</a></p>
+            </div>
+		</div>
+        
+        
+    
+<ul class="children">
+	<li class="comment byuser comment-author-admin bypostauthor odd alt depth-2" id="li-comment-565">
+    	<div id="comment-565">
+            <div class="comment_meta commentmetadata">
+                <span class="avatar"><img alt="" src="./Lesson 5 引入纹理贴图 _ HiWebGL_files/ad516503a11cd5ca435acc9bb6523536(1).png" class="avatar avatar-40 photo" height="40" width="40"></span>
+                <span class="comment_author vcard fn">admin</span>
+                <span class="comment_time">2012 年 2 月 17 日 下午 4:26</span>
+            </div>
+            <div class="comment_body">
+                <p></p><p>纹理贴图的尺寸必须是2的整数次幂</p>
+<p></p>
+                <p class="reply"><a class="comment-reply-link" href="http://www.hiwebgl.com/?p=201&amp;replytocom=565#respond" onclick="return addComment.moveForm(&quot;comment-565&quot;, &quot;565&quot;, &quot;respond&quot;, &quot;201&quot;)">回复</a></p>
+            </div>
+		</div>
+        
+        
+    
+<ul class="children">
+	<li class="comment even depth-3" id="li-comment-735">
+    	<div id="comment-735">
+            <div class="comment_meta commentmetadata">
+                <span class="avatar"><img alt="" src="./Lesson 5 引入纹理贴图 _ HiWebGL_files/ad516503a11cd5ca435acc9bb6523536(14).png" class="avatar avatar-40 photo" height="40" width="40"></span>
+                <span class="comment_author vcard fn">刘俊杰</span>
+                <span class="comment_time">2012 年 4 月 10 日 上午 10:22</span>
+            </div>
+            <div class="comment_body">
+                <p></p><p>正解！</p>
+<p></p>
+                <p class="reply"><a class="comment-reply-link" href="http://www.hiwebgl.com/?p=201&amp;replytocom=735#respond" onclick="return addComment.moveForm(&quot;comment-735&quot;, &quot;735&quot;, &quot;respond&quot;, &quot;201&quot;)">回复</a></p>
+            </div>
+		</div>
+        
+        
+    
+</li>
+</ul>
+</li>
+</ul>
+</li>
+	<li class="comment odd alt thread-even depth-1" id="li-comment-553">
+    	<div id="comment-553">
+            <div class="comment_meta commentmetadata">
+                <span class="avatar"><img alt="" src="./Lesson 5 引入纹理贴图 _ HiWebGL_files/ad516503a11cd5ca435acc9bb6523536(13).png" class="avatar avatar-40 photo" height="40" width="40"></span>
+                <span class="comment_author vcard fn">xkey</span>
+                <span class="comment_time">2012 年 2 月 15 日 下午 1:57</span>
+            </div>
+            <div class="comment_body">
+                <p></p><p>“我们建立了一个全局变量用来储存纹理，显然在真正的应用中会有很多纹理，所以不应该使用全局变量”，请问不用全局变量，是用局部变量么？如果是请问代码怎么写，标示用局部变量不会写，还请指导</p>
+<p></p>
+                <p class="reply"><a class="comment-reply-link" href="http://www.hiwebgl.com/?p=201&amp;replytocom=553#respond" onclick="return addComment.moveForm(&quot;comment-553&quot;, &quot;553&quot;, &quot;respond&quot;, &quot;201&quot;)">回复</a></p>
+            </div>
+		</div>
+        
+        
+    
+<ul class="children">
+	<li class="comment byuser comment-author-admin bypostauthor even depth-2" id="li-comment-566">
+    	<div id="comment-566">
+            <div class="comment_meta commentmetadata">
+                <span class="avatar"><img alt="" src="./Lesson 5 引入纹理贴图 _ HiWebGL_files/ad516503a11cd5ca435acc9bb6523536(1).png" class="avatar avatar-40 photo" height="40" width="40"></span>
+                <span class="comment_author vcard fn">admin</span>
+                <span class="comment_time">2012 年 2 月 17 日 下午 4:27</span>
+            </div>
+            <div class="comment_body">
+                <p></p><p>这个可以参考一下JS的教程，网上搜索一下，很多的</p>
+<p></p>
+                <p class="reply"><a class="comment-reply-link" href="http://www.hiwebgl.com/?p=201&amp;replytocom=566#respond" onclick="return addComment.moveForm(&quot;comment-566&quot;, &quot;566&quot;, &quot;respond&quot;, &quot;201&quot;)">回复</a></p>
+            </div>
+		</div>
+        
+        
+    
+</li>
+</ul>
+</li>
+	<li class="comment odd alt thread-odd thread-alt depth-1" id="li-comment-567">
+    	<div id="comment-567">
+            <div class="comment_meta commentmetadata">
+                <span class="avatar"><img alt="" src="./Lesson 5 引入纹理贴图 _ HiWebGL_files/ad516503a11cd5ca435acc9bb6523536(15).png" class="avatar avatar-40 photo" height="40" width="40"></span>
+                <span class="comment_author vcard fn">sHarpen</span>
+                <span class="comment_time">2012 年 2 月 18 日 下午 1:12</span>
+            </div>
+            <div class="comment_body">
+                <p></p><p>教程里的texture图像不会被载入因为它被指定为了跨域图像<br>
+想要解决这个问题的话应该在<br>
+neheTexture.image = new Image();<br>
+后面加入这句代码<br>
+neheTexture.image.crossOrigin = “anonymous”;</p>
+<p></p>
+                <p class="reply"><a class="comment-reply-link" href="http://www.hiwebgl.com/?p=201&amp;replytocom=567#respond" onclick="return addComment.moveForm(&quot;comment-567&quot;, &quot;567&quot;, &quot;respond&quot;, &quot;201&quot;)">回复</a></p>
+            </div>
+		</div>
+        
+        
+    
+</li>
+	<li class="comment even thread-even depth-1" id="li-comment-814">
+    	<div id="comment-814">
+            <div class="comment_meta commentmetadata">
+                <span class="avatar"><img alt="" src="./Lesson 5 引入纹理贴图 _ HiWebGL_files/ad516503a11cd5ca435acc9bb6523536(16).png" class="avatar avatar-40 photo" height="40" width="40"></span>
+                <span class="comment_author vcard fn">binge</span>
+                <span class="comment_time">2012 年 5 月 5 日 下午 1:46</span>
+            </div>
+            <div class="comment_body">
+                <p></p><p>为什么插入的纹理图片像素都是256*256，不能用任意的吗？</p>
+<p></p>
+                <p class="reply"><a class="comment-reply-link" href="http://www.hiwebgl.com/?p=201&amp;replytocom=814#respond" onclick="return addComment.moveForm(&quot;comment-814&quot;, &quot;814&quot;, &quot;respond&quot;, &quot;201&quot;)">回复</a></p>
+            </div>
+		</div>
+        
+        
+    
+<ul class="children">
+	<li class="comment byuser comment-author-admin bypostauthor odd alt depth-2" id="li-comment-816">
+    	<div id="comment-816">
+            <div class="comment_meta commentmetadata">
+                <span class="avatar"><img alt="" src="./Lesson 5 引入纹理贴图 _ HiWebGL_files/ad516503a11cd5ca435acc9bb6523536(1).png" class="avatar avatar-40 photo" height="40" width="40"></span>
+                <span class="comment_author vcard fn">admin</span>
+                <span class="comment_time">2012 年 5 月 5 日 下午 5:26</span>
+            </div>
+            <div class="comment_body">
+                <p></p><p>纹理贴图的尺寸必须是2的整数次幂。</p>
+<p></p>
+                <p class="reply"><a class="comment-reply-link" href="http://www.hiwebgl.com/?p=201&amp;replytocom=816#respond" onclick="return addComment.moveForm(&quot;comment-816&quot;, &quot;816&quot;, &quot;respond&quot;, &quot;201&quot;)">回复</a></p>
+            </div>
+		</div>
+        
+        
+    
+</li>
+</ul>
+</li>
+	<li class="comment even thread-odd thread-alt depth-1" id="li-comment-890">
+    	<div id="comment-890">
+            <div class="comment_meta commentmetadata">
+                <span class="avatar"><img alt="" src="./Lesson 5 引入纹理贴图 _ HiWebGL_files/1a25ee4d5582e3c86fe40b0aa9efff78.jpeg" class="avatar avatar-40 photo" height="40" width="40"></span>
+                <span class="comment_author vcard fn"><a href="http://webgl/" rel="external nofollow" class="url">alsace</a></span>
+                <span class="comment_time">2012 年 5 月 22 日 上午 9:06</span>
+            </div>
+            <div class="comment_body">
+                <p></p><p>这个是将所有的面都进行贴图，如果我只想贴某几个面呢？ 我试过删除一个面的坐标或者改为0都不正确，忘解答，谢谢</p>
+<p></p>
+                <p class="reply"><a class="comment-reply-link" href="http://www.hiwebgl.com/?p=201&amp;replytocom=890#respond" onclick="return addComment.moveForm(&quot;comment-890&quot;, &quot;890&quot;, &quot;respond&quot;, &quot;201&quot;)">回复</a></p>
+            </div>
+		</div>
+        
+        
+    
+</li>
+	<li class="comment odd alt thread-even depth-1" id="li-comment-894">
+    	<div id="comment-894">
+            <div class="comment_meta commentmetadata">
+                <span class="avatar"><img alt="" src="./Lesson 5 引入纹理贴图 _ HiWebGL_files/ad516503a11cd5ca435acc9bb6523536(17).png" class="avatar avatar-40 photo" height="40" width="40"></span>
+                <span class="comment_author vcard fn">喵喵</span>
+                <span class="comment_time">2012 年 5 月 22 日 下午 10:00</span>
+            </div>
+            <div class="comment_body">
+                <p></p><p>喵呜喵呜，望楼主回复~</p>
+<p></p>
+                <p class="reply"><a class="comment-reply-link" href="http://www.hiwebgl.com/?p=201&amp;replytocom=894#respond" onclick="return addComment.moveForm(&quot;comment-894&quot;, &quot;894&quot;, &quot;respond&quot;, &quot;201&quot;)">回复</a></p>
+            </div>
+		</div>
+        
+        
+    
+</li>
+    </ol>
+        
+
+								<div id="respond">
+				<h3 id="reply-title">Post a Comment <small><a rel="nofollow" id="cancel-comment-reply-link" href="http://www.hiwebgl.com/?p=201#respond" style="display:none;">点击这里取消回复。</a></small></h3>
+									<form action="http://www.hiwebgl.com/wp-comments-post.php" method="post" id="commentform">
+																			<p class="comment-notes">电子邮件地址不会被公开。 必填项已用 <span class="required">*</span> 标注</p>							<p class="comment-form-author"><label for="author">姓名</label> <span class="required">*</span><input id="author" name="author" type="text" value="" size="30" aria-required="true"></p>
+<p class="comment-form-email"><label for="email">电子邮件</label> <span class="required">*</span><input id="email" name="email" type="text" value="" size="30" aria-required="true"></p>
+<p class="comment-form-url"><label for="url">站点</label><input id="url" name="url" type="text" value="" size="30"></p>
+												<p class="comment-form-comment"><label for="comment">评论</label><textarea id="comment" name="comment" cols="45" rows="8" aria-required="true"></textarea></p>						<p class="form-allowed-tags">您可以使用这些 <abbr title="HyperText Markup Language">HTML</abbr> 标签和属性： <code>&lt;a href="" title=""&gt; &lt;abbr title=""&gt; &lt;acronym title=""&gt; &lt;b&gt; &lt;blockquote cite=""&gt; &lt;cite&gt; &lt;code&gt; &lt;del datetime=""&gt; &lt;em&gt; &lt;i&gt; &lt;q cite=""&gt; &lt;strike&gt; &lt;strong&gt; </code></p>						<p class="form-submit">
+							<input name="submit" type="submit" id="submit" value="发表评论">
+							<input type="hidden" name="comment_post_ID" value="201" id="comment_post_ID">
+<input type="hidden" name="comment_parent" id="comment_parent" value="0">
+						</p>
+						<p style="display: none;"><input type="hidden" id="akismet_comment_nonce" name="akismet_comment_nonce" value="a21e4d07c8"></p>					</form>
+							</div><!-- #respond -->
+						
+</div><!-- #comments -->
+
+			</div><!-- #content -->
+		</div><!-- #container -->
+
+<div id="sidebar" class="widget-area" role="complementary">
+	<ul class="xoxo">
+    	<li id="search-2" class="widget-container widget_search"><form id="searchform" method="get" action="http://www.hiwebgl.com/"> 
+	<input type="text" name="s" id="s" class="search_term" value="Type in keyword and hit Enter..." onblur="if (this.value == &#39;&#39;) {this.value = &#39;Type in keyword and hit Enter...&#39;;}" onfocus="if (this.value == &#39;Type in keyword and hit Enter...&#39;) {this.value = &#39;&#39;;}">
+</form></li><li id="text-4" class="widget-container widget_text"><h3 class="widget-title">加入我们的QQ群</h3>			<div class="textwidget"><b>HiWebGL技术讨论群</b><br>①群群号174563471（已满）<br>②群群号133703893（已满）<br>③群群号196778533（已满）<br>④群群号217873851（已满）<br>⑤群群号225923498（已满）<br>500人群群号219549633<br>欢迎各位程序员和工程师加入！<br><a target="_blank" href="http://qun.qq.com/#jointhegroup/gid/219549633"><img border="0" src="./Lesson 5 引入纹理贴图 _ HiWebGL_files/gp.png" alt="点击这里加入此群" title="点击这里加入此群"></a>
+<br><br>
+<b>HiWebGL产业讨论群</b><br>①群群号176289597（已满）<br>②群群号216936388<br>欢迎关注Web3D发展的从业者与富有理想与激情的创业者朋友加入！<br><a target="_blank" href="http://qun.qq.com/#jointhegroup/gid/216936388"><img border="0" src="./Lesson 5 引入纹理贴图 _ HiWebGL_files/gp.png" alt="点击这里加入此群" title="点击这里加入此群"></a></div>
+		</li><style type="text/css" media="screen">
+#mwrapper-wm_show-3 .mcontainer {height: 300px; overflow: hidden;}
+</style>
+<li id="wm_show-3" class="widget-container wm_show"><h3 class="widget-title">关注我们的新浪微博！</h3><div class="mwrapper" id="mwrapper-wm_show-3"><div class="head"><img class="headimg" src="./Lesson 5 引入纹理贴图 _ HiWebGL_files/89c570d0jw1e8qgp5bmzyj2050050aa8.jpg"><a class="headlink" href="http://weibo.com/2311418064" rel="external nofollow" target="_blank">HiWebGL</a><div class="onekey"><iframe width="63" height="24" frameborder="0" allowtransparency="true" marginwidth="0" marginheight="0" scrolling="no" border="0" src="./Lesson 5 引入纹理贴图 _ HiWebGL_files/followbutton.html"></iframe></div></div><a class="scroll up" href="javascript:;"><img src="./Lesson 5 引入纹理贴图 _ HiWebGL_files/transparent.gif"></a><div class="mcontainer"><ul class="microblogs"><li class="tweet">[哆啦A梦吃惊]<div class="rt"><a href="http://weibo.com/crazycomputer" rel="external nofollow" target="_blank">尼奥_</a> : 因写了抢猫粮插件被抓的小喵。<div class="pic rt-pic"><a href="http://ww3.sinaimg.cn/large/6588fb91jw1f8a611qywmj20qo0r743g.jpg" rel="external nofollow" target="_blank"><img src="./Lesson 5 引入纹理贴图 _ HiWebGL_files/6588fb91jw1f8a611qywmj20qo0r743g.jpg"></a></div></div><div class="meta"><a href="http://api.t.sina.com.cn/2311418064/statuses/4025014212843692" rel="external nofollow" target="_blank">9月29日 12:00</a> 来自 <a href="http://weibo.com/2311418064" rel="external nofollow" target="_blank">新浪微博</a></div></li><li class="tweet">转发微博<div class="rt"><a href="http://weibo.com/armcn" rel="external nofollow" target="_blank">ARM中国</a> : 在看颜的时代，如何让一款游戏画面更具高bigger？从8位像素画风到1080P/4K，再到ARM的Enlighten全局光照技术，能够分分钟变化出数十种光照效果，再挑的玩家都给它点赞了，不信你就来看看[围观][围观]<a href="http://t.cn/RcNsHsc" rel="external nofollow" target="_blank">http://t.cn/RcNsHsc</a><div class="pic rt-pic"><a href="http://ww3.sinaimg.cn/large/84217b4fgw1f89g6wubugj20j30q6gr3.jpg" rel="external nofollow" target="_blank"><img src="./Lesson 5 引入纹理贴图 _ HiWebGL_files/84217b4fgw1f89g6wubugj20j30q6gr3.jpg"></a></div></div><div class="meta"><a href="http://api.t.sina.com.cn/2311418064/statuses/4025000392991907" rel="external nofollow" target="_blank">9月29日 11:05</a> 来自 <a href="http://weibo.com/2311418064" rel="external nofollow" target="_blank">新浪微博</a></div></li><li class="tweet">转发微博<div class="rt"><a href="http://weibo.com/baidujs" rel="external nofollow" target="_blank">JS小组</a> : 你知道使用 target='_blank' 也会有安全漏洞么？尤其是在各种 UGC 网站中。不过小编早就玩过了，其实一般倒也不会用在钓鱼上，而是用在各种各样的广告点击中。推荐文章《target='_blank' 安全漏洞示例》地址 <a href="http://t.cn/RchBwVu" rel="external nofollow" target="_blank">http://t.cn/RchBwVu</a>  $w<div class="pic rt-pic"><a href="http://ww2.sinaimg.cn/large/aa9d3df6jw1f7fewekmx8j20g30a1aak.jpg" rel="external nofollow" target="_blank"><img src="./Lesson 5 引入纹理贴图 _ HiWebGL_files/aa9d3df6jw1f7fewekmx8j20g30a1aak.jpg"></a></div></div><div class="meta"><a href="http://api.t.sina.com.cn/2311418064/statuses/4016375595329873" rel="external nofollow" target="_blank">9月5日 15:53</a> 来自 <a href="http://weibo.com/2311418064" rel="external nofollow" target="_blank">新浪微博</a></div></li><li class="tweet">不做游戏，帮转<div class="rt"><a href="http://weibo.com/xdarui" rel="external nofollow" target="_blank">阿里子之</a> : 有做WebVR游戏的公司么，求合作。求圈内大神帮忙转发。@寒冬winter @大城小胖 @w3cplus</div><div class="meta"><a href="http://api.t.sina.com.cn/2311418064/statuses/4015348426770066" rel="external nofollow" target="_blank">9月2日 19:52</a> 来自 <a href="http://weibo.com/2311418064" rel="external nofollow" target="_blank">新浪微博</a></div></li><li class="tweet">阿里云OSS是否支持websockets?有人知道吗？<div class="meta"><a href="http://api.t.sina.com.cn/2311418064/statuses/4006622127044001" rel="external nofollow" target="_blank">8月9日 17:56</a> 来自 <a href="http://weibo.com/2311418064" rel="external nofollow" target="_blank">新浪微博</a></div></li></ul></div><a class="scroll down" href="javascript:;"><img src="./Lesson 5 引入纹理贴图 _ HiWebGL_files/transparent.gif"></a></div></li><li id="recent-comments-2" class="widget-container widget_recent_comments"><h3 class="widget-title">近期评论</h3><ul id="recentcomments"><li class="recentcomments"><a href="http://www.d2film.com/" rel="external nofollow" class="url">企业宣传片制作d2film.com影视视频制作公司QQ30998</a> 发表在《<a href="http://www.hiwebgl.com/?p=42#comment-7984">WebGL中文教程翻译工程启动！</a>》</li><li class="recentcomments"><a href="http://www.128sf.cn/" rel="external nofollow" class="url">魔域服务器架设</a> 发表在《<a href="http://www.hiwebgl.com/?p=312#comment-7858">Lesson 9 优化代码结构实现多物体运动</a>》</li><li class="recentcomments"><a href="http://www.39uc.cn/" rel="external nofollow" class="url">天龙八部师傅m161</a> 发表在《<a href="http://www.hiwebgl.com/?p=70#comment-7857">外媒公布Firefox 6性能测试结果</a>》</li><li class="recentcomments"><a href="http://www.233sf.cn/" rel="external nofollow" class="url">最新奇迹私发网</a> 发表在《<a href="http://www.hiwebgl.com/?p=42#comment-7856">WebGL中文教程翻译工程启动！</a>》</li><li class="recentcomments"><a href="http://www.5aivideo.com/" rel="external nofollow" class="url">婚礼跟拍视频5aivideo.com婚礼摄影MV-QQ73595</a> 发表在《<a href="http://www.hiwebgl.com/?p=42#comment-7829">WebGL中文教程翻译工程启动！</a>》</li></ul></li><li id="categories-2" class="widget-container widget_categories"><h3 class="widget-title">分类目录</h3>		<ul>
+	<li class="cat-item cat-item-16"><a href="http://www.hiwebgl.com/?cat=16" title="查看 Demo大赏 下的所有文章">Demo大赏</a>
+</li>
+	<li class="cat-item cat-item-29"><a href="http://www.hiwebgl.com/?cat=29" title="查看 HTML5新闻 下的所有文章">HTML5新闻</a>
+</li>
+	<li class="cat-item cat-item-57"><a href="http://www.hiwebgl.com/?cat=57" title="Oak3D中文教程">Oak3D教程</a>
+</li>
+	<li class="cat-item cat-item-17"><a href="http://www.hiwebgl.com/?cat=17" title="查看 WebGL教程 下的所有文章">WebGL教程</a>
+</li>
+	<li class="cat-item cat-item-3"><a href="http://www.hiwebgl.com/?cat=3" title="WebGL新闻">WebGL新闻</a>
+</li>
+	<li class="cat-item cat-item-10"><a href="http://www.hiwebgl.com/?cat=10" title="查看 博文精选 下的所有文章">博文精选</a>
+</li>
+	<li class="cat-item cat-item-4"><a href="http://www.hiwebgl.com/?cat=4" title="推荐阅读">推荐</a>
+</li>
+	<li class="cat-item cat-item-1"><a href="http://www.hiwebgl.com/?cat=1" title="查看 未分类 下的所有文章">未分类</a>
+</li>
+		</ul>
+</li><li id="archives-2" class="widget-container widget_archive"><h3 class="widget-title">文章归档</h3>		<ul>
+			<li><a href="http://www.hiwebgl.com/?m=201206" title="2012 年六月">2012 年六月</a></li>
+	<li><a href="http://www.hiwebgl.com/?m=201205" title="2012 年五月">2012 年五月</a></li>
+	<li><a href="http://www.hiwebgl.com/?m=201204" title="2012 年四月">2012 年四月</a></li>
+	<li><a href="http://www.hiwebgl.com/?m=201203" title="2012 年三月">2012 年三月</a></li>
+	<li><a href="http://www.hiwebgl.com/?m=201202" title="2012 年二月">2012 年二月</a></li>
+	<li><a href="http://www.hiwebgl.com/?m=201201" title="2012 年一月">2012 年一月</a></li>
+	<li><a href="http://www.hiwebgl.com/?m=201112" title="2011 年十二月">2011 年十二月</a></li>
+	<li><a href="http://www.hiwebgl.com/?m=201111" title="2011 年十一月">2011 年十一月</a></li>
+	<li><a href="http://www.hiwebgl.com/?m=201110" title="2011 年十月">2011 年十月</a></li>
+	<li><a href="http://www.hiwebgl.com/?m=201109" title="2011 年九月">2011 年九月</a></li>
+	<li><a href="http://www.hiwebgl.com/?m=201108" title="2011 年八月">2011 年八月</a></li>
+		</ul>
+</li>    </ul>
+</div><!-- #sidebar .widget-area -->	</div><!-- #main -->
+    <div id="footer" role="contentinfo">
+    	
+    	<div id="colophon">
+            <div id="site-info" class="clearfix">
+                <div id="generator">Powered by <a href="http://wordpress.org/" title="Semantic Personal Publishing Platform" rel="generator">Wordpress</a> and <a href="http://wpcrunchy.com/" title="Free Premium Quality Wordpress Themes">WPCrunchy</a></div>
+                <div id="credits">Designed by <a href="http://www.hostreviewgeeks.com/" title="best web hosting" target="_blank">best web hosting</a>. In collaboration with <a href="http://www.hostv.com/" title="VPS Hosting" target="_blank">VPS Hosting</a>, <a href="http://broadwaytickets.co/" title="Broadway Tickets" target="_blank">Broadway Tickets</a>, <a href="http://wpcorner.com/" title="Free Wordpress Themes" target="_blank">Free Wordpress Themes</a>.</div>
+            </div>
+        </div>
+    </div><!-- #footer -->
+</div><!-- #wrapper -->
+
+<script type="text/javascript">jQuery(document).ready(function() { if(jQuery("ul.accordion li").length > 2) { jQuery("ul.accordion").accordion(); } });</script><script src="./Lesson 5 引入纹理贴图 _ HiWebGL_files/stat.php" language="JavaScript"></script><script src="./Lesson 5 引入纹理贴图 _ HiWebGL_files/core.php" charset="utf-8" type="text/javascript"></script><a href="http://www.cnzz.com/stat/website.php?web_id=3871765" target="_blank" title="站长统计"><img border="0" hspace="0" vspace="0" src="./Lesson 5 引入纹理贴图 _ HiWebGL_files/pic.gif"></a><script src="./Lesson 5 引入纹理贴图 _ HiWebGL_files/stat.js.下载" defer="defer" async="async"></script>
+ </body></html>

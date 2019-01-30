@@ -1,0 +1,820 @@
+<!DOCTYPE html>
+<!-- saved from url=(0029)http://www.hiwebgl.com/?p=327 -->
+<html dir="ltr" lang="zh-CN"><script type="text/javascript">
+    var spector;
+    var captureOnLoad = false;
+    var captureOffScreen = false;
+    window.__SPECTOR_Canvases = [];
+
+    (function() {
+        var __SPECTOR_Origin_EXTENSION_GetContext = HTMLCanvasElement.prototype.getContext;
+        HTMLCanvasElement.prototype.__SPECTOR_Origin_EXTENSION_GetContext = __SPECTOR_Origin_EXTENSION_GetContext;
+
+        HTMLCanvasElement.prototype.getContext = function () {
+            var context = null;
+            if (!arguments.length) {
+                return context;
+            }
+
+            if (arguments.length === 1) {
+                context = this.__SPECTOR_Origin_EXTENSION_GetContext(arguments[0]);
+                if (context === null) {
+                    return context;
+                }
+            }
+            else if (arguments.length === 2) {
+                context = this.__SPECTOR_Origin_EXTENSION_GetContext(arguments[0], arguments[1]);
+                if (context === null) {
+                    return context;
+                }
+            }
+
+            var contextNames = ["webgl", "experimental-webgl", "webgl2", "experimental-webgl2"];
+            if (contextNames.indexOf(arguments[0]) !== -1) {
+                context.canvas.setAttribute("__spector_context_type", arguments[0]);
+                // Notify the page a canvas is available.
+                var myEvent = new CustomEvent("SpectorWebGLCanvasAvailableEvent");
+                document.dispatchEvent(myEvent);
+
+                if (captureOffScreen) {
+                    var found = false;
+                    for (var i = 0; i < window.__SPECTOR_Canvases.length; i++) {
+                        if (window.__SPECTOR_Canvases[i] === this) {
+                            found = true;
+                            break;
+                        }
+                    }
+                    if (!found) {
+                        window.__SPECTOR_Canvases.push(this);
+                    }
+                }
+
+                if (captureOnLoad) {
+                    // Ensures canvas is in the dom to capture the one we are currently tracking.
+                    if (this.parentElement || false) {
+                        spector.captureContext(context, 500, false);
+                        captureOnLoad = false;
+                    }
+                }
+            }
+
+            return context;
+        }
+    })()</script><script>(function main() {
+    // Create enabled event
+    function fireEnabledEvent() {
+        // If gli exists, then we are already present and shouldn't do anything
+        if (!window.gli) {
+            setTimeout(function () {
+                var enabledEvent = document.createEvent("Event");
+                enabledEvent.initEvent("WebGLEnabledEvent", true, true);
+                document.dispatchEvent(enabledEvent);
+            }, 0);
+        } else {
+            //console.log("WebGL Inspector already embedded on the page - disabling extension");
+        }
+    };
+
+    // Grab the path root from the extension
+    document.addEventListener("WebGLInspectorReadyEvent", function (e) {
+        var pathElement = document.getElementById("__webglpathroot");
+        if (window["gliloader"]) {
+            gliloader.pathRoot = pathElement.innerText;
+        } else {
+            // TODO: more?
+            window.gliCssUrl = pathElement.innerText + "gli.all.css";
+        }
+    }, false);
+
+    // Rewrite getContext to snoop for webgl
+    var originalGetContext = HTMLCanvasElement.prototype.getContext;
+    if (!HTMLCanvasElement.prototype.getContextRaw) {
+        HTMLCanvasElement.prototype.getContextRaw = originalGetContext;
+    }
+    HTMLCanvasElement.prototype.getContext = function () {
+        var ignoreCanvas = this.internalInspectorSurface;
+        if (ignoreCanvas) {
+            return originalGetContext.apply(this, arguments);
+        }
+
+        var result = originalGetContext.apply(this, arguments);
+        if (result == null) {
+            return null;
+        }
+
+        var contextNames = ["moz-webgl", "webkit-3d", "experimental-webgl", "webgl", "3d"];
+        var requestingWebGL = contextNames.indexOf(arguments[0]) != -1;
+        if (requestingWebGL) {
+            // Page is requesting a WebGL context!
+            fireEnabledEvent(this);
+
+            // If we are injected, inspect this context
+            if (window.gli) {
+                if (gli.host.inspectContext) {
+                    // TODO: pull options from extension
+                    result = gli.host.inspectContext(this, result);
+                    // NOTE: execute in a timeout so that if the dom is not yet
+                    // loaded this won't error out.
+                    window.setTimeout(function() {
+                        var hostUI = new gli.host.HostUI(result);
+                        result.hostUI = hostUI; // just so we can access it later for debugging
+                    }, 0);
+                }
+            }
+        }
+
+        return result;
+    };
+})();</script><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+
+<title>Lesson 10 载入世界，以及相机简介 | HiWebGL</title>
+<link rel="profile" href="http://gmpg.org/xfn/11">
+<link rel="stylesheet" type="text/css" media="all" href="./Lesson 10 载入世界，以及相机简介 _ HiWebGL_files/style.css">
+<!--[if IE]>
+<link rel="stylesheet" type="text/css" media="all" href="http://www.hiwebgl.com/wp-content/themes/mnchrome/style-ie.css" />
+<![endif]-->
+<link rel="stylesheet" type="text/css" media="all" href="./Lesson 10 载入世界，以及相机简介 _ HiWebGL_files/custom.css"><link rel="pingback" href="http://www.hiwebgl.com/xmlrpc.php">
+<meta name="robots" content="index,follow">
+<link rel="canonical" href="http://www.hiwebgl.com/?p=327">
+<link rel="alternate" type="application/rss+xml" title="HiWebGL » Feed" href="http://www.hiwebgl.com/?feed=rss2">
+<link rel="alternate" type="application/rss+xml" title="HiWebGL » 评论 Feed" href="http://www.hiwebgl.com/?feed=comments-rss2">
+<link rel="alternate" type="application/rss+xml" title="HiWebGL » Lesson 10 载入世界，以及相机简介 评论 Feed" href="http://www.hiwebgl.com/?feed=rss2&amp;p=327">
+<link rel="stylesheet" id="wm-css" href="./Lesson 10 载入世界，以及相机简介 _ HiWebGL_files/style(1).css" type="text/css" media="all">
+<link rel="stylesheet" id="toc-screen-css" href="./Lesson 10 载入世界，以及相机简介 _ HiWebGL_files/screen.css" type="text/css" media="all">
+<link rel="stylesheet" id="codebox-css" href="./Lesson 10 载入世界，以及相机简介 _ HiWebGL_files/codebox.css" type="text/css" media="screen">
+<script type="text/javascript" src="./Lesson 10 载入世界，以及相机简介 _ HiWebGL_files/jquery.js.下载"></script>
+<script type="text/javascript" src="./Lesson 10 载入世界，以及相机简介 _ HiWebGL_files/front.js.下载"></script>
+<script type="text/javascript" src="./Lesson 10 载入世界，以及相机简介 _ HiWebGL_files/widget.js.下载"></script>
+<script type="text/javascript" src="./Lesson 10 载入世界，以及相机简介 _ HiWebGL_files/comment-reply.js.下载"></script>
+<script type="text/javascript" src="./Lesson 10 载入世界，以及相机简介 _ HiWebGL_files/codebox.js.下载"></script>
+<link rel="EditURI" type="application/rsd+xml" title="RSD" href="http://www.hiwebgl.com/xmlrpc.php?rsd">
+<link rel="wlwmanifest" type="application/wlwmanifest+xml" href="http://www.hiwebgl.com/wp-includes/wlwmanifest.xml"> 
+<link rel="prev" title="Intel公布开源项目River Trail 为Javascript带来并行编程特性" href="http://www.hiwebgl.com/?p=319">
+<link rel="next" title="Lesson 11 球体、旋转矩阵和鼠标事件" href="http://www.hiwebgl.com/?p=339">
+<meta name="generator" content="Monochrome 1.0">
+<link rel="canonical" href="http://www.hiwebgl.com/?p=327">
+<script type="text/javascript" src="./Lesson 10 载入世界，以及相机简介 _ HiWebGL_files/jquery.min.js.下载"></script>
+<script type="text/javascript" src="./Lesson 10 载入世界，以及相机简介 _ HiWebGL_files/hoverIntent.js.下载"></script>
+<script type="text/javascript" src="./Lesson 10 载入世界，以及相机简介 _ HiWebGL_files/superfish.js.下载"></script>
+<script type="text/javascript" src="./Lesson 10 载入世界，以及相机简介 _ HiWebGL_files/supersubs.js.下载"></script>
+<script type="text/javascript" src="./Lesson 10 载入世界，以及相机简介 _ HiWebGL_files/jquery.accordion.js.下载"></script>
+<script type="text/javascript" src="./Lesson 10 载入世界，以及相机简介 _ HiWebGL_files/dropdowns.js.下载"></script>
+<style type="text/css" media="all">
+/* <![CDATA[ */
+@import url("http://www.hiwebgl.com/wp-content/plugins/wp-table-reloaded/css/plugin.css?ver=1.9.3");
+@import url("http://www.hiwebgl.com/wp-content/plugins/wp-table-reloaded/css/datatables.css?ver=1.9.3");
+/* ]]> */
+</style></head>
+<body class="single single-post postid-327 single-format-standard">
+<div id="wrapper" class="hfeed">
+	<div id="header">
+    	<div id="masthead">
+        	<div id="branding" role="banner">
+            	<div id="site-logo">
+                	<a href="http://www.hiwebgl.com/" title="HiWebGL" rel="home">
+                    	                    <img src="./Lesson 10 载入世界，以及相机简介 _ HiWebGL_files/logo.png" align="logo">
+                    					</a>
+                </div>
+                <div id="site-description">最好的HTML5 WebGL中文资讯站！</div>
+                            </div><!-- #branding -->
+            <div id="access" role="navigation">
+            		<div class="menu">
+		<ul class="sf-menu sf-js-enabled">
+			<li>
+            	<a href="http://www.hiwebgl.com/" title="HiWebGL" rel="home">
+				<strong>首页</strong><span>Homepage</span>
+			</a></li>
+						<li>
+				<a href="http://www.hiwebgl.com/?p=42">
+				<strong>教程</strong><span>&nbsp;</span></a>
+							</li>
+						<li>
+				<a href="http://www.hiwebgl.com/?cat=16">
+				<strong>Demo</strong><span>&nbsp;</span></a>
+							</li>
+						<li>
+				<a href="http://www.hiwebgl.com/ask">
+				<strong>有问必答</strong><span>&nbsp;</span></a>
+							</li>
+						<li>
+				<a href="http://hiwebgl.com/forum/">
+				<strong>论坛</strong><span>&nbsp;</span></a>
+							</li>
+					</ul>
+	</div>
+            </div><!-- #access -->
+        </div><!-- #masthead -->
+    </div><!-- #header -->
+    
+    <div id="breadcrumbWrap"><div id="breadcrumb">
+<span>You are here: </span><a href="http://www.hiwebgl.com/">Home</a> » <a href="http://www.hiwebgl.com/?cat=17" title="查看 WebGL教程 中的全部文章">WebGL教程</a> » Lesson 10 载入世界，以及相机简介</div></div>    
+    <div id="main">
+		<div id="container">
+			<div id="content" role="main">
+
+
+				<div id="post-327" class="post-327 post type-post status-publish format-standard hentry category-webgl">
+					<h1 class="entry-title">Lesson 10 载入世界，以及相机简介</h1>
+
+					<div class="entry-meta">
+							<span class="meta-author">By admin</span>
+    <span class="meta-date">On 2011 年 9 月 21 日</span>
+    <span class="meta-comment">4 条评论</span>
+						3,300 次浏览					</div><!-- .entry-meta -->
+
+					<div class="entry-content">
+                		<p><span style="color: #888888;"><em>HiWebGL译者声明：因为译者个人方便的原因，我们将原教程中的第三方图形库由glMatrix改为Oak3D实现，这不影响到Demo的最终效果和实现，也不影响到WebGL的讲解和学习。原教程正文中相应的代码和讲解也为做了相应修改！本教程由HiWebGL翻译整理，转载请注明出处！</em></span></p>
+<p><span style="color: #888888;"><em>关于Oak3D：Oak3D是一套简单易用、性能优越的WebGL Javascript Library。您可以在他们的主页找到更多信息。Oak3D主页：<a href="http://www.oak3d.com/" target="_blank"><span style="color: #888888;">http://www.oak3d.com</span></a>&nbsp;</em></span></p>
+<p>欢迎来到WebGL教程的第10课，这节课是基于NeHe的OpenGL教程的<a href="http://nehe.gamedev.net/data/lessons/lesson.asp?lesson=10" target="_blank">第10节</a>改编的。在这节课中，我们将会从一个文件中载入3D场景（这样我们就可以通过切换文件来轻松扩展Demo），然后会写一些简单的代码让我们可以在场景中移动，用Doom自带的<a href="http://en.wikipedia.org/wiki/Doom_WAD" target="_blank">WAD文件格式</a>，实现一个类似于Doom的小游戏！</p>
+<p>下面的视频就是我们这节课将会完成的最终效果。</p>
+<p><embed src="http://player.youku.com/player.php/sid/XMzA2MTEzNzA0/v.swf" quality="high" width="480" height="400" align="middle" allowscriptaccess="sameDomain" type="application/x-shockwave-flash"></p>
+<p>点击<a href="http://www.hiwebgl.com/webgl_lessons/lesson10/index.html" target="_blank">这里</a>打开一个独立的WebGL页面，如果你的浏览器不支持WebGL，请点击<a href="http://www.hiwebgl.com/?p=52" target="_blank">这里</a>。</p>
+<p>你会发现你自己身处一个房间之中，墙上贴满了Lionel Brits的照片，他撰写了原始的OpenGL教程，也就是我们一直基于其改编的Nehe的OpenGL教程（/致敬）。使用方向键或WASD键，你可以在房间里来回走动，还可以走出房间；使用Page Up和Page Down键，你可以抬头低头。特需要注意的是，为了增强真实性，你的视角也会在移动的时候一上一下，类似于慢跑时的点头。</p>
+<p>下面我们来看看它是怎么工作的……</p>
+<p>惯例声明：本系列的教程是针对那些已经具备相应编程知识但没有实际3D图形经验的人的；目标是让学习者创建并运行代码，并且明白代码其中的含义，从而可以快速地创建自己的3D Web页面。如果你还没有阅读前一课，请先阅读前一课的内容吧。因为本课中我只会讲解那些与前一课中不同的新知识。</p>
+<p>另外，我编写这套教程是因为我在独立学习WebGL，所以教程中可能（非常可能）会有错误，所以还请风险自担。尽管如此，我还是会不断的修正bug和改正其中的错误的，所以如果你发现了教程中的错误，请告诉我。</p>
+<p>要获得上面实例的代码，请点击<a href="http://www.hiwebgl.com/webgl_lessons/lesson10/lesson10.zip" target="_blank">这里</a>下载我们为您准备好的压缩包。这里不建议通过查看源代码的方式获得实例，因为下载下来的world.txt的编码可能会发生变化，导致场景不可用。另外，因为要载入本地资源，所以请使用Chrome浏览器的读者为Chrome增加如下命令行：“–allow-file-access-from-files”;请使用Firefox的读者打开about:config配置页面，找到“security.fileuri.strict_origin_policy”项，并将其设置为“false”。除此之外，你也可以安装一个web服务器，然后通过服务器加载电脑上的资源。</p>
+<p>和前面几课一样，最简单的讲解方式就是从代码底部开始。所以让我们先从body标签里的HTML代码开始吧！自从第一课开始，这部分代码第一次有了些有意思的东西！</p>
+
+<div class="wp_codebox"><table><tbody><tr id="p3271"><td class="line_numbers"><pre>387
+388
+389
+390
+391
+392
+393
+394
+395
+396
+397
+398
+399
+400
+401
+402
+403
+</pre></td><td class="code" id="p327code1"><pre class="html4strict" style="font-family:monospace;"><span style="color: #009900;">&lt;<a href="http://december.com/html/4/element/body.html"><span style="color: #000000; font-weight: bold;">body</span></a> <span style="color: #000066;">onload</span><span style="color: #66cc66;">=</span><span style="color: #ff0000;">"webGLStart();"</span>&gt;</span>
+<span style="color: #009900;">&lt;<a href="http://december.com/html/4/element/br.html"><span style="color: #000000; font-weight: bold;">br</span></a>&gt;</span>
+WebGL中文教程 - 由HiWebGL整理翻译 - 感谢<span style="color: #009900;">&lt;<a href="http://december.com/html/4/element/a.html"><span style="color: #000000; font-weight: bold;">a</span></a> <span style="color: #000066;">href</span><span style="color: #66cc66;">=</span><span style="color: #ff0000;">"http://www.oak3d.com"</span>&gt;</span>Oak3D<span style="color: #009900;">&lt;<span style="color: #66cc66;">/</span><a href="http://december.com/html/4/element/a.html"><span style="color: #000000; font-weight: bold;">a</span></a>&gt;</span>提供图形库支持！<span style="color: #009900;">&lt;<a href="http://december.com/html/4/element/br.html"><span style="color: #000000; font-weight: bold;">br</span></a>&gt;</span>
+<span style="color: #009900;">&lt;<a href="http://december.com/html/4/element/br.html"><span style="color: #000000; font-weight: bold;">br</span></a>&gt;&lt;<a href="http://december.com/html/4/element/a.html"><span style="color: #000000; font-weight: bold;">a</span></a> <span style="color: #000066;">href</span><span style="color: #66cc66;">=</span><span style="color: #ff0000;">"http://www.hiwebgl.com/?p=327"</span>&gt;</span><span style="color: #ddbb00;">&amp;lt;&amp;lt;</span>返回 Lesson 10<span style="color: #009900;">&lt;<span style="color: #66cc66;">/</span><a href="http://december.com/html/4/element/a.html"><span style="color: #000000; font-weight: bold;">a</span></a>&gt;&lt;<a href="http://december.com/html/4/element/br.html"><span style="color: #000000; font-weight: bold;">br</span></a>&gt;</span>
+&nbsp;
+    <span style="color: #009900;">&lt;canvas <span style="color: #000066;">id</span><span style="color: #66cc66;">=</span><span style="color: #ff0000;">"lesson10-canvas"</span> <span style="color: #000066;">style</span><span style="color: #66cc66;">=</span><span style="color: #ff0000;">"border: none;"</span> <span style="color: #000066;">width</span><span style="color: #66cc66;">=</span><span style="color: #ff0000;">"500"</span> <span style="color: #000066;">height</span><span style="color: #66cc66;">=</span><span style="color: #ff0000;">"500"</span>&gt;&lt;<span style="color: #66cc66;">/</span>canvas&gt;</span>
+&nbsp;
+    <span style="color: #009900;">&lt;<a href="http://december.com/html/4/element/div.html"><span style="color: #000000; font-weight: bold;">div</span></a> <span style="color: #000066;">id</span><span style="color: #66cc66;">=</span><span style="color: #ff0000;">"loadingtext"</span>&gt;</span>Loading world...<span style="color: #009900;">&lt;<span style="color: #66cc66;">/</span><a href="http://december.com/html/4/element/div.html"><span style="color: #000000; font-weight: bold;">div</span></a>&gt;</span>
+&nbsp;
+    <span style="color: #009900;">&lt;<a href="http://december.com/html/4/element/br.html"><span style="color: #000000; font-weight: bold;">br</span></a><span style="color: #66cc66;">/</span>&gt;</span>
+    使用方向键或WASD移动，使用 <span style="color: #009900;">&lt;<a href="http://december.com/html/4/element/code.html"><span style="color: #000000; font-weight: bold;">code</span></a>&gt;</span>Page Up<span style="color: #009900;">&lt;<span style="color: #66cc66;">/</span><a href="http://december.com/html/4/element/code.html"><span style="color: #000000; font-weight: bold;">code</span></a>&gt;</span>键和<span style="color: #009900;">&lt;<a href="http://december.com/html/4/element/code.html"><span style="color: #000000; font-weight: bold;">code</span></a>&gt;</span>Page Down<span style="color: #009900;">&lt;<span style="color: #66cc66;">/</span><a href="http://december.com/html/4/element/code.html"><span style="color: #000000; font-weight: bold;">code</span></a>&gt;</span> 键来上看下看。
+&nbsp;
+    <span style="color: #009900;">&lt;<a href="http://december.com/html/4/element/br.html"><span style="color: #000000; font-weight: bold;">br</span></a><span style="color: #66cc66;">/</span>&gt;</span>
+<span style="color: #009900;">&lt;<a href="http://december.com/html/4/element/br.html"><span style="color: #000000; font-weight: bold;">br</span></a>&gt;&lt;<a href="http://december.com/html/4/element/a.html"><span style="color: #000000; font-weight: bold;">a</span></a> <span style="color: #000066;">href</span><span style="color: #66cc66;">=</span><span style="color: #ff0000;">"http://www.hiwebgl.com/?p=327"</span>&gt;</span><span style="color: #ddbb00;">&amp;lt;&amp;lt;</span>返回 Lesson 10<span style="color: #009900;">&lt;<span style="color: #66cc66;">/</span><a href="http://december.com/html/4/element/a.html"><span style="color: #000000; font-weight: bold;">a</span></a>&gt;&lt;<a href="http://december.com/html/4/element/br.html"><span style="color: #000000; font-weight: bold;">br</span></a>&gt;</span>
+&nbsp;
+&nbsp;
+<span style="color: #009900;">&lt;<span style="color: #66cc66;">/</span><a href="http://december.com/html/4/element/body.html"><span style="color: #000000; font-weight: bold;">body</span></a>&gt;</span></pre></td></tr></tbody></table></div>
+
+<p>我们使用了DIV标签来充当占位符，在载入世界时显示Loading。如果客户端与服务器端的连接缓慢，客户端就会看到正在载入的提示信息。当然，这条信息必须要显示在canvas之上而不是之下，这是由一段CSS代码来控制的，它就位于head标签的尾部。</p>
+
+<div class="wp_codebox"><table><tbody><tr id="p3272"><td class="line_numbers"><pre>372
+373
+374
+375
+376
+377
+378
+379
+380
+</pre></td><td class="code" id="p327code2"><pre class="css" style="font-family:monospace;">&lt;style type<span style="color: #00AA00;">=</span><span style="color: #ff0000;">"text/css"</span><span style="color: #00AA00;">&gt;</span>
+    <span style="color: #cc00cc;">#loadingtext</span> <span style="color: #00AA00;">{</span>
+        <span style="color: #000000; font-weight: bold;">position</span><span style="color: #00AA00;">:</span><span style="color: #993333;">absolute</span><span style="color: #00AA00;">;</span>
+        <span style="color: #000000; font-weight: bold;">top</span><span style="color: #00AA00;">:</span><span style="color: #933;">250px</span><span style="color: #00AA00;">;</span>
+        <span style="color: #000000; font-weight: bold;">left</span><span style="color: #00AA00;">:</span><span style="color: #933;">150px</span><span style="color: #00AA00;">;</span>
+        <span style="color: #000000; font-weight: bold;">font-size</span><span style="color: #00AA00;">:</span><span style="color: #933;">2em</span><span style="color: #00AA00;">;</span>
+        <span style="color: #000000; font-weight: bold;">color</span><span style="color: #00AA00;">:</span> <span style="color: #993333;">white</span><span style="color: #00AA00;">;</span>
+    <span style="color: #00AA00;">}</span>
+&lt;/style<span style="color: #00AA00;">&gt;</span></pre></td></tr></tbody></table></div>
+
+<p>好了，这就是HTML代码的部分。下面我们来看看Javascript部分。</p>
+<p>首先第一个小改动位于已经成为我们的标准的webGLStart函数中，除了通常的部署初始化的代码之外，还调用了一个新的函数用于从服务器载入世界。</p>
+
+<div class="wp_codebox"><table><tbody><tr id="p3273"><td class="line_numbers"><pre>354
+355
+356
+357
+358
+359
+360
+361
+362
+363
+364
+365
+366
+367
+368
+</pre></td><td class="code" id="p327code3"><pre class="javascript" style="font-family:monospace;">    <span style="color: #003366; font-weight: bold;">function</span> webGLStart<span style="color: #009900;">(</span><span style="color: #009900;">)</span> <span style="color: #009900;">{</span>
+        <span style="color: #003366; font-weight: bold;">var</span> canvas <span style="color: #339933;">=</span> document.<span style="color: #660066;">getElementById</span><span style="color: #009900;">(</span><span style="color: #3366CC;">"lesson10-canvas"</span><span style="color: #009900;">)</span><span style="color: #339933;">;</span>
+        initGL<span style="color: #009900;">(</span>canvas<span style="color: #009900;">)</span><span style="color: #339933;">;</span>
+        initShaders<span style="color: #009900;">(</span><span style="color: #009900;">)</span><span style="color: #339933;">;</span>
+        initTexture<span style="color: #009900;">(</span><span style="color: #009900;">)</span><span style="color: #339933;">;</span>
+        loadWorld<span style="color: #009900;">(</span><span style="color: #009900;">)</span><span style="color: #339933;">;</span>
+&nbsp;
+        gl.<span style="color: #660066;">clearColor</span><span style="color: #009900;">(</span><span style="color: #CC0000;">0.0</span><span style="color: #339933;">,</span> <span style="color: #CC0000;">0.0</span><span style="color: #339933;">,</span> <span style="color: #CC0000;">0.0</span><span style="color: #339933;">,</span> <span style="color: #CC0000;">1.0</span><span style="color: #009900;">)</span><span style="color: #339933;">;</span>
+        gl.<span style="color: #660066;">enable</span><span style="color: #009900;">(</span>gl.<span style="color: #660066;">DEPTH_TEST</span><span style="color: #009900;">)</span><span style="color: #339933;">;</span>
+&nbsp;
+        document.<span style="color: #660066;">onkeydown</span> <span style="color: #339933;">=</span> handleKeyDown<span style="color: #339933;">;</span>
+        document.<span style="color: #660066;">onkeyup</span> <span style="color: #339933;">=</span> handleKeyUp<span style="color: #339933;">;</span>
+&nbsp;
+        tick<span style="color: #009900;">(</span><span style="color: #009900;">)</span><span style="color: #339933;">;</span>
+    <span style="color: #009900;">}</span></pre></td></tr></tbody></table></div>
+
+<p>让我们往上走走，loadWorld函数就在drawScene函数的上面，大概在整个代码的四分之三处。它长的是这个样子滴：</p>
+
+<div class="wp_codebox"><table><tbody><tr id="p3274"><td class="line_numbers"><pre>273
+274
+275
+276
+277
+278
+279
+280
+281
+282
+</pre></td><td class="code" id="p327code4"><pre class="javascript" style="font-family:monospace;">    <span style="color: #003366; font-weight: bold;">function</span> loadWorld<span style="color: #009900;">(</span><span style="color: #009900;">)</span> <span style="color: #009900;">{</span>
+        <span style="color: #003366; font-weight: bold;">var</span> request <span style="color: #339933;">=</span> <span style="color: #003366; font-weight: bold;">new</span> XMLHttpRequest<span style="color: #009900;">(</span><span style="color: #009900;">)</span><span style="color: #339933;">;</span>
+        request.<span style="color: #000066;">open</span><span style="color: #009900;">(</span><span style="color: #3366CC;">"GET"</span><span style="color: #339933;">,</span> <span style="color: #3366CC;">"world.txt"</span><span style="color: #009900;">)</span><span style="color: #339933;">;</span>
+        request.<span style="color: #660066;">onreadystatechange</span> <span style="color: #339933;">=</span> <span style="color: #003366; font-weight: bold;">function</span> <span style="color: #009900;">(</span><span style="color: #009900;">)</span> <span style="color: #009900;">{</span>
+            <span style="color: #000066; font-weight: bold;">if</span> <span style="color: #009900;">(</span>request.<span style="color: #660066;">readyState</span> <span style="color: #339933;">==</span> <span style="color: #CC0000;">4</span><span style="color: #009900;">)</span> <span style="color: #009900;">{</span>
+                handleLoadedWorld<span style="color: #009900;">(</span>request.<span style="color: #660066;">responseText</span><span style="color: #009900;">)</span><span style="color: #339933;">;</span>
+            <span style="color: #009900;">}</span>
+        <span style="color: #009900;">}</span>
+        request.<span style="color: #660066;">send</span><span style="color: #009900;">(</span><span style="color: #009900;">)</span><span style="color: #339933;">;</span>
+    <span style="color: #009900;">}</span></pre></td></tr></tbody></table></div>
+
+<p>代码的样式看起来非常眼熟，很像之前我们用来载入纹理的那段代码。我们建立了一个XMLHttpRequest对象，让它来负责载入，然后告诉他使用HTTP GET请求来获取与当前网页文件相同服务器、相同目录下的名为world.txt的文件。我们还指定了一个回调函数，在不同的载入阶段，回调函数会被更新。当XMLHttpRequest报告说它手下的readyState已经等于4啦，也就是文件已经被完整的载入了，回调函数就会调用handleLoadedWorld。最后，我们告诉XMLHttpRequest使用send方法来正式开始获取文件。</p>
+<p>接着，让我们来看看handleLoadedWorld函数，它就在loadWorld函数上面。</p>
+
+<div class="wp_codebox"><table><tbody><tr id="p3275"><td class="line_numbers"><pre>233
+234
+235
+236
+</pre></td><td class="code" id="p327code5"><pre class="javascript" style="font-family:monospace;">    <span style="color: #003366; font-weight: bold;">var</span> worldVertexPositionBuffer <span style="color: #339933;">=</span> <span style="color: #003366; font-weight: bold;">null</span><span style="color: #339933;">;</span>
+    <span style="color: #003366; font-weight: bold;">var</span> worldVertexTextureCoordBuffer <span style="color: #339933;">=</span> <span style="color: #003366; font-weight: bold;">null</span><span style="color: #339933;">;</span>
+&nbsp;
+    <span style="color: #003366; font-weight: bold;">function</span> handleLoadedWorld<span style="color: #009900;">(</span>data<span style="color: #009900;">)</span> <span style="color: #009900;">{</span></pre></td></tr></tbody></table></div>
+
+<p>这个函数的工作就是解析载入文件的内容，并且使用这些内容来建立两个我们之前课程中已经不厌其烦的对象数组——顶点位置数组和纹理坐标数组。载入文件中的内容是被当做字符串来传入的，参数的名字是data。开始的一小段代码解析了这些文件内容。在这节课的示例中我们使用的文件格式非常简单，它包含一个三角形的列表，每一个都由3个顶点来指定；文件中每行都是一个顶点，每个顶点包含5个值：位置坐标X、位置坐标Y、位置坐标Z、纹理坐标S和纹理坐标T。文件中还包括注释（以“//”起头的那些行）和空白行，这些在处理的时候都会被忽略。文件在第一行还给出了三角形的总数，尽管我们实际上并不会用到这个数字。</p>
+<p>怎么样，是不是觉得这个文件格式完美无瑕？好吧，实际上它漏洞百出！它忽略了很多我们在真实场景应用中需要的信息，比如法线、不同物体的不同纹理。在真实的应用中，我们应该使用另外一种格式，或者直接使用JSON。我依然在教程中使用这种简单的文件格式，是因为原本NeHe的OpenGL教程中使用了它，并且它真的很容易理解，处理起来也很简单。好吧，说了这么多，因为真实应用中不会使用这种格式，所以我不会详细讲解下面的解析代码的细节。</p>
+
+<div class="wp_codebox"><table><tbody><tr id="p3276"><td class="line_numbers"><pre>237
+238
+239
+240
+241
+242
+243
+244
+245
+246
+247
+248
+249
+250
+251
+252
+253
+254
+255
+</pre></td><td class="code" id="p327code6"><pre class="javascript" style="font-family:monospace;">        <span style="color: #003366; font-weight: bold;">var</span> lines <span style="color: #339933;">=</span> data.<span style="color: #660066;">split</span><span style="color: #009900;">(</span><span style="color: #3366CC;">"<span style="color: #000099; font-weight: bold;">\n</span>"</span><span style="color: #009900;">)</span><span style="color: #339933;">;</span>
+        <span style="color: #003366; font-weight: bold;">var</span> vertexCount <span style="color: #339933;">=</span> <span style="color: #CC0000;">0</span><span style="color: #339933;">;</span>
+        <span style="color: #003366; font-weight: bold;">var</span> vertexPositions <span style="color: #339933;">=</span> <span style="color: #009900;">[</span><span style="color: #009900;">]</span><span style="color: #339933;">;</span>
+        <span style="color: #003366; font-weight: bold;">var</span> vertexTextureCoords <span style="color: #339933;">=</span> <span style="color: #009900;">[</span><span style="color: #009900;">]</span><span style="color: #339933;">;</span>
+        <span style="color: #000066; font-weight: bold;">for</span> <span style="color: #009900;">(</span><span style="color: #003366; font-weight: bold;">var</span> i <span style="color: #000066; font-weight: bold;">in</span> lines<span style="color: #009900;">)</span> <span style="color: #009900;">{</span>
+            <span style="color: #003366; font-weight: bold;">var</span> vals <span style="color: #339933;">=</span> lines<span style="color: #009900;">[</span>i<span style="color: #009900;">]</span>.<span style="color: #660066;">replace</span><span style="color: #009900;">(</span><span style="color: #009966; font-style: italic;">/^\s+/</span><span style="color: #339933;">,</span> <span style="color: #3366CC;">""</span><span style="color: #009900;">)</span>.<span style="color: #660066;">split</span><span style="color: #009900;">(</span><span style="color: #009966; font-style: italic;">/\s+/</span><span style="color: #009900;">)</span><span style="color: #339933;">;</span>
+            <span style="color: #000066; font-weight: bold;">if</span> <span style="color: #009900;">(</span>vals.<span style="color: #660066;">length</span> <span style="color: #339933;">==</span> <span style="color: #CC0000;">5</span> <span style="color: #339933;">&amp;&amp;</span> vals<span style="color: #009900;">[</span><span style="color: #CC0000;">0</span><span style="color: #009900;">]</span> <span style="color: #339933;">!=</span> <span style="color: #3366CC;">"//"</span><span style="color: #009900;">)</span> <span style="color: #009900;">{</span>
+                <span style="color: #006600; font-style: italic;">// It is a line describing a vertex; get X, Y and Z first</span>
+                vertexPositions.<span style="color: #660066;">push</span><span style="color: #009900;">(</span>parseFloat<span style="color: #009900;">(</span>vals<span style="color: #009900;">[</span><span style="color: #CC0000;">0</span><span style="color: #009900;">]</span><span style="color: #009900;">)</span><span style="color: #009900;">)</span><span style="color: #339933;">;</span>
+                vertexPositions.<span style="color: #660066;">push</span><span style="color: #009900;">(</span>parseFloat<span style="color: #009900;">(</span>vals<span style="color: #009900;">[</span><span style="color: #CC0000;">1</span><span style="color: #009900;">]</span><span style="color: #009900;">)</span><span style="color: #009900;">)</span><span style="color: #339933;">;</span>
+                vertexPositions.<span style="color: #660066;">push</span><span style="color: #009900;">(</span>parseFloat<span style="color: #009900;">(</span>vals<span style="color: #009900;">[</span><span style="color: #CC0000;">2</span><span style="color: #009900;">]</span><span style="color: #009900;">)</span><span style="color: #009900;">)</span><span style="color: #339933;">;</span>
+&nbsp;
+                <span style="color: #006600; font-style: italic;">// And then the texture coords</span>
+                vertexTextureCoords.<span style="color: #660066;">push</span><span style="color: #009900;">(</span>parseFloat<span style="color: #009900;">(</span>vals<span style="color: #009900;">[</span><span style="color: #CC0000;">3</span><span style="color: #009900;">]</span><span style="color: #009900;">)</span><span style="color: #009900;">)</span><span style="color: #339933;">;</span>
+                vertexTextureCoords.<span style="color: #660066;">push</span><span style="color: #009900;">(</span>parseFloat<span style="color: #009900;">(</span>vals<span style="color: #009900;">[</span><span style="color: #CC0000;">4</span><span style="color: #009900;">]</span><span style="color: #009900;">)</span><span style="color: #009900;">)</span><span style="color: #339933;">;</span>
+&nbsp;
+                vertexCount <span style="color: #339933;">+=</span> <span style="color: #CC0000;">1</span><span style="color: #339933;">;</span>
+            <span style="color: #009900;">}</span>
+        <span style="color: #009900;">}</span></pre></td></tr></tbody></table></div>
+
+<p>最后说一句，以上代码所做的实际上是将读取由空格分隔的5个属性值，然后用它们组成顶点位置数组和纹理坐标数组；另外还在vertexCount变量中记录了顶点的数量。</p>
+<p>下面的代码现在看起来应该非常熟悉</p>
+
+<div class="wp_codebox"><table><tbody><tr id="p3277"><td class="line_numbers"><pre>257
+258
+259
+260
+261
+262
+263
+264
+265
+266
+267
+</pre></td><td class="code" id="p327code7"><pre class="javascript" style="font-family:monospace;">        worldVertexPositionBuffer <span style="color: #339933;">=</span> gl.<span style="color: #660066;">createBuffer</span><span style="color: #009900;">(</span><span style="color: #009900;">)</span><span style="color: #339933;">;</span>
+        gl.<span style="color: #660066;">bindBuffer</span><span style="color: #009900;">(</span>gl.<span style="color: #660066;">ARRAY_BUFFER</span><span style="color: #339933;">,</span> worldVertexPositionBuffer<span style="color: #009900;">)</span><span style="color: #339933;">;</span>
+        gl.<span style="color: #660066;">bufferData</span><span style="color: #009900;">(</span>gl.<span style="color: #660066;">ARRAY_BUFFER</span><span style="color: #339933;">,</span> <span style="color: #003366; font-weight: bold;">new</span> Float32Array<span style="color: #009900;">(</span>vertexPositions<span style="color: #009900;">)</span><span style="color: #339933;">,</span> gl.<span style="color: #660066;">STATIC_DRAW</span><span style="color: #009900;">)</span><span style="color: #339933;">;</span>
+        worldVertexPositionBuffer.<span style="color: #660066;">itemSize</span> <span style="color: #339933;">=</span> <span style="color: #CC0000;">3</span><span style="color: #339933;">;</span>
+        worldVertexPositionBuffer.<span style="color: #660066;">numItems</span> <span style="color: #339933;">=</span> vertexCount<span style="color: #339933;">;</span>
+&nbsp;
+        worldVertexTextureCoordBuffer <span style="color: #339933;">=</span> gl.<span style="color: #660066;">createBuffer</span><span style="color: #009900;">(</span><span style="color: #009900;">)</span><span style="color: #339933;">;</span>
+        gl.<span style="color: #660066;">bindBuffer</span><span style="color: #009900;">(</span>gl.<span style="color: #660066;">ARRAY_BUFFER</span><span style="color: #339933;">,</span> worldVertexTextureCoordBuffer<span style="color: #009900;">)</span><span style="color: #339933;">;</span>
+        gl.<span style="color: #660066;">bufferData</span><span style="color: #009900;">(</span>gl.<span style="color: #660066;">ARRAY_BUFFER</span><span style="color: #339933;">,</span> <span style="color: #003366; font-weight: bold;">new</span> Float32Array<span style="color: #009900;">(</span>vertexTextureCoords<span style="color: #009900;">)</span><span style="color: #339933;">,</span> gl.<span style="color: #660066;">STATIC_DRAW</span><span style="color: #009900;">)</span><span style="color: #339933;">;</span>
+        worldVertexTextureCoordBuffer.<span style="color: #660066;">itemSize</span> <span style="color: #339933;">=</span> <span style="color: #CC0000;">2</span><span style="color: #339933;">;</span>
+        worldVertexTextureCoordBuffer.<span style="color: #660066;">numItems</span> <span style="color: #339933;">=</span> vertexCount<span style="color: #339933;">;</span></pre></td></tr></tbody></table></div>
+
+<p>我们建立了从文件中载入的顶点位置数组和纹理坐标数组。最终，当这些准备工作都已经就绪时，我们清空了原本显示“Loading World…”的DIV标签中的内容。</p>
+
+<div class="wp_codebox"><table><tbody><tr id="p3278"><td class="line_numbers"><pre>269
+270
+</pre></td><td class="code" id="p327code8"><pre class="javascript" style="font-family:monospace;">        document.<span style="color: #660066;">getElementById</span><span style="color: #009900;">(</span><span style="color: #3366CC;">"loadingtext"</span><span style="color: #009900;">)</span>.<span style="color: #660066;">textContent</span> <span style="color: #339933;">=</span> <span style="color: #3366CC;">""</span><span style="color: #339933;">;</span>
+    <span style="color: #009900;">}</span></pre></td></tr></tbody></table></div>
+
+<p>以上就是从文件中载入世界所需要的全部代码。在我们继续研究其他代码之前，让我们先休息一下，来看看这个world.txt中的一些有趣的东西。首先是前三个顶点，用于描述场景中的第一个三角形，它看起来是这样的：</p>
+
+<div class="wp_codebox"><table><tbody><tr id="p3279"><td class="line_numbers"><pre>4
+5
+6
+7
+</pre></td><td class="code" id="p327code9"><pre class="text" style="font-family:monospace;">// Floor 1
+-3.0  0.0 -3.0 0.0 6.0
+-3.0  0.0  3.0 0.0 0.0
+ 3.0  0.0  3.0 6.0 0.0</pre></td></tr></tbody></table></div>
+
+<p>你还记得，这5个值分别是X、Y、Z、S、T，其中S和T是纹理坐标。你可以看到纹理坐标是介于0到6之间的。但是我之前说过纹理坐标的范围是位于0到1的区间中的。这是怎么回事呢？答案就是，当你求纹理中的一个点时，S和T的坐标值将自动对1取模，所以5.5实际上与纹理中0.5的那个点是相同的点。这就意味着，实际上纹理会自动平铺，不断重复，直到填满整个三角形。这显然十分有用，尤其是当你想用一个很小的纹理填充一个很大的物体时——比如用一块砖的纹理覆盖整个一面墙。</p>
+<p>好了，让我们继续看看下一段比较有趣代码——drawScene函数。首先，函数检查了一下当我们完成载入世界之后，相应的对象数组是否被正确建立；如果没有，将会有一个应急处理：</p>
+
+<div class="wp_codebox"><table><tbody><tr id="p32710"><td class="line_numbers"><pre>286
+287
+288
+289
+290
+291
+292
+</pre></td><td class="code" id="p327code10"><pre class="javascript" style="font-family:monospace;">    <span style="color: #003366; font-weight: bold;">function</span> drawScene<span style="color: #009900;">(</span><span style="color: #009900;">)</span> <span style="color: #009900;">{</span>
+        gl.<span style="color: #660066;">viewport</span><span style="color: #009900;">(</span><span style="color: #CC0000;">0</span><span style="color: #339933;">,</span> <span style="color: #CC0000;">0</span><span style="color: #339933;">,</span> gl.<span style="color: #660066;">viewportWidth</span><span style="color: #339933;">,</span> gl.<span style="color: #660066;">viewportHeight</span><span style="color: #009900;">)</span><span style="color: #339933;">;</span>
+        gl.<span style="color: #660066;">clear</span><span style="color: #009900;">(</span>gl.<span style="color: #660066;">COLOR_BUFFER_BIT</span> <span style="color: #339933;">|</span> gl.<span style="color: #660066;">DEPTH_BUFFER_BIT</span><span style="color: #009900;">)</span><span style="color: #339933;">;</span>
+&nbsp;
+        <span style="color: #000066; font-weight: bold;">if</span> <span style="color: #009900;">(</span>worldVertexTextureCoordBuffer <span style="color: #339933;">==</span> <span style="color: #003366; font-weight: bold;">null</span> <span style="color: #339933;">||</span> worldVertexPositionBuffer <span style="color: #339933;">==</span> <span style="color: #003366; font-weight: bold;">null</span><span style="color: #009900;">)</span> <span style="color: #009900;">{</span>
+            <span style="color: #000066; font-weight: bold;">return</span><span style="color: #339933;">;</span>
+        <span style="color: #009900;">}</span></pre></td></tr></tbody></table></div>
+
+<p>如果对象数组确认无误，下一步就是我们通常所做的，建立投影矩阵和模型视图矩阵。</p>
+
+<div class="wp_codebox"><table><tbody><tr id="p32711"><td class="line_numbers"><pre>294
+295
+296
+</pre></td><td class="code" id="p327code11"><pre class="javascript" style="font-family:monospace;">        pMatrix <span style="color: #339933;">=</span> okMat4Proj<span style="color: #009900;">(</span><span style="color: #CC0000;">45</span><span style="color: #339933;">,</span> gl.<span style="color: #660066;">viewportWidth</span> <span style="color: #339933;">/</span> gl.<span style="color: #660066;">viewportHeight</span><span style="color: #339933;">,</span> <span style="color: #CC0000;">0.1</span><span style="color: #339933;">,</span> <span style="color: #CC0000;">100.0</span><span style="color: #009900;">)</span><span style="color: #339933;">;</span>
+&nbsp;
+        mvMatrix <span style="color: #339933;">=</span> <span style="color: #003366; font-weight: bold;">new</span> okMat4<span style="color: #009900;">(</span><span style="color: #009900;">)</span><span style="color: #339933;">;</span></pre></td></tr></tbody></table></div>
+
+<p>接下来我们要着手处理相机（camera）了，也就是允许视角按照我们想要的方式来移动穿越场景。首先你要记住的事，和其他很多特性一样，WebGL并不直接支持相机，但是要模拟一个也不是什么困难的事情。如果我们有了相机，在这个简单的示例中，我们想要的是，把它放置于一个指定的X、Y、Z坐标上，并且可以围绕X轴做倾斜用于观察上下（pitch），可以围绕Y轴做转动用于左转向右转向（yaw）。因为我们不能改变相机的位置——实际上它永远都处于坐标（0,0,0）并且看向Z轴的负半轴，所以我们想要做的是告诉WebGL去调整我们绘制的场景，这个用X、Y、Z坐标指定的空间我们称之为world space；将其调整到一个新的基于相机的位置和旋转的参照系中去，我们称之为eye space。</p>
+<p>一个简单的例子也许有助于你理解。让我们设想一下一个简单的场景，其中有一个立方体，在world space中它的中心坐标是（1,2,3）。我们想要模拟一个处于（0,0,7）坐标、既没有pitch也没有yaw、看向Z轴负半轴的相机。为了实现这个效果，我们把立方体中心坐标从world space的坐标转换为eye space的坐标。这么理解或许会简单一些，也许也没简单多少。</p>
+<p>我们大概比较清楚的就是又要用到矩阵了，我们会维护一个称之为相机矩阵（camera matrix）的东西，用来表示相机的位置和旋转。但是在这节课的示例中，我们简单一些，我们只要使用既有的模型视图矩阵就可以了。</p>
+<p>从上面的实例中可以明显的推理出，我们模拟相机的方式就是移动场景，相机不动，而让场景朝我们想要移动方向的相反方向“退回”，然后再根据通常使用的相关坐标系，绘制出场景的方法。假设我们把自己想象成相机，我们想要移动到某个指定位置，然后做指定的旋转，那么就要让场景退回——“退回”的意思就是，让场景做一个相反的旋转，然后再做一个相反的移动。</p>
+<p>从数学的角度讲，比如我们模拟一个位置在（x,y,z）的相机，然后做ψ角度yaw旋转，再做一个θ角度的pitch旋转；那我们就需要先做一个围绕X轴的-θ角度旋转，再做一个围绕Y轴的-ψ角度旋转，然后移动到（-x,-y,-z）。完成后，我们把所有要绘制的东西的状态用world space中的坐标都储存到模型视图矩阵中，最后在顶点着色器中通过矩阵的乘法运算，会神奇般地将其转换为eye space中的坐标。</p>
+<p>当然，还有其他的方法来放置相机，我们将会在以后的课程中讨论。现在，我们先来看看上述做法的代码：</p>
+
+<div class="wp_codebox"><table><tbody><tr id="p32712"><td class="line_numbers"><pre>297
+298
+299
+</pre></td><td class="code" id="p327code12"><pre class="javascript" style="font-family:monospace;">        mvMatrix.<span style="color: #660066;">rotX</span><span style="color: #009900;">(</span>OAK.<span style="color: #660066;">SPACE_LOCAL</span><span style="color: #339933;">,</span> <span style="color: #339933;">-</span>pitch<span style="color: #339933;">,</span> <span style="color: #003366; font-weight: bold;">true</span><span style="color: #009900;">)</span><span style="color: #339933;">;</span>
+        mvMatrix.<span style="color: #660066;">rotY</span><span style="color: #009900;">(</span>OAK.<span style="color: #660066;">SPACE_LOCAL</span><span style="color: #339933;">,</span> <span style="color: #339933;">-</span>yaw<span style="color: #339933;">,</span> <span style="color: #003366; font-weight: bold;">true</span><span style="color: #009900;">)</span><span style="color: #339933;">;</span>
+        mvMatrix.<span style="color: #660066;">translate</span><span style="color: #009900;">(</span>OAK.<span style="color: #660066;">SPACE_LOCAL</span><span style="color: #339933;">,</span> <span style="color: #339933;">-</span>xPos<span style="color: #339933;">,</span> <span style="color: #339933;">-</span>yPos<span style="color: #339933;">,</span> <span style="color: #339933;">-</span>zPos<span style="color: #339933;">,</span> <span style="color: #003366; font-weight: bold;">true</span><span style="color: #009900;">)</span><span style="color: #339933;">;</span></pre></td></tr></tbody></table></div>
+
+<p>完成后，我们要做的就是根据之前我们载入的对象数组中所描述的，绘制出整个场景。下面的代码看起来和之前几课非常相似。</p>
+
+<div class="wp_codebox"><table><tbody><tr id="p32713"><td class="line_numbers"><pre>301
+302
+303
+304
+305
+306
+307
+308
+309
+310
+311
+312
+313
+</pre></td><td class="code" id="p327code13"><pre class="javascript" style="font-family:monospace;">        gl.<span style="color: #660066;">activeTexture</span><span style="color: #009900;">(</span>gl.<span style="color: #660066;">TEXTURE0</span><span style="color: #009900;">)</span><span style="color: #339933;">;</span>
+        gl.<span style="color: #660066;">bindTexture</span><span style="color: #009900;">(</span>gl.<span style="color: #660066;">TEXTURE_2D</span><span style="color: #339933;">,</span> mudTexture<span style="color: #009900;">)</span><span style="color: #339933;">;</span>
+        gl.<span style="color: #660066;">uniform1i</span><span style="color: #009900;">(</span>shaderProgram.<span style="color: #660066;">samplerUniform</span><span style="color: #339933;">,</span> <span style="color: #CC0000;">0</span><span style="color: #009900;">)</span><span style="color: #339933;">;</span>
+&nbsp;
+        gl.<span style="color: #660066;">bindBuffer</span><span style="color: #009900;">(</span>gl.<span style="color: #660066;">ARRAY_BUFFER</span><span style="color: #339933;">,</span> worldVertexTextureCoordBuffer<span style="color: #009900;">)</span><span style="color: #339933;">;</span>
+        gl.<span style="color: #660066;">vertexAttribPointer</span><span style="color: #009900;">(</span>shaderProgram.<span style="color: #660066;">textureCoordAttribute</span><span style="color: #339933;">,</span> worldVertexTextureCoordBuffer.<span style="color: #660066;">itemSize</span><span style="color: #339933;">,</span> gl.<span style="color: #660066;">FLOAT</span><span style="color: #339933;">,</span> <span style="color: #003366; font-weight: bold;">false</span><span style="color: #339933;">,</span> <span style="color: #CC0000;">0</span><span style="color: #339933;">,</span> <span style="color: #CC0000;">0</span><span style="color: #009900;">)</span><span style="color: #339933;">;</span>
+&nbsp;
+        gl.<span style="color: #660066;">bindBuffer</span><span style="color: #009900;">(</span>gl.<span style="color: #660066;">ARRAY_BUFFER</span><span style="color: #339933;">,</span> worldVertexPositionBuffer<span style="color: #009900;">)</span><span style="color: #339933;">;</span>
+        gl.<span style="color: #660066;">vertexAttribPointer</span><span style="color: #009900;">(</span>shaderProgram.<span style="color: #660066;">vertexPositionAttribute</span><span style="color: #339933;">,</span> worldVertexPositionBuffer.<span style="color: #660066;">itemSize</span><span style="color: #339933;">,</span> gl.<span style="color: #660066;">FLOAT</span><span style="color: #339933;">,</span> <span style="color: #003366; font-weight: bold;">false</span><span style="color: #339933;">,</span> <span style="color: #CC0000;">0</span><span style="color: #339933;">,</span> <span style="color: #CC0000;">0</span><span style="color: #009900;">)</span><span style="color: #339933;">;</span>
+&nbsp;
+        setMatrixUniforms<span style="color: #009900;">(</span><span style="color: #009900;">)</span><span style="color: #339933;">;</span>
+        gl.<span style="color: #660066;">drawArrays</span><span style="color: #009900;">(</span>gl.<span style="color: #660066;">TRIANGLES</span><span style="color: #339933;">,</span> <span style="color: #CC0000;">0</span><span style="color: #339933;">,</span> worldVertexPositionBuffer.<span style="color: #660066;">numItems</span><span style="color: #009900;">)</span><span style="color: #339933;">;</span>
+    <span style="color: #009900;">}</span></pre></td></tr></tbody></table></div>
+
+<p>好了，到此我们就解决了本课中新增加的那一批代码。最后我们来看看控制移动，包括“慢跑”是上下点头的那一部分代码。和之前课程中的一样，这节课页面中的键盘动作也是设计成给所有人一个相同的运动速率，不管他们的电脑性能如何。电脑好的人仅仅是能获得更好的fps帧率，而不是更快的移动速度！</p>
+<p>这些工作都是由handleKeys函数来完成的，我们根据用户当前正按下的键来计算出一个速率——也就是位置改变的速率——一个pitch改变的速率和一个yaw改变的速率。如果没有键被按下，那么这些值都会被设置为0；如果相应的键被按下，那么它们会被设为一个固定的值，单位是每毫秒。你可以在页面的三分之二处找到这些代码。</p>
+
+<div class="wp_codebox"><table><tbody><tr id="p32714"><td class="line_numbers"><pre>187
+188
+189
+190
+191
+192
+193
+194
+195
+196
+197
+198
+199
+200
+201
+202
+203
+204
+205
+206
+207
+208
+209
+210
+211
+212
+213
+214
+215
+216
+217
+218
+219
+220
+221
+222
+223
+224
+225
+226
+227
+228
+229
+230
+</pre></td><td class="code" id="p327code14"><pre class="javascript" style="font-family:monospace;">    <span style="color: #003366; font-weight: bold;">var</span> pitch <span style="color: #339933;">=</span> <span style="color: #CC0000;">0</span><span style="color: #339933;">;</span>
+    <span style="color: #003366; font-weight: bold;">var</span> pitchRate <span style="color: #339933;">=</span> <span style="color: #CC0000;">0</span><span style="color: #339933;">;</span>
+&nbsp;
+    <span style="color: #003366; font-weight: bold;">var</span> yaw <span style="color: #339933;">=</span> <span style="color: #CC0000;">0</span><span style="color: #339933;">;</span>
+    <span style="color: #003366; font-weight: bold;">var</span> yawRate <span style="color: #339933;">=</span> <span style="color: #CC0000;">0</span><span style="color: #339933;">;</span>
+&nbsp;
+    <span style="color: #003366; font-weight: bold;">var</span> xPos <span style="color: #339933;">=</span> <span style="color: #CC0000;">0</span><span style="color: #339933;">;</span>
+    <span style="color: #003366; font-weight: bold;">var</span> yPos <span style="color: #339933;">=</span> <span style="color: #CC0000;">0.4</span><span style="color: #339933;">;</span>
+    <span style="color: #003366; font-weight: bold;">var</span> zPos <span style="color: #339933;">=</span> <span style="color: #CC0000;">0</span><span style="color: #339933;">;</span>
+&nbsp;
+    <span style="color: #003366; font-weight: bold;">var</span> speed <span style="color: #339933;">=</span> <span style="color: #CC0000;">0</span><span style="color: #339933;">;</span>
+&nbsp;
+    <span style="color: #003366; font-weight: bold;">function</span> handleKeys<span style="color: #009900;">(</span><span style="color: #009900;">)</span> <span style="color: #009900;">{</span>
+        <span style="color: #000066; font-weight: bold;">if</span> <span style="color: #009900;">(</span>currentlyPressedKeys<span style="color: #009900;">[</span><span style="color: #CC0000;">33</span><span style="color: #009900;">]</span><span style="color: #009900;">)</span> <span style="color: #009900;">{</span>
+            <span style="color: #006600; font-style: italic;">// Page Up</span>
+            pitchRate <span style="color: #339933;">=</span> <span style="color: #CC0000;">0.1</span><span style="color: #339933;">;</span>
+        <span style="color: #009900;">}</span> <span style="color: #000066; font-weight: bold;">else</span> <span style="color: #000066; font-weight: bold;">if</span> <span style="color: #009900;">(</span>currentlyPressedKeys<span style="color: #009900;">[</span><span style="color: #CC0000;">34</span><span style="color: #009900;">]</span><span style="color: #009900;">)</span> <span style="color: #009900;">{</span>
+            <span style="color: #006600; font-style: italic;">// Page Down</span>
+            pitchRate <span style="color: #339933;">=</span> <span style="color: #339933;">-</span><span style="color: #CC0000;">0.1</span><span style="color: #339933;">;</span>
+        <span style="color: #009900;">}</span> <span style="color: #000066; font-weight: bold;">else</span> <span style="color: #009900;">{</span>
+            pitchRate <span style="color: #339933;">=</span> <span style="color: #CC0000;">0</span><span style="color: #339933;">;</span>
+        <span style="color: #009900;">}</span>
+&nbsp;
+        <span style="color: #000066; font-weight: bold;">if</span> <span style="color: #009900;">(</span>currentlyPressedKeys<span style="color: #009900;">[</span><span style="color: #CC0000;">37</span><span style="color: #009900;">]</span> <span style="color: #339933;">||</span> currentlyPressedKeys<span style="color: #009900;">[</span><span style="color: #CC0000;">65</span><span style="color: #009900;">]</span><span style="color: #009900;">)</span> <span style="color: #009900;">{</span>
+            <span style="color: #006600; font-style: italic;">// Left cursor key or A</span>
+            yawRate <span style="color: #339933;">=</span> <span style="color: #CC0000;">0.1</span><span style="color: #339933;">;</span>
+        <span style="color: #009900;">}</span> <span style="color: #000066; font-weight: bold;">else</span> <span style="color: #000066; font-weight: bold;">if</span> <span style="color: #009900;">(</span>currentlyPressedKeys<span style="color: #009900;">[</span><span style="color: #CC0000;">39</span><span style="color: #009900;">]</span> <span style="color: #339933;">||</span> currentlyPressedKeys<span style="color: #009900;">[</span><span style="color: #CC0000;">68</span><span style="color: #009900;">]</span><span style="color: #009900;">)</span> <span style="color: #009900;">{</span>
+            <span style="color: #006600; font-style: italic;">// Right cursor key or D</span>
+            yawRate <span style="color: #339933;">=</span> <span style="color: #339933;">-</span><span style="color: #CC0000;">0.1</span><span style="color: #339933;">;</span>
+        <span style="color: #009900;">}</span> <span style="color: #000066; font-weight: bold;">else</span> <span style="color: #009900;">{</span>
+            yawRate <span style="color: #339933;">=</span> <span style="color: #CC0000;">0</span><span style="color: #339933;">;</span>
+        <span style="color: #009900;">}</span>
+&nbsp;
+        <span style="color: #000066; font-weight: bold;">if</span> <span style="color: #009900;">(</span>currentlyPressedKeys<span style="color: #009900;">[</span><span style="color: #CC0000;">38</span><span style="color: #009900;">]</span> <span style="color: #339933;">||</span> currentlyPressedKeys<span style="color: #009900;">[</span><span style="color: #CC0000;">87</span><span style="color: #009900;">]</span><span style="color: #009900;">)</span> <span style="color: #009900;">{</span>
+            <span style="color: #006600; font-style: italic;">// Up cursor key or W</span>
+            speed <span style="color: #339933;">=</span> <span style="color: #CC0000;">0.003</span><span style="color: #339933;">;</span>
+        <span style="color: #009900;">}</span> <span style="color: #000066; font-weight: bold;">else</span> <span style="color: #000066; font-weight: bold;">if</span> <span style="color: #009900;">(</span>currentlyPressedKeys<span style="color: #009900;">[</span><span style="color: #CC0000;">40</span><span style="color: #009900;">]</span> <span style="color: #339933;">||</span> currentlyPressedKeys<span style="color: #009900;">[</span><span style="color: #CC0000;">83</span><span style="color: #009900;">]</span><span style="color: #009900;">)</span> <span style="color: #009900;">{</span>
+            <span style="color: #006600; font-style: italic;">// Down cursor key</span>
+            speed <span style="color: #339933;">=</span> <span style="color: #339933;">-</span><span style="color: #CC0000;">0.003</span><span style="color: #339933;">;</span>
+        <span style="color: #009900;">}</span> <span style="color: #000066; font-weight: bold;">else</span> <span style="color: #009900;">{</span>
+            speed <span style="color: #339933;">=</span> <span style="color: #CC0000;">0</span><span style="color: #339933;">;</span>
+        <span style="color: #009900;">}</span>
+&nbsp;
+    <span style="color: #009900;">}</span></pre></td></tr></tbody></table></div>
+
+<p>就拿上面的代码为例，如果左方向键被按下，那么yawRate就被设置为0.1°/ms，也就是100°/s。换句话说，如果我们向左旋转，旋转一周的时间需要3.6秒。</p>
+<p>和前面的课程一样，这些改变的速率都会在animate函数中被调用，以设置xPos和zPos。同时， 在animate函数中也会设置yaw和pitch.yPos，但是逻辑上有些不同。让我们看一下代码，它就在drawScene函数的下面，接近底部，下面是开头的几行：</p>
+
+<div class="wp_codebox"><table><tbody><tr id="p32715"><td class="line_numbers"><pre>320
+321
+322
+323
+324
+325
+326
+327
+</pre></td><td class="code" id="p327code15"><pre class="javascript" style="font-family:monospace;">    <span style="color: #003366; font-weight: bold;">var</span> lastTime <span style="color: #339933;">=</span> <span style="color: #CC0000;">0</span><span style="color: #339933;">;</span>
+    <span style="color: #006600; font-style: italic;">// Used to make us "jog" up and down as we move forward.</span>
+    <span style="color: #003366; font-weight: bold;">var</span> joggingAngle <span style="color: #339933;">=</span> <span style="color: #CC0000;">0</span><span style="color: #339933;">;</span>
+&nbsp;
+    <span style="color: #003366; font-weight: bold;">function</span> animate<span style="color: #009900;">(</span><span style="color: #009900;">)</span> <span style="color: #009900;">{</span>
+        <span style="color: #003366; font-weight: bold;">var</span> timeNow <span style="color: #339933;">=</span> <span style="color: #003366; font-weight: bold;">new</span> Date<span style="color: #009900;">(</span><span style="color: #009900;">)</span>.<span style="color: #660066;">getTime</span><span style="color: #009900;">(</span><span style="color: #009900;">)</span><span style="color: #339933;">;</span>
+        <span style="color: #000066; font-weight: bold;">if</span> <span style="color: #009900;">(</span>lastTime <span style="color: #339933;">!=</span> <span style="color: #CC0000;">0</span><span style="color: #009900;">)</span> <span style="color: #009900;">{</span>
+            <span style="color: #003366; font-weight: bold;">var</span> elapsed <span style="color: #339933;">=</span> timeNow <span style="color: #339933;">-</span> lastTime<span style="color: #339933;">;</span></pre></td></tr></tbody></table></div>
+
+<p>其中大部分都是正常的代码，用于计算出距离上次animate函数被调用的毫秒数。joggingAngle是个很有意思的变量。我们用来获得点头效果的方法是，在移动是，让Y坐标跟随头部高度中心位置的正弦波移动。joggingAngle这个角度变量，就是用于传递给正弦函数计算当前位置的。</p>
+<p>让我们看看这部分的代码，同时代码中也调整了x和z来实现移动：</p>
+
+<div class="wp_codebox"><table><tbody><tr id="p32716"><td class="line_numbers"><pre>329
+330
+331
+332
+333
+334
+335
+</pre></td><td class="code" id="p327code16"><pre class="javascript" style="font-family:monospace;">            <span style="color: #000066; font-weight: bold;">if</span> <span style="color: #009900;">(</span>speed <span style="color: #339933;">!=</span> <span style="color: #CC0000;">0</span><span style="color: #009900;">)</span> <span style="color: #009900;">{</span>
+                xPos <span style="color: #339933;">-=</span> Math.<span style="color: #660066;">sin</span><span style="color: #009900;">(</span>degToRad<span style="color: #009900;">(</span>yaw<span style="color: #009900;">)</span><span style="color: #009900;">)</span> <span style="color: #339933;">*</span> speed <span style="color: #339933;">*</span> elapsed<span style="color: #339933;">;</span>
+                zPos <span style="color: #339933;">-=</span> Math.<span style="color: #660066;">cos</span><span style="color: #009900;">(</span>degToRad<span style="color: #009900;">(</span>yaw<span style="color: #009900;">)</span><span style="color: #009900;">)</span> <span style="color: #339933;">*</span> speed <span style="color: #339933;">*</span> elapsed<span style="color: #339933;">;</span>
+&nbsp;
+                joggingAngle <span style="color: #339933;">+=</span> elapsed <span style="color: #339933;">*</span> <span style="color: #CC0000;">0.6</span><span style="color: #339933;">;</span> <span style="color: #006600; font-style: italic;">// 0.6 "fiddle factor" - makes it feel more realistic :-)</span>
+                yPos <span style="color: #339933;">=</span> Math.<span style="color: #660066;">sin</span><span style="color: #009900;">(</span>degToRad<span style="color: #009900;">(</span>joggingAngle<span style="color: #009900;">)</span><span style="color: #009900;">)</span> <span style="color: #339933;">/</span> <span style="color: #CC0000;">20</span> <span style="color: #339933;">+</span> <span style="color: #CC0000;">0.4</span>
+            <span style="color: #009900;">}</span></pre></td></tr></tbody></table></div>
+
+<p>显然，位置的改变和所谓的慢跑时的点头效果都应该发生在我们移动的时候，所以如果speed为非零值，就会根据三角函数和当前速度来调整xPos和zPos（因为Javascript中的三角函数使用的是弧度制，所以我们借助degToRad函数将角度值转换为弧度值）。接下来，joggingAngle继续参与运算，计算出当前的yPos。所有我们使用到的数字都乘以距离上次animate函数被调用的毫秒数，尤其是对于speed，它已经被设置为以毫秒为单位了，这非常完美。</p>
+<p>然后，我们需要根据yaw和pitch各自相应的改变速率调整它们的值，这个运算在我们站在原地不移动的时候也会进行。</p>
+
+<div class="wp_codebox"><table><tbody><tr id="p32717"><td class="line_numbers"><pre>337
+338
+</pre></td><td class="code" id="p327code17"><pre class="javascript" style="font-family:monospace;">            yaw <span style="color: #339933;">+=</span> yawRate <span style="color: #339933;">*</span> elapsed<span style="color: #339933;">;</span>
+            pitch <span style="color: #339933;">+=</span> pitchRate <span style="color: #339933;">*</span> elapsed<span style="color: #339933;">;</span></pre></td></tr></tbody></table></div>
+
+<p>最后，我们需要记录当前时间，以便我们可以在下次animate函数被调用时计算出中间的时间间隔。</p>
+
+<div class="wp_codebox"><table><tbody><tr id="p32718"><td class="line_numbers"><pre>340
+341
+342
+</pre></td><td class="code" id="p327code18"><pre class="javascript" style="font-family:monospace;">        <span style="color: #009900;">}</span>
+        lastTime <span style="color: #339933;">=</span> timeNow<span style="color: #339933;">;</span>
+    <span style="color: #009900;">}</span></pre></td></tr></tbody></table></div>
+
+<p>好了，本节课到此为止！你学会了一种简单的从txt文件中载入场景的方法，和一种简单的应用相机的方法。</p>
+<p>下节课中我们将会演示如何显示一个球体，然后使用鼠标事件旋转它，然后还会为你讲解如何使用旋转矩阵去避免一个讨厌的问题——万向节死锁（gimbal-lock）。</p>
+<p>（其实下节课根本没有讲到万向节死锁，大家千万不要上当！大概是作者写着写着就忘了吧……如果有需要，请给我们留言，我们会专门专业一篇文章来讲解所谓的“万向节死锁”的！）</p>
+<div style="clear:both; margin-top:5px; margin-bottom:5px;"></div><div style="float:left"><!-- JiaThis Button BEGIN -->
+<div id="ckepop">
+	<span class="jiathis_txt">分享到：</span>
+	<a class="jiathis_button_tools_1"></a>
+	<a class="jiathis_button_tools_2"></a>
+	<a class="jiathis_button_tools_3"></a>
+	<a class="jiathis_button_tools_4"></a>
+	<a href="http://www.jiathis.com/share" class="jiathis jiathis_txt jiathis_separator jtico jtico_jiathis" target="_blank">更多</a>
+	<a class="jiathis_counter_style"></a>
+</div>
+<script type="text/javascript" src="./Lesson 10 载入世界，以及相机简介 _ HiWebGL_files/jia.js.下载" charset="utf-8"></script>
+<!-- JiaThis Button END --></div><div style="clear:both; margin-top:5px; margin-bottom:5px;"></div>											</div><!-- .entry-content -->
+
+
+					<div class="entry-utility">
+						Posted in <a href="http://www.hiwebgl.com/?cat=17" title="查看 WebGL教程 中的全部文章" rel="category">WebGL教程</a>. Bookmark the <a href="http://www.hiwebgl.com/?p=327" title="Permalink to Lesson 10 载入世界，以及相机简介" rel="bookmark">permalink</a>.											</div><!-- .entry-utility -->
+				</div><!-- #post-## -->
+
+				<div id="nav-below" class="navigation">
+					<div class="nav-previous"><a href="http://www.hiwebgl.com/?p=319" rel="prev"><span class="meta-nav">←</span> Intel公布开源项目River Trail 为Javascript带来并行编程特性</a></div>
+					<div class="nav-next"><a href="http://www.hiwebgl.com/?p=339" rel="next">Lesson 11 球体、旋转矩阵和鼠标事件 <span class="meta-nav">→</span></a></div>
+				</div><!-- #nav-below -->
+
+				
+
+<div id="comments">
+		<h3 id="comments-title"><span>2 trackbacks</span></h3>
+	<dl id="trackback_list">
+		<dt><a href="http://www.hiwebgl.com/?p=42" rel="external nofollow" class="url">WebGL教程 | WebGL中文教程翻译工程启动！HiWebGL | HiWebGL | 最好的HTML5 WebGL中文资讯站</a></dt>
+		<dd><span>2011 年 9 月 22 日 上午 1:19</span></dd>
+		<dt><a href="http://www.hiwebgl.com/?p=628" rel="external nofollow" class="url">WebGL新闻 | WebGL All in One 全傻瓜简介HiWebGL | HiWebGL | 最好的HTML5 WebGL中文资讯站</a></dt>
+		<dd><span>2011 年 11 月 23 日 下午 11:59</span></dd>
+    </dl>
+    <h3 id="comments-title"><span>2 comments</span></h3>
+	<ol class="commentlist">
+    	
+
+	<li class="comment even thread-even depth-1" id="li-comment-285">
+    	<div id="comment-285">
+            <div class="comment_meta commentmetadata">
+                <span class="avatar"><img alt="" src="./Lesson 10 载入世界，以及相机简介 _ HiWebGL_files/ad516503a11cd5ca435acc9bb6523536.png" class="avatar avatar-40 photo" height="40" width="40"></span>
+                <span class="comment_author vcard fn">Lil' Dash</span>
+                <span class="comment_time">2011 年 12 月 26 日 下午 3:11</span>
+            </div>
+            <div class="comment_body">
+                <p></p><p>教程整理得很好啊！！ 可以提问题不？《Lesson 10 载入世界，以及相机简介》为什么我在线浏览上面的网页可以显示3D场景，但是下载了你们提供的DEMO代码，在本地就显示不了呢？  谢谢！</p>
+<p></p>
+                <p class="reply"><a class="comment-reply-link" href="http://www.hiwebgl.com/?p=327&amp;replytocom=285#respond" onclick="return addComment.moveForm(&quot;comment-285&quot;, &quot;285&quot;, &quot;respond&quot;, &quot;327&quot;)">回复</a></p>
+            </div>
+		</div>
+        
+        
+    
+<ul class="children">
+	<li class="comment odd alt depth-2" id="li-comment-286">
+    	<div id="comment-286">
+            <div class="comment_meta commentmetadata">
+                <span class="avatar"><img alt="" src="./Lesson 10 载入世界，以及相机简介 _ HiWebGL_files/ad516503a11cd5ca435acc9bb6523536(1).png" class="avatar avatar-40 photo" height="40" width="40"></span>
+                <span class="comment_author vcard fn">hjlld</span>
+                <span class="comment_time">2011 年 12 月 26 日 下午 10:00</span>
+            </div>
+            <div class="comment_body">
+                <p></p><p>需要设置一下浏览器，看一下本节教程有下载链接的那一段</p>
+<p></p>
+                <p class="reply"><a class="comment-reply-link" href="http://www.hiwebgl.com/?p=327&amp;replytocom=286#respond" onclick="return addComment.moveForm(&quot;comment-286&quot;, &quot;286&quot;, &quot;respond&quot;, &quot;327&quot;)">回复</a></p>
+            </div>
+		</div>
+        
+        
+    
+</li>
+</ul>
+</li>
+    </ol>
+        
+
+								<div id="respond">
+				<h3 id="reply-title">Post a Comment <small><a rel="nofollow" id="cancel-comment-reply-link" href="http://www.hiwebgl.com/?p=327#respond" style="display:none;">点击这里取消回复。</a></small></h3>
+									<form action="http://www.hiwebgl.com/wp-comments-post.php" method="post" id="commentform">
+																			<p class="comment-notes">电子邮件地址不会被公开。 必填项已用 <span class="required">*</span> 标注</p>							<p class="comment-form-author"><label for="author">姓名</label> <span class="required">*</span><input id="author" name="author" type="text" value="" size="30" aria-required="true"></p>
+<p class="comment-form-email"><label for="email">电子邮件</label> <span class="required">*</span><input id="email" name="email" type="text" value="" size="30" aria-required="true"></p>
+<p class="comment-form-url"><label for="url">站点</label><input id="url" name="url" type="text" value="" size="30"></p>
+												<p class="comment-form-comment"><label for="comment">评论</label><textarea id="comment" name="comment" cols="45" rows="8" aria-required="true"></textarea></p>						<p class="form-allowed-tags">您可以使用这些 <abbr title="HyperText Markup Language">HTML</abbr> 标签和属性： <code>&lt;a href="" title=""&gt; &lt;abbr title=""&gt; &lt;acronym title=""&gt; &lt;b&gt; &lt;blockquote cite=""&gt; &lt;cite&gt; &lt;code&gt; &lt;del datetime=""&gt; &lt;em&gt; &lt;i&gt; &lt;q cite=""&gt; &lt;strike&gt; &lt;strong&gt; </code></p>						<p class="form-submit">
+							<input name="submit" type="submit" id="submit" value="发表评论">
+							<input type="hidden" name="comment_post_ID" value="327" id="comment_post_ID">
+<input type="hidden" name="comment_parent" id="comment_parent" value="0">
+						</p>
+						<p style="display: none;"><input type="hidden" id="akismet_comment_nonce" name="akismet_comment_nonce" value="af33da8dd0"></p>					</form>
+							</div><!-- #respond -->
+						
+</div><!-- #comments -->
+
+			</div><!-- #content -->
+		</div><!-- #container -->
+
+<div id="sidebar" class="widget-area" role="complementary">
+	<ul class="xoxo">
+    	<li id="search-2" class="widget-container widget_search"><form id="searchform" method="get" action="http://www.hiwebgl.com/"> 
+	<input type="text" name="s" id="s" class="search_term" value="Type in keyword and hit Enter..." onblur="if (this.value == &#39;&#39;) {this.value = &#39;Type in keyword and hit Enter...&#39;;}" onfocus="if (this.value == &#39;Type in keyword and hit Enter...&#39;) {this.value = &#39;&#39;;}">
+</form></li><li id="text-4" class="widget-container widget_text"><h3 class="widget-title">加入我们的QQ群</h3>			<div class="textwidget"><b>HiWebGL技术讨论群</b><br>①群群号174563471（已满）<br>②群群号133703893（已满）<br>③群群号196778533（已满）<br>④群群号217873851（已满）<br>⑤群群号225923498（已满）<br>500人群群号219549633<br>欢迎各位程序员和工程师加入！<br><a target="_blank" href="http://qun.qq.com/#jointhegroup/gid/219549633"><img border="0" src="./Lesson 10 载入世界，以及相机简介 _ HiWebGL_files/gp.png" alt="点击这里加入此群" title="点击这里加入此群"></a>
+<br><br>
+<b>HiWebGL产业讨论群</b><br>①群群号176289597（已满）<br>②群群号216936388<br>欢迎关注Web3D发展的从业者与富有理想与激情的创业者朋友加入！<br><a target="_blank" href="http://qun.qq.com/#jointhegroup/gid/216936388"><img border="0" src="./Lesson 10 载入世界，以及相机简介 _ HiWebGL_files/gp.png" alt="点击这里加入此群" title="点击这里加入此群"></a></div>
+		</li><style type="text/css" media="screen">
+#mwrapper-wm_show-3 .mcontainer {height: 300px; overflow: hidden;}
+</style>
+<li id="wm_show-3" class="widget-container wm_show"><h3 class="widget-title">关注我们的新浪微博！</h3><div class="mwrapper" id="mwrapper-wm_show-3"><div class="head"><img class="headimg" src="./Lesson 10 载入世界，以及相机简介 _ HiWebGL_files/89c570d0jw1e8qgp5bmzyj2050050aa8.jpg"><a class="headlink" href="http://weibo.com/2311418064" rel="external nofollow" target="_blank">HiWebGL</a><div class="onekey"><iframe width="63" height="24" frameborder="0" allowtransparency="true" marginwidth="0" marginheight="0" scrolling="no" border="0" src="./Lesson 10 载入世界，以及相机简介 _ HiWebGL_files/followbutton.html"></iframe></div></div><a class="scroll up" href="javascript:;"><img src="./Lesson 10 载入世界，以及相机简介 _ HiWebGL_files/transparent.gif"></a><div class="mcontainer"><ul class="microblogs"><li class="tweet">[哆啦A梦吃惊]<div class="rt"><a href="http://weibo.com/crazycomputer" rel="external nofollow" target="_blank">尼奥_</a> : 因写了抢猫粮插件被抓的小喵。<div class="pic rt-pic"><a href="http://ww3.sinaimg.cn/large/6588fb91jw1f8a611qywmj20qo0r743g.jpg" rel="external nofollow" target="_blank"><img src="./Lesson 10 载入世界，以及相机简介 _ HiWebGL_files/6588fb91jw1f8a611qywmj20qo0r743g.jpg"></a></div></div><div class="meta"><a href="http://api.t.sina.com.cn/2311418064/statuses/4025014212843692" rel="external nofollow" target="_blank">9月29日 12:00</a> 来自 <a href="http://weibo.com/2311418064" rel="external nofollow" target="_blank">新浪微博</a></div></li><li class="tweet">转发微博<div class="rt"><a href="http://weibo.com/armcn" rel="external nofollow" target="_blank">ARM中国</a> : 在看颜的时代，如何让一款游戏画面更具高bigger？从8位像素画风到1080P/4K，再到ARM的Enlighten全局光照技术，能够分分钟变化出数十种光照效果，再挑的玩家都给它点赞了，不信你就来看看[围观][围观]<a href="http://t.cn/RcNsHsc" rel="external nofollow" target="_blank">http://t.cn/RcNsHsc</a><div class="pic rt-pic"><a href="http://ww3.sinaimg.cn/large/84217b4fgw1f89g6wubugj20j30q6gr3.jpg" rel="external nofollow" target="_blank"><img src="./Lesson 10 载入世界，以及相机简介 _ HiWebGL_files/84217b4fgw1f89g6wubugj20j30q6gr3.jpg"></a></div></div><div class="meta"><a href="http://api.t.sina.com.cn/2311418064/statuses/4025000392991907" rel="external nofollow" target="_blank">9月29日 11:05</a> 来自 <a href="http://weibo.com/2311418064" rel="external nofollow" target="_blank">新浪微博</a></div></li><li class="tweet">转发微博<div class="rt"><a href="http://weibo.com/baidujs" rel="external nofollow" target="_blank">JS小组</a> : 你知道使用 target='_blank' 也会有安全漏洞么？尤其是在各种 UGC 网站中。不过小编早就玩过了，其实一般倒也不会用在钓鱼上，而是用在各种各样的广告点击中。推荐文章《target='_blank' 安全漏洞示例》地址 <a href="http://t.cn/RchBwVu" rel="external nofollow" target="_blank">http://t.cn/RchBwVu</a>  $w<div class="pic rt-pic"><a href="http://ww2.sinaimg.cn/large/aa9d3df6jw1f7fewekmx8j20g30a1aak.jpg" rel="external nofollow" target="_blank"><img src="./Lesson 10 载入世界，以及相机简介 _ HiWebGL_files/aa9d3df6jw1f7fewekmx8j20g30a1aak.jpg"></a></div></div><div class="meta"><a href="http://api.t.sina.com.cn/2311418064/statuses/4016375595329873" rel="external nofollow" target="_blank">9月5日 15:53</a> 来自 <a href="http://weibo.com/2311418064" rel="external nofollow" target="_blank">新浪微博</a></div></li><li class="tweet">不做游戏，帮转<div class="rt"><a href="http://weibo.com/xdarui" rel="external nofollow" target="_blank">阿里子之</a> : 有做WebVR游戏的公司么，求合作。求圈内大神帮忙转发。@寒冬winter @大城小胖 @w3cplus</div><div class="meta"><a href="http://api.t.sina.com.cn/2311418064/statuses/4015348426770066" rel="external nofollow" target="_blank">9月2日 19:52</a> 来自 <a href="http://weibo.com/2311418064" rel="external nofollow" target="_blank">新浪微博</a></div></li><li class="tweet">阿里云OSS是否支持websockets?有人知道吗？<div class="meta"><a href="http://api.t.sina.com.cn/2311418064/statuses/4006622127044001" rel="external nofollow" target="_blank">8月9日 17:56</a> 来自 <a href="http://weibo.com/2311418064" rel="external nofollow" target="_blank">新浪微博</a></div></li></ul></div><a class="scroll down" href="javascript:;"><img src="./Lesson 10 载入世界，以及相机简介 _ HiWebGL_files/transparent.gif"></a></div></li><li id="recent-comments-2" class="widget-container widget_recent_comments"><h3 class="widget-title">近期评论</h3><ul id="recentcomments"><li class="recentcomments"><a href="http://www.d2film.com/" rel="external nofollow" class="url">企业宣传片制作d2film.com影视视频制作公司QQ30998</a> 发表在《<a href="http://www.hiwebgl.com/?p=42#comment-7984">WebGL中文教程翻译工程启动！</a>》</li><li class="recentcomments"><a href="http://www.128sf.cn/" rel="external nofollow" class="url">魔域服务器架设</a> 发表在《<a href="http://www.hiwebgl.com/?p=312#comment-7858">Lesson 9 优化代码结构实现多物体运动</a>》</li><li class="recentcomments"><a href="http://www.39uc.cn/" rel="external nofollow" class="url">天龙八部师傅m161</a> 发表在《<a href="http://www.hiwebgl.com/?p=70#comment-7857">外媒公布Firefox 6性能测试结果</a>》</li><li class="recentcomments"><a href="http://www.233sf.cn/" rel="external nofollow" class="url">最新奇迹私发网</a> 发表在《<a href="http://www.hiwebgl.com/?p=42#comment-7856">WebGL中文教程翻译工程启动！</a>》</li><li class="recentcomments"><a href="http://www.5aivideo.com/" rel="external nofollow" class="url">婚礼跟拍视频5aivideo.com婚礼摄影MV-QQ73595</a> 发表在《<a href="http://www.hiwebgl.com/?p=42#comment-7829">WebGL中文教程翻译工程启动！</a>》</li></ul></li><li id="categories-2" class="widget-container widget_categories"><h3 class="widget-title">分类目录</h3>		<ul>
+	<li class="cat-item cat-item-16"><a href="http://www.hiwebgl.com/?cat=16" title="查看 Demo大赏 下的所有文章">Demo大赏</a>
+</li>
+	<li class="cat-item cat-item-29"><a href="http://www.hiwebgl.com/?cat=29" title="查看 HTML5新闻 下的所有文章">HTML5新闻</a>
+</li>
+	<li class="cat-item cat-item-57"><a href="http://www.hiwebgl.com/?cat=57" title="Oak3D中文教程">Oak3D教程</a>
+</li>
+	<li class="cat-item cat-item-17"><a href="http://www.hiwebgl.com/?cat=17" title="查看 WebGL教程 下的所有文章">WebGL教程</a>
+</li>
+	<li class="cat-item cat-item-3"><a href="http://www.hiwebgl.com/?cat=3" title="WebGL新闻">WebGL新闻</a>
+</li>
+	<li class="cat-item cat-item-10"><a href="http://www.hiwebgl.com/?cat=10" title="查看 博文精选 下的所有文章">博文精选</a>
+</li>
+	<li class="cat-item cat-item-4"><a href="http://www.hiwebgl.com/?cat=4" title="推荐阅读">推荐</a>
+</li>
+	<li class="cat-item cat-item-1"><a href="http://www.hiwebgl.com/?cat=1" title="查看 未分类 下的所有文章">未分类</a>
+</li>
+		</ul>
+</li><li id="archives-2" class="widget-container widget_archive"><h3 class="widget-title">文章归档</h3>		<ul>
+			<li><a href="http://www.hiwebgl.com/?m=201206" title="2012 年六月">2012 年六月</a></li>
+	<li><a href="http://www.hiwebgl.com/?m=201205" title="2012 年五月">2012 年五月</a></li>
+	<li><a href="http://www.hiwebgl.com/?m=201204" title="2012 年四月">2012 年四月</a></li>
+	<li><a href="http://www.hiwebgl.com/?m=201203" title="2012 年三月">2012 年三月</a></li>
+	<li><a href="http://www.hiwebgl.com/?m=201202" title="2012 年二月">2012 年二月</a></li>
+	<li><a href="http://www.hiwebgl.com/?m=201201" title="2012 年一月">2012 年一月</a></li>
+	<li><a href="http://www.hiwebgl.com/?m=201112" title="2011 年十二月">2011 年十二月</a></li>
+	<li><a href="http://www.hiwebgl.com/?m=201111" title="2011 年十一月">2011 年十一月</a></li>
+	<li><a href="http://www.hiwebgl.com/?m=201110" title="2011 年十月">2011 年十月</a></li>
+	<li><a href="http://www.hiwebgl.com/?m=201109" title="2011 年九月">2011 年九月</a></li>
+	<li><a href="http://www.hiwebgl.com/?m=201108" title="2011 年八月">2011 年八月</a></li>
+		</ul>
+</li>    </ul>
+</div><!-- #sidebar .widget-area -->	</div><!-- #main -->
+    <div id="footer" role="contentinfo">
+    	
+    	<div id="colophon">
+            <div id="site-info" class="clearfix">
+                <div id="generator">Powered by <a href="http://wordpress.org/" title="Semantic Personal Publishing Platform" rel="generator">Wordpress</a> and <a href="http://wpcrunchy.com/" title="Free Premium Quality Wordpress Themes">WPCrunchy</a></div>
+                <div id="credits">Designed by <a href="http://www.hostreviewgeeks.com/" title="best web hosting" target="_blank">best web hosting</a>. In collaboration with <a href="http://www.hostv.com/" title="VPS Hosting" target="_blank">VPS Hosting</a>, <a href="http://broadwaytickets.co/" title="Broadway Tickets" target="_blank">Broadway Tickets</a>, <a href="http://wpcorner.com/" title="Free Wordpress Themes" target="_blank">Free Wordpress Themes</a>.</div>
+            </div>
+        </div>
+    </div><!-- #footer -->
+</div><!-- #wrapper -->
+
+<script type="text/javascript">jQuery(document).ready(function() { if(jQuery("ul.accordion li").length > 2) { jQuery("ul.accordion").accordion(); } });</script><script src="./Lesson 10 载入世界，以及相机简介 _ HiWebGL_files/stat.php" language="JavaScript"></script><script src="./Lesson 10 载入世界，以及相机简介 _ HiWebGL_files/core.php" charset="utf-8" type="text/javascript"></script><a href="http://www.cnzz.com/stat/website.php?web_id=3871765" target="_blank" title="站长统计"><img border="0" hspace="0" vspace="0" src="./Lesson 10 载入世界，以及相机简介 _ HiWebGL_files/pic.gif"></a><script src="./Lesson 10 载入世界，以及相机简介 _ HiWebGL_files/stat.js.下载" defer="defer" async="async"></script>
+ </body></html>

@@ -1,0 +1,549 @@
+<!DOCTYPE html>
+<!-- saved from url=(0029)http://www.hiwebgl.com/?p=363 -->
+<html dir="ltr" lang="zh-CN"><script type="text/javascript">
+    var spector;
+    var captureOnLoad = false;
+    var captureOffScreen = false;
+    window.__SPECTOR_Canvases = [];
+
+    (function() {
+        var __SPECTOR_Origin_EXTENSION_GetContext = HTMLCanvasElement.prototype.getContext;
+        HTMLCanvasElement.prototype.__SPECTOR_Origin_EXTENSION_GetContext = __SPECTOR_Origin_EXTENSION_GetContext;
+
+        HTMLCanvasElement.prototype.getContext = function () {
+            var context = null;
+            if (!arguments.length) {
+                return context;
+            }
+
+            if (arguments.length === 1) {
+                context = this.__SPECTOR_Origin_EXTENSION_GetContext(arguments[0]);
+                if (context === null) {
+                    return context;
+                }
+            }
+            else if (arguments.length === 2) {
+                context = this.__SPECTOR_Origin_EXTENSION_GetContext(arguments[0], arguments[1]);
+                if (context === null) {
+                    return context;
+                }
+            }
+
+            var contextNames = ["webgl", "experimental-webgl", "webgl2", "experimental-webgl2"];
+            if (contextNames.indexOf(arguments[0]) !== -1) {
+                context.canvas.setAttribute("__spector_context_type", arguments[0]);
+                // Notify the page a canvas is available.
+                var myEvent = new CustomEvent("SpectorWebGLCanvasAvailableEvent");
+                document.dispatchEvent(myEvent);
+
+                if (captureOffScreen) {
+                    var found = false;
+                    for (var i = 0; i < window.__SPECTOR_Canvases.length; i++) {
+                        if (window.__SPECTOR_Canvases[i] === this) {
+                            found = true;
+                            break;
+                        }
+                    }
+                    if (!found) {
+                        window.__SPECTOR_Canvases.push(this);
+                    }
+                }
+
+                if (captureOnLoad) {
+                    // Ensures canvas is in the dom to capture the one we are currently tracking.
+                    if (this.parentElement || false) {
+                        spector.captureContext(context, 500, false);
+                        captureOnLoad = false;
+                    }
+                }
+            }
+
+            return context;
+        }
+    })()</script><script>(function main() {
+    // Create enabled event
+    function fireEnabledEvent() {
+        // If gli exists, then we are already present and shouldn't do anything
+        if (!window.gli) {
+            setTimeout(function () {
+                var enabledEvent = document.createEvent("Event");
+                enabledEvent.initEvent("WebGLEnabledEvent", true, true);
+                document.dispatchEvent(enabledEvent);
+            }, 0);
+        } else {
+            //console.log("WebGL Inspector already embedded on the page - disabling extension");
+        }
+    };
+
+    // Grab the path root from the extension
+    document.addEventListener("WebGLInspectorReadyEvent", function (e) {
+        var pathElement = document.getElementById("__webglpathroot");
+        if (window["gliloader"]) {
+            gliloader.pathRoot = pathElement.innerText;
+        } else {
+            // TODO: more?
+            window.gliCssUrl = pathElement.innerText + "gli.all.css";
+        }
+    }, false);
+
+    // Rewrite getContext to snoop for webgl
+    var originalGetContext = HTMLCanvasElement.prototype.getContext;
+    if (!HTMLCanvasElement.prototype.getContextRaw) {
+        HTMLCanvasElement.prototype.getContextRaw = originalGetContext;
+    }
+    HTMLCanvasElement.prototype.getContext = function () {
+        var ignoreCanvas = this.internalInspectorSurface;
+        if (ignoreCanvas) {
+            return originalGetContext.apply(this, arguments);
+        }
+
+        var result = originalGetContext.apply(this, arguments);
+        if (result == null) {
+            return null;
+        }
+
+        var contextNames = ["moz-webgl", "webkit-3d", "experimental-webgl", "webgl", "3d"];
+        var requestingWebGL = contextNames.indexOf(arguments[0]) != -1;
+        if (requestingWebGL) {
+            // Page is requesting a WebGL context!
+            fireEnabledEvent(this);
+
+            // If we are injected, inspect this context
+            if (window.gli) {
+                if (gli.host.inspectContext) {
+                    // TODO: pull options from extension
+                    result = gli.host.inspectContext(this, result);
+                    // NOTE: execute in a timeout so that if the dom is not yet
+                    // loaded this won't error out.
+                    window.setTimeout(function() {
+                        var hostUI = new gli.host.HostUI(result);
+                        result.hostUI = hostUI; // just so we can access it later for debugging
+                    }, 0);
+                }
+            }
+        }
+
+        return result;
+    };
+})();</script><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+
+<title>Lesson 13 片元级光照与多program对象 | HiWebGL</title>
+<link rel="profile" href="http://gmpg.org/xfn/11">
+<link rel="stylesheet" type="text/css" media="all" href="./Lesson 13 片元级光照与多program对象 _ HiWebGL_files/style.css">
+<!--[if IE]>
+<link rel="stylesheet" type="text/css" media="all" href="http://www.hiwebgl.com/wp-content/themes/mnchrome/style-ie.css" />
+<![endif]-->
+<link rel="stylesheet" type="text/css" media="all" href="./Lesson 13 片元级光照与多program对象 _ HiWebGL_files/custom.css"><link rel="pingback" href="http://www.hiwebgl.com/xmlrpc.php">
+<meta name="robots" content="index,follow">
+<link rel="canonical" href="http://www.hiwebgl.com/?p=363">
+<link rel="alternate" type="application/rss+xml" title="HiWebGL » Feed" href="http://www.hiwebgl.com/?feed=rss2">
+<link rel="alternate" type="application/rss+xml" title="HiWebGL » 评论 Feed" href="http://www.hiwebgl.com/?feed=comments-rss2">
+<link rel="alternate" type="application/rss+xml" title="HiWebGL » Lesson 13 片元级光照与多program对象 评论 Feed" href="http://www.hiwebgl.com/?feed=rss2&amp;p=363">
+<link rel="stylesheet" id="wm-css" href="./Lesson 13 片元级光照与多program对象 _ HiWebGL_files/style(1).css" type="text/css" media="all">
+<link rel="stylesheet" id="toc-screen-css" href="./Lesson 13 片元级光照与多program对象 _ HiWebGL_files/screen.css" type="text/css" media="all">
+<link rel="stylesheet" id="codebox-css" href="./Lesson 13 片元级光照与多program对象 _ HiWebGL_files/codebox.css" type="text/css" media="screen">
+<script type="text/javascript" src="./Lesson 13 片元级光照与多program对象 _ HiWebGL_files/jquery.js.下载"></script>
+<script type="text/javascript" src="./Lesson 13 片元级光照与多program对象 _ HiWebGL_files/front.js.下载"></script>
+<script type="text/javascript" src="./Lesson 13 片元级光照与多program对象 _ HiWebGL_files/widget.js.下载"></script>
+<script type="text/javascript" src="./Lesson 13 片元级光照与多program对象 _ HiWebGL_files/comment-reply.js.下载"></script>
+<script type="text/javascript" src="./Lesson 13 片元级光照与多program对象 _ HiWebGL_files/codebox.js.下载"></script>
+<link rel="EditURI" type="application/rsd+xml" title="RSD" href="http://www.hiwebgl.com/xmlrpc.php?rsd">
+<link rel="wlwmanifest" type="application/wlwmanifest+xml" href="http://www.hiwebgl.com/wp-includes/wlwmanifest.xml"> 
+<link rel="prev" title="Lesson 12 点光源" href="http://www.hiwebgl.com/?p=355">
+<link rel="next" title="Rovio推HTML5版愤怒的小鸟 目标多平台" href="http://www.hiwebgl.com/?p=379">
+<meta name="generator" content="Monochrome 1.0">
+<link rel="canonical" href="http://www.hiwebgl.com/?p=363">
+<script type="text/javascript" src="./Lesson 13 片元级光照与多program对象 _ HiWebGL_files/jquery.min.js.下载"></script>
+<script type="text/javascript" src="./Lesson 13 片元级光照与多program对象 _ HiWebGL_files/hoverIntent.js.下载"></script>
+<script type="text/javascript" src="./Lesson 13 片元级光照与多program对象 _ HiWebGL_files/superfish.js.下载"></script>
+<script type="text/javascript" src="./Lesson 13 片元级光照与多program对象 _ HiWebGL_files/supersubs.js.下载"></script>
+<script type="text/javascript" src="./Lesson 13 片元级光照与多program对象 _ HiWebGL_files/jquery.accordion.js.下载"></script>
+<script type="text/javascript" src="./Lesson 13 片元级光照与多program对象 _ HiWebGL_files/dropdowns.js.下载"></script>
+<style type="text/css" media="all">
+/* <![CDATA[ */
+@import url("http://www.hiwebgl.com/wp-content/plugins/wp-table-reloaded/css/plugin.css?ver=1.9.3");
+@import url("http://www.hiwebgl.com/wp-content/plugins/wp-table-reloaded/css/datatables.css?ver=1.9.3");
+/* ]]> */
+</style></head>
+<body class="single single-post postid-363 single-format-standard">
+<div id="wrapper" class="hfeed">
+	<div id="header">
+    	<div id="masthead">
+        	<div id="branding" role="banner">
+            	<div id="site-logo">
+                	<a href="http://www.hiwebgl.com/" title="HiWebGL" rel="home">
+                    	                    <img src="./Lesson 13 片元级光照与多program对象 _ HiWebGL_files/logo.png" align="logo">
+                    					</a>
+                </div>
+                <div id="site-description">最好的HTML5 WebGL中文资讯站！</div>
+                            </div><!-- #branding -->
+            <div id="access" role="navigation">
+            		<div class="menu">
+		<ul class="sf-menu sf-js-enabled">
+			<li>
+            	<a href="http://www.hiwebgl.com/" title="HiWebGL" rel="home">
+				<strong>首页</strong><span>Homepage</span>
+			</a></li>
+						<li>
+				<a href="http://www.hiwebgl.com/?p=42">
+				<strong>教程</strong><span>&nbsp;</span></a>
+							</li>
+						<li>
+				<a href="http://www.hiwebgl.com/?cat=16">
+				<strong>Demo</strong><span>&nbsp;</span></a>
+							</li>
+						<li>
+				<a href="http://www.hiwebgl.com/ask">
+				<strong>有问必答</strong><span>&nbsp;</span></a>
+							</li>
+						<li>
+				<a href="http://hiwebgl.com/forum/">
+				<strong>论坛</strong><span>&nbsp;</span></a>
+							</li>
+					</ul>
+	</div>
+            </div><!-- #access -->
+        </div><!-- #masthead -->
+    </div><!-- #header -->
+    
+    <div id="breadcrumbWrap"><div id="breadcrumb">
+<span>You are here: </span><a href="http://www.hiwebgl.com/">Home</a> » <a href="http://www.hiwebgl.com/?cat=17" title="查看 WebGL教程 中的全部文章">WebGL教程</a> » Lesson 13 片元级光照与多program对象</div></div>    
+    <div id="main">
+		<div id="container">
+			<div id="content" role="main">
+
+
+				<div id="post-363" class="post-363 post type-post status-publish format-standard hentry category-webgl">
+					<h1 class="entry-title">Lesson 13 片元级光照与多program对象</h1>
+
+					<div class="entry-meta">
+							<span class="meta-author">By admin</span>
+    <span class="meta-date">On 2011 年 9 月 23 日</span>
+    <span class="meta-comment">一条评论</span>
+						1,620 次浏览					</div><!-- .entry-meta -->
+
+					<div class="entry-content">
+                		<p><span style="color: #888888;"><em>HiWebGL译者声明：因为译者个人方便的原因，我们将原教程中的第三方图形库由glMatrix改为Oak3D实现，这不影响到Demo的最终效果和实现，也不影响到WebGL的讲解和学习。原教程正文中相应的代码和讲解也为做了相应修改！本教程由HiWebGL翻译整理，转载请注明出处！</em></span></p>
+<p><span style="color: #888888;"><em>关于Oak3D：Oak3D是一套简单易用、性能优越的WebGL Javascript Library。您可以在他们的主页找到更多信息。Oak3D主页：<a href="http://www.oak3d.com/" target="_blank"><span style="color: #888888;">http://www.oak3d.com</span></a>&nbsp;</em></span></p>
+<p>欢迎来到WebGL教程的第13课。在本节课中，我们将会讲解逐片元光照（Per-fragment Lighting），比起我们之前一直使用的逐顶点光照（Per-vertex Lighting），前者对于显卡是来说是一项更加困难的工作，但是同时也会生成更加真实的效果；同时我们还会看一下如何通过选择使用WebGL program对象来切换代码中用到的着色器。</p>
+<p>下面的视频就是我们这节课将会完成的最终效果。</p>
+<p><embed src="http://player.youku.com/player.php/sid/XMzA2Njc4MTEy/v.swf" quality="high" width="480" height="400" align="middle" allowscriptaccess="sameDomain" type="application/x-shockwave-flash"></p>
+<p>点击<a href="http://www.hiwebgl.com/webgl_lessons/lesson13/index.html" target="_blank">这里</a>打开一个独立的WebGL页面，如果你的浏览器不支持WebGL，请点击<a href="http://www.hiwebgl.com/?p=52" target="_blank">这里</a>。</p>
+<p>你会看到一个球体和一个立方体在围绕轨道旋转；在纹理载入阶段，它们是白色的，当纹理载入后，你会看到月球和一个木质的板条箱。这个场景和第12课中的非常相似，但是我们让轨道上的两个物体的距离更近了，这样你可以更加清晰的看到它们的样子。和之前一样，两个物体都是被位于它们中间的点光源所照亮。如果你想要改变光源的位置和颜色等，可以使用canvas下面的文本输入框。你还可以使用复选框开启和关闭光源，切换逐片元光照和逐顶点光照，以及选择是否使用纹理。</p>
+<p>请试着在逐片元光照和逐顶点光照之间切换。你应该能够很容易的看出它们之间的区别，尤其是在板条箱上。当启用逐片元光照时，板条箱的中间明显比其他部分更明亮；而在月球上，效果不是那么明显，只是在边缘区域，光照的淡出效果更加平滑，锯齿也更少。当关闭纹理之后，你会更容易地观察到这些效果。</p>
+<p>下面我们来看看它是怎么工作的……</p>
+<p>惯例声明：本系列的教程是针对那些已经具备相应编程知识但没有实际3D图形经验的人的；目标是让学习者创建并运行代码，并且明白代码其中的含义，从而可以快速地创建自己的3D Web页面。如果你还没有阅读前一课，请先阅读前一课的内容吧。因为本课中我只会讲解那些与前一课中不同的新知识。</p>
+<p>另外，我编写这套教程是因为我在独立学习WebGL，所以教程中可能（非常可能）会有错误，所以还请风险自担。尽管如此，我还是会不断的修正bug和改正其中的错误的，所以如果你发现了教程中的错误，请告诉我。</p>
+<p>有两种方法可以获得上面实例的代码：在实例的独立页面中选择“查看源代码”；或者点击<a href="http://www.hiwebgl.com/webgl_lessons/lesson13/lesson13.zip" target="_blank">这里</a>下载我们为您准备好的压缩包。</p>
+<p><a href="./Lesson 13 片元级光照与多program对象 _ HiWebGL_files/point.png"><img src="./Lesson 13 片元级光照与多program对象 _ HiWebGL_files/point.png" alt="" title="point" width="300" height="309" class="alignleft size-full wp-image-364"></a>让我们先讲一下，耗费更多的显卡资源去实现逐片元光照为什么是值得的。你也许还记得左边这张在第7课出现过的图片。你已经知道，物体表面的光亮程度是由法线和入射光线之间的夹角决定的。到目前为止，我们的光照效果都是在顶点着色器中计算的，其中用到了每个顶点的法线和光照方向。这中间有一个称之为光照量的参数，也就是物体表面反射了多少光。我们把这个参数以varying变量的形式，从顶点着色器传递到片元着色器，用来调整片元的颜色，反映出相应的光照程度。这个光照量的参数，和其他varying变量一样，对于顶点之间的片元，都会被WebGL进行线性插值。所以，在左边的图中，B点将会相当明亮，因为B点的光线几乎是平行于法线的；而A点则会稍微暗一些，因为光线的入射角更大一些。在A点和B点之间的点，将会有一个从明到暗的渐变。这个效果看起来非常好。</p>
+<p>让我们把光源的位置往上提提，就像右图中的那样。<a href="./Lesson 13 片元级光照与多program对象 _ HiWebGL_files/point-lighting-in-middle.png"><img src="./Lesson 13 片元级光照与多program对象 _ HiWebGL_files/point-lighting-in-middle.png" alt="" title="point-lighting-in-middle" width="416" height="185" class="alignright size-full wp-image-365"></a>A点和C点都会比较暗，因为光线的入射角更大。假设我们仍然使用逐顶点光照，那么B点的明亮程度应该是A点和C点的平均值，所以B点也同样会比较暗。但是，这很明显是错误的！在B点，光线几乎是平行于法线的，所以它应该是其中最明亮的一个点。所以在计算顶点之间的片元光照时，我们必须逐个片元、逐个片元的单独进行计算。</p>
+<p>每个片元都要计算各自的光照效果，意味着我们需要它们各自的位置（用于计算光照方向）和各自的法线；我们可以把这些值都从顶点着色器传递到片元着色器。同样它们也会被线性插值，所以位置值会是一条顶点间的直线，而法线值将会平滑地改变。那条直线正是我们想要的；而A点和C点的法线是相同的，所以这两点之间所有片元的法线也是相同的，这也很完美。</p>
+<p>这样就解释了为什么在我们的页面上，启用逐片元光照后立方体看起来更加真实。另外还有一个好处，那就是对于用平面图形逼近组成的弯曲表面，例如球体，它也能给出很好的光照效果。因为如果两个顶点的法线不同，那么对于这两个顶点之间的片元来说，线性插值后的法线也会平滑的改变，这样就实现了曲面效果。在我们的这种思考方式中，逐片元光照实际上是<a href="http://en.wikipedia.org/wiki/Phong_shading" target="_blank">冯氏着色法（Phong shading）</a>的一种形式，下面的这幅图很好的解释了这种效果，我就不用再多费口舌了。</p>
+<p><a href="./Lesson 13 片元级光照与多program对象 _ HiWebGL_files/Phong-shading-sample.jpg"><img src="./Lesson 13 片元级光照与多program对象 _ HiWebGL_files/Phong-shading-sample.jpg" alt="" title="Phong-shading-sample" width="673" height="291" class="alignnone size-full wp-image-366 aligncenter"></a></p>
+<p>你同样也可以在Demo中观察到这种效果。当你关闭逐片元光照，启用逐顶点光照时，你会发现阴影的边缘（也就是点光源失效，完全被环境光接管的部分）看起来有很多锯齿。这是因为球体是由很多三角形组成的，你可以仔细观察它们的边缘。当你开启逐片元光照时，你会发现边缘的这种过度非常平滑，更像是真正的球体上的效果。</p>
+<p>好了，以上就是理论部分，现在让我们看一下代码吧。着色器部分的代码在页面的顶部，我们先来看一下它们。因为在这节课中我们既要用到逐顶点光照又要用到逐片元光照，这是由页面上的复选框决定的，所以每个光照技术都需要有各自的顶点着色器和片元着色器（将两者都写到一起也是可能的，但是这会导致代码很难读）。我们稍后再讲切换不同光照技术的方法，现在你只要记住在页面中我们是通过定义脚本中的id标签来区别二者的。首先是用于逐顶点光照的一对着色器，它们和第7课中的代码完全一样，所以我只列出脚本标签，注意看其中id。</p>
+
+<div class="wp_codebox"><table><tbody><tr id="p3631"><td class="line_numbers"><pre>8
+</pre></td><td class="code" id="p363code1"><pre class="javascript" style="font-family:monospace;"><span style="color: #339933;">&lt;</span>script id<span style="color: #339933;">=</span><span style="color: #3366CC;">"per-vertex-lighting-fs"</span> type<span style="color: #339933;">=</span><span style="color: #3366CC;">"x-shader/x-fragment"</span><span style="color: #339933;">&gt;</span></pre></td></tr></tbody></table></div>
+
+
+<div class="wp_codebox"><table><tbody><tr id="p3632"><td class="line_numbers"><pre>31
+</pre></td><td class="code" id="p363code2"><pre class="javascript" style="font-family:monospace;"><span style="color: #339933;">&lt;</span>script id<span style="color: #339933;">=</span><span style="color: #3366CC;">"per-vertex-lighting-vs"</span> type<span style="color: #339933;">=</span><span style="color: #3366CC;">"x-shader/x-vertex"</span><span style="color: #339933;">&gt;</span></pre></td></tr></tbody></table></div>
+
+<p>然后是逐片元光照的片元着色器。</p>
+
+<div class="wp_codebox"><table><tbody><tr id="p3633"><td class="line_numbers"><pre>68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80
+81
+82
+83
+84
+85
+86
+87
+88
+89
+90
+91
+92
+93
+94
+95
+96
+97
+98
+99
+100
+101
+102
+103
+104
+105
+106
+107
+</pre></td><td class="code" id="p363code3"><pre class="glsl" style="font-family:monospace;"><span style="color: #000066;">&lt;</span>script id<span style="color: #000066;">=</span><span style="color: #ff0000;">"per-fragment-lighting-fs"</span> type<span style="color: #000066;">=</span><span style="color: #ff0000;">"x-shader/x-fragment"</span><span style="color: #000066;">&gt;</span>
+&nbsp;
+    <span style="color: #000066; font-weight: bold;">precision</span> <span style="color: #000066; font-weight: bold;">mediump</span> <span style="color: #000066; font-weight: bold;">float</span><span style="color: #000066;">;</span>
+&nbsp;
+&nbsp;
+    <span style="color: #333399; font-weight: bold;">varying</span> <span style="color: #000066; font-weight: bold;">vec2</span> vTextureCoord<span style="color: #000066;">;</span>
+    <span style="color: #333399; font-weight: bold;">varying</span> <span style="color: #000066; font-weight: bold;">vec3</span> vTransformedNormal<span style="color: #000066;">;</span>
+    <span style="color: #333399; font-weight: bold;">varying</span> <span style="color: #000066; font-weight: bold;">vec4</span> vPosition<span style="color: #000066;">;</span>
+&nbsp;
+    <span style="color: #333399; font-weight: bold;">uniform</span> <span style="color: #000066; font-weight: bold;">bool</span> uUseLighting<span style="color: #000066;">;</span>
+    <span style="color: #333399; font-weight: bold;">uniform</span> <span style="color: #000066; font-weight: bold;">bool</span> uUseTextures<span style="color: #000066;">;</span>
+&nbsp;
+    <span style="color: #333399; font-weight: bold;">uniform</span> <span style="color: #000066; font-weight: bold;">vec3</span> uAmbientColor<span style="color: #000066;">;</span>
+&nbsp;
+    <span style="color: #333399; font-weight: bold;">uniform</span> <span style="color: #000066; font-weight: bold;">vec3</span> uPointLightingLocation<span style="color: #000066;">;</span>
+    <span style="color: #333399; font-weight: bold;">uniform</span> <span style="color: #000066; font-weight: bold;">vec3</span> uPointLightingColor<span style="color: #000066;">;</span>
+&nbsp;
+    <span style="color: #333399; font-weight: bold;">uniform</span> <span style="color: #000066; font-weight: bold;">sampler2D</span> uSampler<span style="color: #000066;">;</span>
+&nbsp;
+&nbsp;
+    <span style="color: #000066; font-weight: bold;">void</span> main<span style="color: #000066;">(</span><span style="color: #000066; font-weight: bold;">void</span><span style="color: #000066;">)</span> <span style="color: #000066;">{</span>
+        <span style="color: #000066; font-weight: bold;">vec3</span> lightWeighting<span style="color: #000066;">;</span>
+        <span style="color: #000000; font-weight: bold;">if</span> <span style="color: #000066;">(</span><span style="color: #000066;">!</span>uUseLighting<span style="color: #000066;">)</span> <span style="color: #000066;">{</span>
+            lightWeighting <span style="color: #000066;">=</span> <span style="color: #000066; font-weight: bold;">vec3</span><span style="color: #000066;">(</span><span style="color: #0000ff;">1.0</span><span style="color: #000066;">,</span> <span style="color: #0000ff;">1.0</span><span style="color: #000066;">,</span> <span style="color: #0000ff;">1.0</span><span style="color: #000066;">)</span><span style="color: #000066;">;</span>
+        <span style="color: #000066;">}</span> <span style="color: #000000; font-weight: bold;">else</span> <span style="color: #000066;">{</span>
+            <span style="color: #000066; font-weight: bold;">vec3</span> lightDirection <span style="color: #000066;">=</span> <span style="color: #993333; font-weight: bold;">normalize</span><span style="color: #000066;">(</span>uPointLightingLocation <span style="color: #000066;">-</span> vPosition<span style="color: #000066;">.</span><span style="color: #006600;">xyz</span><span style="color: #000066;">)</span><span style="color: #000066;">;</span>
+&nbsp;
+            <span style="color: #000066; font-weight: bold;">float</span> directionalLightWeighting <span style="color: #000066;">=</span> <span style="color: #993333; font-weight: bold;">max</span><span style="color: #000066;">(</span><span style="color: #993333; font-weight: bold;">dot</span><span style="color: #000066;">(</span><span style="color: #993333; font-weight: bold;">normalize</span><span style="color: #000066;">(</span>vTransformedNormal<span style="color: #000066;">)</span><span style="color: #000066;">,</span> lightDirection<span style="color: #000066;">)</span><span style="color: #000066;">,</span> <span style="color: #0000ff;">0.0</span><span style="color: #000066;">)</span><span style="color: #000066;">;</span>
+            lightWeighting <span style="color: #000066;">=</span> uAmbientColor <span style="color: #000066;">+</span> uPointLightingColor <span style="color: #000066;">*</span> directionalLightWeighting<span style="color: #000066;">;</span>
+        <span style="color: #000066;">}</span>
+&nbsp;
+        <span style="color: #000066; font-weight: bold;">vec4</span> fragmentColor<span style="color: #000066;">;</span>
+        <span style="color: #000000; font-weight: bold;">if</span> <span style="color: #000066;">(</span>uUseTextures<span style="color: #000066;">)</span> <span style="color: #000066;">{</span>
+            fragmentColor <span style="color: #000066;">=</span> <span style="color: #993333; font-weight: bold;">texture2D</span><span style="color: #000066;">(</span>uSampler<span style="color: #000066;">,</span> <span style="color: #000066; font-weight: bold;">vec2</span><span style="color: #000066;">(</span>vTextureCoord<span style="color: #000066;">.</span><span style="color: #006600;">s</span><span style="color: #000066;">,</span> vTextureCoord<span style="color: #000066;">.</span><span style="color: #006600;">t</span><span style="color: #000066;">)</span><span style="color: #000066;">)</span><span style="color: #000066;">;</span>
+        <span style="color: #000066;">}</span> <span style="color: #000000; font-weight: bold;">else</span> <span style="color: #000066;">{</span>
+            fragmentColor <span style="color: #000066;">=</span> <span style="color: #000066; font-weight: bold;">vec4</span><span style="color: #000066;">(</span><span style="color: #0000ff;">1.0</span><span style="color: #000066;">,</span> <span style="color: #0000ff;">1.0</span><span style="color: #000066;">,</span> <span style="color: #0000ff;">1.0</span><span style="color: #000066;">,</span> <span style="color: #0000ff;">1.0</span><span style="color: #000066;">)</span><span style="color: #000066;">;</span>
+        <span style="color: #000066;">}</span>
+        <span style="color: #551111;">gl_FragColor</span> <span style="color: #000066;">=</span> <span style="color: #000066; font-weight: bold;">vec4</span><span style="color: #000066;">(</span>fragmentColor<span style="color: #000066;">.</span><span style="color: #006600;">rgb</span> <span style="color: #000066;">*</span> lightWeighting<span style="color: #000066;">,</span> fragmentColor<span style="color: #000066;">.</span><span style="color: #006600;">a</span><span style="color: #000066;">)</span><span style="color: #000066;">;</span>
+    <span style="color: #000066;">}</span>
+<span style="color: #000066;">&lt;/</span>script<span style="color: #000066;">&gt;</span></pre></td></tr></tbody></table></div>
+
+<p>你会发现其中的代码和我们之前一直在顶点着色器中写的代码非常相似。实际上，根本也是做的完全一样的工作，计算出光线方向，然后与法线结合在一起，计算出光照亮。区别在于，参与运算的这些值是从varying变量中引入的，而不是顶点属性；并且最后的光照亮会立即与纹理材质结合，而不是先输出再稍后处理。值得注意的是，我们必须将线性插值之后的法线进行归一化处理。归一化，就是将一个向量的长度调整为1。这是因为在两个长度为1的向量间进行插值，仅仅是确保插值后的向量指向正确的方向，而不会确保长度依然为1。所以我们必须对其进行归一化处理。</p>
+<p>因为所有的重担都由片元着色器承担了，所以在逐片元光照中，顶点着色器的代码相对比较简单。</p>
+
+<div class="wp_codebox"><table><tbody><tr id="p3634"><td class="line_numbers"><pre>109
+110
+111
+112
+113
+114
+115
+116
+117
+118
+119
+120
+121
+122
+123
+124
+125
+126
+127
+128
+129
+</pre></td><td class="code" id="p363code4"><pre class="glsl" style="font-family:monospace;"><span style="color: #000066;">&lt;</span>script id<span style="color: #000066;">=</span><span style="color: #ff0000;">"per-fragment-lighting-vs"</span> type<span style="color: #000066;">=</span><span style="color: #ff0000;">"x-shader/x-vertex"</span><span style="color: #000066;">&gt;</span>
+    <span style="color: #333399; font-weight: bold;">attribute</span> <span style="color: #000066; font-weight: bold;">vec3</span> aVertexPosition<span style="color: #000066;">;</span>
+    <span style="color: #333399; font-weight: bold;">attribute</span> <span style="color: #000066; font-weight: bold;">vec3</span> aVertexNormal<span style="color: #000066;">;</span>
+    <span style="color: #333399; font-weight: bold;">attribute</span> <span style="color: #000066; font-weight: bold;">vec2</span> aTextureCoord<span style="color: #000066;">;</span>
+&nbsp;
+    <span style="color: #333399; font-weight: bold;">uniform</span> <span style="color: #000066; font-weight: bold;">mat4</span> uMVMatrix<span style="color: #000066;">;</span>
+    <span style="color: #333399; font-weight: bold;">uniform</span> <span style="color: #000066; font-weight: bold;">mat4</span> uPMatrix<span style="color: #000066;">;</span>
+    <span style="color: #333399; font-weight: bold;">uniform</span> <span style="color: #000066; font-weight: bold;">mat4</span> uNMatrix<span style="color: #000066;">;</span>
+&nbsp;
+    <span style="color: #333399; font-weight: bold;">varying</span> <span style="color: #000066; font-weight: bold;">vec2</span> vTextureCoord<span style="color: #000066;">;</span>
+    <span style="color: #333399; font-weight: bold;">varying</span> <span style="color: #000066; font-weight: bold;">vec3</span> vTransformedNormal<span style="color: #000066;">;</span>
+    <span style="color: #333399; font-weight: bold;">varying</span> <span style="color: #000066; font-weight: bold;">vec4</span> vPosition<span style="color: #000066;">;</span>
+&nbsp;
+&nbsp;
+    <span style="color: #000066; font-weight: bold;">void</span> main<span style="color: #000066;">(</span><span style="color: #000066; font-weight: bold;">void</span><span style="color: #000066;">)</span> <span style="color: #000066;">{</span>
+        vPosition <span style="color: #000066;">=</span> uMVMatrix <span style="color: #000066;">*</span> <span style="color: #000066; font-weight: bold;">vec4</span><span style="color: #000066;">(</span>aVertexPosition<span style="color: #000066;">,</span> <span style="color: #0000ff;">1.0</span><span style="color: #000066;">)</span><span style="color: #000066;">;</span>
+        <span style="color: #551111;">gl_Position</span> <span style="color: #000066;">=</span> uPMatrix <span style="color: #000066;">*</span> vPosition<span style="color: #000066;">;</span>
+        vTextureCoord <span style="color: #000066;">=</span> aTextureCoord<span style="color: #000066;">;</span>
+        vTransformedNormal <span style="color: #000066;">=</span> <span style="color: #000066;">(</span>uNMatrix <span style="color: #000066;">*</span> <span style="color: #000066; font-weight: bold;">vec4</span><span style="color: #000066;">(</span>aVertexNormal<span style="color: #000066;">,</span> <span style="color: #0000ff;">1.0</span><span style="color: #000066;">)</span><span style="color: #000066;">)</span><span style="color: #000066;">.</span><span style="color: #006600;">xyz</span><span style="color: #000066;">;</span>
+    <span style="color: #000066;">}</span>
+<span style="color: #000066;">&lt;/</span>script<span style="color: #000066;">&gt;</span></pre></td></tr></tbody></table></div>
+
+<p>在应用了模型视图矩阵并和法线矩阵相乘之后，我们依然需要计算出顶点的位置。但是我们只需要把它们储存到varying变量中就可以了，稍后在片元着色器中会用到。</p>
+<p>以上就是着色器中的全部代码了！剩下的代码和之前的课程中的非常类似，除了一个地方。到目前为止，我们在一个WebGL页面中只使用了1个顶点着色器和1个片元着色器。现在你也许还记得在第1课中我们提到过，WebGL program对象是用来把着色器代码传送到显卡端的，一个program对象只能同时包含1个顶点着色器和1个片元着色器。这也就是说，我们需要定义两个program对象，然后根据是否开启逐片元光照的复选框来切换它们。</p>
+<p>方法很简单，initShaders函数做出了如下变化：</p>
+
+<div class="wp_codebox"><table><tbody><tr id="p3635"><td class="line_numbers"><pre>222
+223
+224
+225
+226
+227
+228
+229
+</pre></td><td class="code" id="p363code5"><pre class="javascript" style="font-family:monospace;">    <span style="color: #003366; font-weight: bold;">var</span> currentProgram<span style="color: #339933;">;</span>
+    <span style="color: #003366; font-weight: bold;">var</span> perVertexProgram<span style="color: #339933;">;</span>
+    <span style="color: #003366; font-weight: bold;">var</span> perFragmentProgram<span style="color: #339933;">;</span>
+&nbsp;
+    <span style="color: #003366; font-weight: bold;">function</span> initShaders<span style="color: #009900;">(</span><span style="color: #009900;">)</span> <span style="color: #009900;">{</span>
+        perVertexProgram <span style="color: #339933;">=</span> createProgram<span style="color: #009900;">(</span><span style="color: #3366CC;">"per-vertex-lighting-fs"</span><span style="color: #339933;">,</span> <span style="color: #3366CC;">"per-vertex-lighting-vs"</span><span style="color: #009900;">)</span><span style="color: #339933;">;</span>
+        perFragmentProgram <span style="color: #339933;">=</span> createProgram<span style="color: #009900;">(</span><span style="color: #3366CC;">"per-fragment-lighting-fs"</span><span style="color: #339933;">,</span> <span style="color: #3366CC;">"per-fragment-lighting-vs"</span><span style="color: #009900;">)</span><span style="color: #339933;">;</span>
+    <span style="color: #009900;">}</span></pre></td></tr></tbody></table></div>
+
+<p>我们定义了两个独立的全局变量，一个用来储存逐顶点光照，另一个用来储存逐片元光照；另外还有一个currentProgram变量用来表示当前正在使用的光照。createProgram函数和我们之前用的那个是一样的，只不过被参数化了，我就不重复解释了。</p>
+<p>然后我们在drawScene函数一开始就切换到相应的program。</p>
+
+<div class="wp_codebox"><table><tbody><tr id="p3636"><td class="line_numbers"><pre>534
+535
+536
+537
+538
+539
+540
+541
+542
+543
+544
+545
+546
+</pre></td><td class="code" id="p363code6"><pre class="javascript" style="font-family:monospace;">    <span style="color: #003366; font-weight: bold;">function</span> drawScene<span style="color: #009900;">(</span><span style="color: #009900;">)</span> <span style="color: #009900;">{</span>
+        gl.<span style="color: #660066;">viewport</span><span style="color: #009900;">(</span><span style="color: #CC0000;">0</span><span style="color: #339933;">,</span> <span style="color: #CC0000;">0</span><span style="color: #339933;">,</span> gl.<span style="color: #660066;">viewportWidth</span><span style="color: #339933;">,</span> gl.<span style="color: #660066;">viewportHeight</span><span style="color: #009900;">)</span><span style="color: #339933;">;</span>
+        gl.<span style="color: #660066;">clear</span><span style="color: #009900;">(</span>gl.<span style="color: #660066;">COLOR_BUFFER_BIT</span> <span style="color: #339933;">|</span> gl.<span style="color: #660066;">DEPTH_BUFFER_BIT</span><span style="color: #009900;">)</span><span style="color: #339933;">;</span>
+&nbsp;
+        pMatrix <span style="color: #339933;">=</span> okMat4Proj<span style="color: #009900;">(</span><span style="color: #CC0000;">45</span><span style="color: #339933;">,</span> gl.<span style="color: #660066;">viewportWidth</span> <span style="color: #339933;">/</span> gl.<span style="color: #660066;">viewportHeight</span><span style="color: #339933;">,</span> <span style="color: #CC0000;">0.1</span><span style="color: #339933;">,</span> <span style="color: #CC0000;">100.0</span><span style="color: #009900;">)</span><span style="color: #339933;">;</span>
+&nbsp;
+        <span style="color: #003366; font-weight: bold;">var</span> perFragmentLighting <span style="color: #339933;">=</span> document.<span style="color: #660066;">getElementById</span><span style="color: #009900;">(</span><span style="color: #3366CC;">"per-fragment"</span><span style="color: #009900;">)</span>.<span style="color: #660066;">checked</span><span style="color: #339933;">;</span>
+        <span style="color: #000066; font-weight: bold;">if</span> <span style="color: #009900;">(</span>perFragmentLighting<span style="color: #009900;">)</span> <span style="color: #009900;">{</span>
+            currentProgram <span style="color: #339933;">=</span> perFragmentProgram<span style="color: #339933;">;</span>
+        <span style="color: #009900;">}</span> <span style="color: #000066; font-weight: bold;">else</span> <span style="color: #009900;">{</span>
+            currentProgram <span style="color: #339933;">=</span> perVertexProgram<span style="color: #339933;">;</span>
+        <span style="color: #009900;">}</span>
+        gl.<span style="color: #660066;">useProgram</span><span style="color: #009900;">(</span>currentProgram<span style="color: #009900;">)</span><span style="color: #339933;">;</span></pre></td></tr></tbody></table></div>
+
+<p>我们必须一开始就做这项工作是因为，当我们在编写绘制的代码时（比如设置uniform变量或者将顶点数组绑定到attribute上），我们需要确定当前program是哪一个，否则我们就可能使用了错误的program。</p>
+
+<div class="wp_codebox"><table><tbody><tr id="p3637"><td class="line_numbers"><pre>548
+549
+</pre></td><td class="code" id="p363code7"><pre class="javascript" style="font-family:monospace;">        <span style="color: #003366; font-weight: bold;">var</span> lighting <span style="color: #339933;">=</span> document.<span style="color: #660066;">getElementById</span><span style="color: #009900;">(</span><span style="color: #3366CC;">"lighting"</span><span style="color: #009900;">)</span>.<span style="color: #660066;">checked</span><span style="color: #339933;">;</span>
+        gl.<span style="color: #660066;">uniform1i</span><span style="color: #009900;">(</span>currentProgram.<span style="color: #660066;">useLightingUniform</span><span style="color: #339933;">,</span> lighting<span style="color: #009900;">)</span><span style="color: #339933;">;</span></pre></td></tr></tbody></table></div>
+
+<p>这样，你应该能看出来，每次我们调用drawScene函数使用了并且仅使用了一个program；在不同的调用中可能会用到不同的program。你也许会问，是否可以在drawScene函数内部的不同地方使用不同的program？那么场景中不同的部分就会用不同的着色器绘制，比如说也许你的场景中有一部分需要用逐片元光照，另一部分需要用逐顶点光照。答案是肯定的！尽管在本课中不需要这么做，但是，它是完美可行的并且实际上非常有用！</p>
+<p>好了，本节课结束了。你学会了如何使用多个program来切换着色器，以及如何使用逐像素光照。下节课我们将会讲解第7课剩下的最后一种光照形式——镜面高光！</p>
+<div style="clear:both; margin-top:5px; margin-bottom:5px;"></div><div style="float:left"><!-- JiaThis Button BEGIN -->
+<div id="ckepop">
+	<span class="jiathis_txt">分享到：</span>
+	<a class="jiathis_button_tools_1"></a>
+	<a class="jiathis_button_tools_2"></a>
+	<a class="jiathis_button_tools_3"></a>
+	<a class="jiathis_button_tools_4"></a>
+	<a href="http://www.jiathis.com/share" class="jiathis jiathis_txt jiathis_separator jtico jtico_jiathis" target="_blank">更多</a>
+	<a class="jiathis_counter_style"></a>
+</div>
+<script type="text/javascript" src="./Lesson 13 片元级光照与多program对象 _ HiWebGL_files/jia.js.下载" charset="utf-8"></script>
+<!-- JiaThis Button END --></div><div style="clear:both; margin-top:5px; margin-bottom:5px;"></div>											</div><!-- .entry-content -->
+
+
+					<div class="entry-utility">
+						Posted in <a href="http://www.hiwebgl.com/?cat=17" title="查看 WebGL教程 中的全部文章" rel="category">WebGL教程</a>. Bookmark the <a href="http://www.hiwebgl.com/?p=363" title="Permalink to Lesson 13 片元级光照与多program对象" rel="bookmark">permalink</a>.											</div><!-- .entry-utility -->
+				</div><!-- #post-## -->
+
+				<div id="nav-below" class="navigation">
+					<div class="nav-previous"><a href="http://www.hiwebgl.com/?p=355" rel="prev"><span class="meta-nav">←</span> Lesson 12 点光源</a></div>
+					<div class="nav-next"><a href="http://www.hiwebgl.com/?p=379" rel="next">Rovio推HTML5版愤怒的小鸟 目标多平台 <span class="meta-nav">→</span></a></div>
+				</div><!-- #nav-below -->
+
+				
+
+<div id="comments">
+		<h3 id="comments-title"><span>1 trackback</span></h3>
+	<dl id="trackback_list">
+		<dt><a href="http://www.hiwebgl.com/?p=42" rel="external nofollow" class="url">WebGL教程 | WebGL中文教程翻译工程启动！HiWebGL | HiWebGL | 最好的HTML5 WebGL中文资讯站</a></dt>
+		<dd><span>2011 年 9 月 24 日 上午 12:53</span></dd>
+    </dl>
+        
+
+								<div id="respond">
+				<h3 id="reply-title">Post a Comment <small><a rel="nofollow" id="cancel-comment-reply-link" href="http://www.hiwebgl.com/?p=363#respond" style="display:none;">点击这里取消回复。</a></small></h3>
+									<form action="http://www.hiwebgl.com/wp-comments-post.php" method="post" id="commentform">
+																			<p class="comment-notes">电子邮件地址不会被公开。 必填项已用 <span class="required">*</span> 标注</p>							<p class="comment-form-author"><label for="author">姓名</label> <span class="required">*</span><input id="author" name="author" type="text" value="" size="30" aria-required="true"></p>
+<p class="comment-form-email"><label for="email">电子邮件</label> <span class="required">*</span><input id="email" name="email" type="text" value="" size="30" aria-required="true"></p>
+<p class="comment-form-url"><label for="url">站点</label><input id="url" name="url" type="text" value="" size="30"></p>
+												<p class="comment-form-comment"><label for="comment">评论</label><textarea id="comment" name="comment" cols="45" rows="8" aria-required="true"></textarea></p>						<p class="form-allowed-tags">您可以使用这些 <abbr title="HyperText Markup Language">HTML</abbr> 标签和属性： <code>&lt;a href="" title=""&gt; &lt;abbr title=""&gt; &lt;acronym title=""&gt; &lt;b&gt; &lt;blockquote cite=""&gt; &lt;cite&gt; &lt;code&gt; &lt;del datetime=""&gt; &lt;em&gt; &lt;i&gt; &lt;q cite=""&gt; &lt;strike&gt; &lt;strong&gt; </code></p>						<p class="form-submit">
+							<input name="submit" type="submit" id="submit" value="发表评论">
+							<input type="hidden" name="comment_post_ID" value="363" id="comment_post_ID">
+<input type="hidden" name="comment_parent" id="comment_parent" value="0">
+						</p>
+						<p style="display: none;"><input type="hidden" id="akismet_comment_nonce" name="akismet_comment_nonce" value="cea70c24ec"></p>					</form>
+							</div><!-- #respond -->
+						
+</div><!-- #comments -->
+
+			</div><!-- #content -->
+		</div><!-- #container -->
+
+<div id="sidebar" class="widget-area" role="complementary">
+	<ul class="xoxo">
+    	<li id="search-2" class="widget-container widget_search"><form id="searchform" method="get" action="http://www.hiwebgl.com/"> 
+	<input type="text" name="s" id="s" class="search_term" value="Type in keyword and hit Enter..." onblur="if (this.value == &#39;&#39;) {this.value = &#39;Type in keyword and hit Enter...&#39;;}" onfocus="if (this.value == &#39;Type in keyword and hit Enter...&#39;) {this.value = &#39;&#39;;}">
+</form></li><li id="text-4" class="widget-container widget_text"><h3 class="widget-title">加入我们的QQ群</h3>			<div class="textwidget"><b>HiWebGL技术讨论群</b><br>①群群号174563471（已满）<br>②群群号133703893（已满）<br>③群群号196778533（已满）<br>④群群号217873851（已满）<br>⑤群群号225923498（已满）<br>500人群群号219549633<br>欢迎各位程序员和工程师加入！<br><a target="_blank" href="http://qun.qq.com/#jointhegroup/gid/219549633"><img border="0" src="./Lesson 13 片元级光照与多program对象 _ HiWebGL_files/gp.png" alt="点击这里加入此群" title="点击这里加入此群"></a>
+<br><br>
+<b>HiWebGL产业讨论群</b><br>①群群号176289597（已满）<br>②群群号216936388<br>欢迎关注Web3D发展的从业者与富有理想与激情的创业者朋友加入！<br><a target="_blank" href="http://qun.qq.com/#jointhegroup/gid/216936388"><img border="0" src="./Lesson 13 片元级光照与多program对象 _ HiWebGL_files/gp.png" alt="点击这里加入此群" title="点击这里加入此群"></a></div>
+		</li><style type="text/css" media="screen">
+#mwrapper-wm_show-3 .mcontainer {height: 300px; overflow: hidden;}
+</style>
+<li id="wm_show-3" class="widget-container wm_show"><h3 class="widget-title">关注我们的新浪微博！</h3><div class="mwrapper" id="mwrapper-wm_show-3"><div class="head"><img class="headimg" src="./Lesson 13 片元级光照与多program对象 _ HiWebGL_files/89c570d0jw1e8qgp5bmzyj2050050aa8.jpg"><a class="headlink" href="http://weibo.com/2311418064" rel="external nofollow" target="_blank">HiWebGL</a><div class="onekey"><iframe width="63" height="24" frameborder="0" allowtransparency="true" marginwidth="0" marginheight="0" scrolling="no" border="0" src="./Lesson 13 片元级光照与多program对象 _ HiWebGL_files/followbutton.html"></iframe></div></div><a class="scroll up" href="javascript:;"><img src="./Lesson 13 片元级光照与多program对象 _ HiWebGL_files/transparent.gif"></a><div class="mcontainer"><ul class="microblogs"><li class="tweet">[哆啦A梦吃惊]<div class="rt"><a href="http://weibo.com/crazycomputer" rel="external nofollow" target="_blank">尼奥_</a> : 因写了抢猫粮插件被抓的小喵。<div class="pic rt-pic"><a href="http://ww3.sinaimg.cn/large/6588fb91jw1f8a611qywmj20qo0r743g.jpg" rel="external nofollow" target="_blank"><img src="./Lesson 13 片元级光照与多program对象 _ HiWebGL_files/6588fb91jw1f8a611qywmj20qo0r743g.jpg"></a></div></div><div class="meta"><a href="http://api.t.sina.com.cn/2311418064/statuses/4025014212843692" rel="external nofollow" target="_blank">9月29日 12:00</a> 来自 <a href="http://weibo.com/2311418064" rel="external nofollow" target="_blank">新浪微博</a></div></li><li class="tweet">转发微博<div class="rt"><a href="http://weibo.com/armcn" rel="external nofollow" target="_blank">ARM中国</a> : 在看颜的时代，如何让一款游戏画面更具高bigger？从8位像素画风到1080P/4K，再到ARM的Enlighten全局光照技术，能够分分钟变化出数十种光照效果，再挑的玩家都给它点赞了，不信你就来看看[围观][围观]<a href="http://t.cn/RcNsHsc" rel="external nofollow" target="_blank">http://t.cn/RcNsHsc</a><div class="pic rt-pic"><a href="http://ww3.sinaimg.cn/large/84217b4fgw1f89g6wubugj20j30q6gr3.jpg" rel="external nofollow" target="_blank"><img src="./Lesson 13 片元级光照与多program对象 _ HiWebGL_files/84217b4fgw1f89g6wubugj20j30q6gr3.jpg"></a></div></div><div class="meta"><a href="http://api.t.sina.com.cn/2311418064/statuses/4025000392991907" rel="external nofollow" target="_blank">9月29日 11:05</a> 来自 <a href="http://weibo.com/2311418064" rel="external nofollow" target="_blank">新浪微博</a></div></li><li class="tweet">转发微博<div class="rt"><a href="http://weibo.com/baidujs" rel="external nofollow" target="_blank">JS小组</a> : 你知道使用 target='_blank' 也会有安全漏洞么？尤其是在各种 UGC 网站中。不过小编早就玩过了，其实一般倒也不会用在钓鱼上，而是用在各种各样的广告点击中。推荐文章《target='_blank' 安全漏洞示例》地址 <a href="http://t.cn/RchBwVu" rel="external nofollow" target="_blank">http://t.cn/RchBwVu</a>  $w<div class="pic rt-pic"><a href="http://ww2.sinaimg.cn/large/aa9d3df6jw1f7fewekmx8j20g30a1aak.jpg" rel="external nofollow" target="_blank"><img src="./Lesson 13 片元级光照与多program对象 _ HiWebGL_files/aa9d3df6jw1f7fewekmx8j20g30a1aak.jpg"></a></div></div><div class="meta"><a href="http://api.t.sina.com.cn/2311418064/statuses/4016375595329873" rel="external nofollow" target="_blank">9月5日 15:53</a> 来自 <a href="http://weibo.com/2311418064" rel="external nofollow" target="_blank">新浪微博</a></div></li><li class="tweet">不做游戏，帮转<div class="rt"><a href="http://weibo.com/xdarui" rel="external nofollow" target="_blank">阿里子之</a> : 有做WebVR游戏的公司么，求合作。求圈内大神帮忙转发。@寒冬winter @大城小胖 @w3cplus</div><div class="meta"><a href="http://api.t.sina.com.cn/2311418064/statuses/4015348426770066" rel="external nofollow" target="_blank">9月2日 19:52</a> 来自 <a href="http://weibo.com/2311418064" rel="external nofollow" target="_blank">新浪微博</a></div></li><li class="tweet">阿里云OSS是否支持websockets?有人知道吗？<div class="meta"><a href="http://api.t.sina.com.cn/2311418064/statuses/4006622127044001" rel="external nofollow" target="_blank">8月9日 17:56</a> 来自 <a href="http://weibo.com/2311418064" rel="external nofollow" target="_blank">新浪微博</a></div></li></ul></div><a class="scroll down" href="javascript:;"><img src="./Lesson 13 片元级光照与多program对象 _ HiWebGL_files/transparent.gif"></a></div></li><li id="recent-comments-2" class="widget-container widget_recent_comments"><h3 class="widget-title">近期评论</h3><ul id="recentcomments"><li class="recentcomments"><a href="http://www.d2film.com/" rel="external nofollow" class="url">企业宣传片制作d2film.com影视视频制作公司QQ30998</a> 发表在《<a href="http://www.hiwebgl.com/?p=42#comment-7984">WebGL中文教程翻译工程启动！</a>》</li><li class="recentcomments"><a href="http://www.128sf.cn/" rel="external nofollow" class="url">魔域服务器架设</a> 发表在《<a href="http://www.hiwebgl.com/?p=312#comment-7858">Lesson 9 优化代码结构实现多物体运动</a>》</li><li class="recentcomments"><a href="http://www.39uc.cn/" rel="external nofollow" class="url">天龙八部师傅m161</a> 发表在《<a href="http://www.hiwebgl.com/?p=70#comment-7857">外媒公布Firefox 6性能测试结果</a>》</li><li class="recentcomments"><a href="http://www.233sf.cn/" rel="external nofollow" class="url">最新奇迹私发网</a> 发表在《<a href="http://www.hiwebgl.com/?p=42#comment-7856">WebGL中文教程翻译工程启动！</a>》</li><li class="recentcomments"><a href="http://www.5aivideo.com/" rel="external nofollow" class="url">婚礼跟拍视频5aivideo.com婚礼摄影MV-QQ73595</a> 发表在《<a href="http://www.hiwebgl.com/?p=42#comment-7829">WebGL中文教程翻译工程启动！</a>》</li></ul></li><li id="categories-2" class="widget-container widget_categories"><h3 class="widget-title">分类目录</h3>		<ul>
+	<li class="cat-item cat-item-16"><a href="http://www.hiwebgl.com/?cat=16" title="查看 Demo大赏 下的所有文章">Demo大赏</a>
+</li>
+	<li class="cat-item cat-item-29"><a href="http://www.hiwebgl.com/?cat=29" title="查看 HTML5新闻 下的所有文章">HTML5新闻</a>
+</li>
+	<li class="cat-item cat-item-57"><a href="http://www.hiwebgl.com/?cat=57" title="Oak3D中文教程">Oak3D教程</a>
+</li>
+	<li class="cat-item cat-item-17"><a href="http://www.hiwebgl.com/?cat=17" title="查看 WebGL教程 下的所有文章">WebGL教程</a>
+</li>
+	<li class="cat-item cat-item-3"><a href="http://www.hiwebgl.com/?cat=3" title="WebGL新闻">WebGL新闻</a>
+</li>
+	<li class="cat-item cat-item-10"><a href="http://www.hiwebgl.com/?cat=10" title="查看 博文精选 下的所有文章">博文精选</a>
+</li>
+	<li class="cat-item cat-item-4"><a href="http://www.hiwebgl.com/?cat=4" title="推荐阅读">推荐</a>
+</li>
+	<li class="cat-item cat-item-1"><a href="http://www.hiwebgl.com/?cat=1" title="查看 未分类 下的所有文章">未分类</a>
+</li>
+		</ul>
+</li><li id="archives-2" class="widget-container widget_archive"><h3 class="widget-title">文章归档</h3>		<ul>
+			<li><a href="http://www.hiwebgl.com/?m=201206" title="2012 年六月">2012 年六月</a></li>
+	<li><a href="http://www.hiwebgl.com/?m=201205" title="2012 年五月">2012 年五月</a></li>
+	<li><a href="http://www.hiwebgl.com/?m=201204" title="2012 年四月">2012 年四月</a></li>
+	<li><a href="http://www.hiwebgl.com/?m=201203" title="2012 年三月">2012 年三月</a></li>
+	<li><a href="http://www.hiwebgl.com/?m=201202" title="2012 年二月">2012 年二月</a></li>
+	<li><a href="http://www.hiwebgl.com/?m=201201" title="2012 年一月">2012 年一月</a></li>
+	<li><a href="http://www.hiwebgl.com/?m=201112" title="2011 年十二月">2011 年十二月</a></li>
+	<li><a href="http://www.hiwebgl.com/?m=201111" title="2011 年十一月">2011 年十一月</a></li>
+	<li><a href="http://www.hiwebgl.com/?m=201110" title="2011 年十月">2011 年十月</a></li>
+	<li><a href="http://www.hiwebgl.com/?m=201109" title="2011 年九月">2011 年九月</a></li>
+	<li><a href="http://www.hiwebgl.com/?m=201108" title="2011 年八月">2011 年八月</a></li>
+		</ul>
+</li>    </ul>
+</div><!-- #sidebar .widget-area -->	</div><!-- #main -->
+    <div id="footer" role="contentinfo">
+    	
+    	<div id="colophon">
+            <div id="site-info" class="clearfix">
+                <div id="generator">Powered by <a href="http://wordpress.org/" title="Semantic Personal Publishing Platform" rel="generator">Wordpress</a> and <a href="http://wpcrunchy.com/" title="Free Premium Quality Wordpress Themes">WPCrunchy</a></div>
+                <div id="credits">Designed by <a href="http://www.hostreviewgeeks.com/" title="best web hosting" target="_blank">best web hosting</a>. In collaboration with <a href="http://www.hostv.com/" title="VPS Hosting" target="_blank">VPS Hosting</a>, <a href="http://broadwaytickets.co/" title="Broadway Tickets" target="_blank">Broadway Tickets</a>, <a href="http://wpcorner.com/" title="Free Wordpress Themes" target="_blank">Free Wordpress Themes</a>.</div>
+            </div>
+        </div>
+    </div><!-- #footer -->
+</div><!-- #wrapper -->
+
+<script type="text/javascript">jQuery(document).ready(function() { if(jQuery("ul.accordion li").length > 2) { jQuery("ul.accordion").accordion(); } });</script><script src="./Lesson 13 片元级光照与多program对象 _ HiWebGL_files/stat.php" language="JavaScript"></script><script src="./Lesson 13 片元级光照与多program对象 _ HiWebGL_files/core.php" charset="utf-8" type="text/javascript"></script><a href="http://www.cnzz.com/stat/website.php?web_id=3871765" target="_blank" title="站长统计"><img border="0" hspace="0" vspace="0" src="./Lesson 13 片元级光照与多program对象 _ HiWebGL_files/pic.gif"></a><script src="./Lesson 13 片元级光照与多program对象 _ HiWebGL_files/stat.js.下载" defer="defer" async="async"></script>
+ </body></html>
